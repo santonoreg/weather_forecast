@@ -18,7 +18,7 @@ if ($method === 'POST') {
         json_out(['error' => 'Μη έγκυρα στοιχεία τοποθεσίας'], 400);
     }
     $st = $pdo->prepare('INSERT INTO locations (name, lat, lon) VALUES (?, ?, ?)');
-    $st->execute([mb_substr($name, 0, 120), round($lat, 5), round($lon, 5)]);
+    $st->execute([(function_exists('mb_substr') ? mb_substr($name, 0, 120) : substr($name, 0, 200)), round($lat, 5), round($lon, 5)]);
     json_out(['id' => (int)$pdo->lastInsertId(), 'name' => $name, 'lat' => $lat, 'lon' => $lon], 201);
 }
 

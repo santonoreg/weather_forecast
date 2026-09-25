@@ -5,7 +5,7 @@ require __DIR__ . '/db.php';
 
 if (isset($_GET['q'])) {
     $q = trim((string)$_GET['q']);
-    if (mb_strlen($q) < 2) json_out([]);
+    if ((function_exists('mb_strlen') ? mb_strlen($q) : strlen($q)) < 2) json_out([]);
     $body = http_get('https://geocoding-api.open-meteo.com/v1/search?count=8&language=el&name=' . rawurlencode($q));
     $res = $body ? (json_decode($body, true)['results'] ?? []) : [];
     json_out(array_map(fn($r) => [

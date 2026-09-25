@@ -2,6 +2,24 @@
 // Κοινή σύνδεση SQLite + βοηθητικές συναρτήσεις JSON
 declare(strict_types=1);
 
+// Ανεκτικότητα σε παλαιότερες εκδόσεις PHP / ελλιπείς επεκτάσεις
+if (!function_exists('str_contains')) { function str_contains(string $h, string $n): bool { return $n === '' || strpos($h, $n) !== false; } }
+if (!function_exists('str_starts_with')) { function str_starts_with(string $h, string $n): bool { return strncmp($h, $n, strlen($n)) === 0; } }
+ini_set('display_errors', '0');
+set_exception_handler(function (Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Σφάλμα διακομιστή: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+});
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true) && !headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'Σφάλμα PHP: ' . $e['message']], JSON_UNESCAPED_UNICODE);
+    }
+});
+
 function db(): PDO
 {
     static $pdo = null;
