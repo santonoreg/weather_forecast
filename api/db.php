@@ -7,8 +7,20 @@ function db(): PDO
     static $pdo = null;
     if ($pdo) return $pdo;
     $dir = __DIR__ . '/../data';
-    if (!is_dir($dir)) mkdir($dir, 0775, true);
-    $pdo = new PDO('sqlite:' . $dir . '/wefo.sqlite');
+    if (!extension_loaded('pdo_sqlite')) {
+        json_out(['error' => 'Λείπει η επέκταση PHP pdo_sqlite (π.χ. apt install php-sqlite3)'], 500);
+    }
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true)) {
+        json_out(['error' => 'Δεν μπορεί να δημιουργηθεί ο φάκελος data/. Δώσε δικαιώματα εγγραφής στον χρήστη του web server'], 500);
+    }
+    if (!is_writable($dir)) {
+        json_out(['error' => 'Ο φάκελος data/ δεν είναι εγγράψιμος από τον web server (chown www-data data && chmod 775 data)'], 500);
+    }
+    try {
+        $pdo = new PDO('sqlite:' . $dir . '/wefo.sqlite');
+    } catch (PDOException $e) {
+        json_out(['error' => 'Σφάλμα βάσης: ' . $e->getMessage()], 500);
+    }
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $pdo->exec('CREATE TABLE IF NOT EXISTS locations (
