@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WeFo · Σύγκριση προγνώσεων καιρού</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='14' fill='%23f5b301'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span id="brandIcon"></span> WeFo <small>σύγκριση μοντέλων καιρού</small></div>
+  <nav>
+    <button class="nav-btn active" data-view="forecast">Πρόγνωση</button>
+    <button class="nav-btn" data-view="places">Τοποθεσίες &amp; Χάρτης</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ ΠΡΟΓΝΩΣΗ ============ -->
+  <section id="view-forecast" class="view active">
+    <div class="toolbar">
+      <label>Τοποθεσία
+        <select id="locSelect"></select>
+      </label>
+      <label>Βήμα
+        <select id="stepSelect">
+          <option value="1">1 ώρα</option>
+          <option value="3" selected>3 ώρες</option>
+          <option value="6">6 ώρες</option>
+          <option value="12">12 ώρες</option>
+        </select>
+      </label>
+      <button id="refreshBtn" class="btn ghost" title="Νέα λήψη δεδομένων">↻ Ανανέωση</button>
+      <span id="meta" class="meta"></span>
+    </div>
+
+    <div id="empty" class="notice" hidden>
+      Δεν υπάρχουν αποθηκευμένες τοποθεσίες. Πήγαινε στις <a href="#" data-goto="places">Τοποθεσίες &amp; Χάρτης</a> και πρόσθεσε μία.
+    </div>
+    <div id="error" class="notice error" hidden></div>
+    <div id="loading" class="loading" hidden><div class="spinner"></div> Λήψη προβλέψεων από όλους τους παρόχους…</div>
+
+    <div id="forecastBody" hidden>
+      <div id="days" class="days"></div>
+      <div id="tabs" class="tabs"></div>
+      <div class="table-wrap"><table id="grid" class="grid"></table></div>
+      <div id="legend" class="legend"></div>
+    </div>
+  </section>
+
+  <!-- ============ ΤΟΠΟΘΕΣΙΕΣ ============ -->
+  <section id="view-places" class="view">
+    <div class="places-layout">
+      <div class="panel">
+        <h2>Επιλογή περιοχής</h2>
+        <div class="search">
+          <input id="searchInput" type="search" placeholder="Αναζήτηση πόλης ή περιοχής…" autocomplete="off">
+          <ul id="searchResults" class="results" hidden></ul>
+        </div>
+        <div class="coords">
+          <label>Γεωγρ. πλάτος<input id="latInput" type="number" step="0.0001" min="-90" max="90" placeholder="37.9838"></label>
+          <label>Γεωγρ. μήκος<input id="lonInput" type="number" step="0.0001" min="-180" max="180" placeholder="23.7275"></label>
+        </div>
+        <label class="full">Όνομα τοποθεσίας
+          <input id="nameInput" type="text" maxlength="120" placeholder="π.χ. Αθήνα">
+        </label>
+        <div class="row">
+          <button id="saveBtn" class="btn primary">Αποθήκευση τοποθεσίας</button>
+          <button id="geoBtn" class="btn ghost">Η θέση μου</button>
+        </div>
+        <p id="placeMsg" class="hint">Κάνε κλικ στον χάρτη, γράψε συντεταγμένες ή αναζήτησε μια περιοχή.</p>
+
+        <h2>Αποθηκευμένες τοποθεσίες</h2>
+        <ul id="savedList" class="saved"></ul>
+      </div>
+      <div id="map" class="map"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Δεδομένα: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (ECMWF, GFS, ICON, GEM, Météo-France, UKMO, JMA, CMA, KNMI, DMI, MET Norway) και
+  <a href="https://api.met.no/" target="_blank" rel="noopener">MET Norway / Yr</a>. Χάρτης © OpenStreetMap. Οι πιθανότητες προκύπτουν από τη συμφωνία των μοντέλων και δεν αποτελούν επίσημη πρόγνωση.
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
