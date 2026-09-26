@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261014">
+<link rel="stylesheet" href="css/style.css?v=20261015">
 </head>
 <body>
 <header class="topbar">
@@ -96,21 +96,20 @@
       </div>
       <div id="map" class="map"></div>
     </div>
+
+    <!-- History of the selected saved location (shown below the map only when chosen) -->
+    <section id="histSec" class="histsec" hidden>
+      <button id="histClose" class="h-close" type="button" data-i18n-title="h.close" title="Close">✕</button>
+      <div id="histBody"></div>
+    </section>
   </section>
 </main>
-
-<dialog id="histDlg" class="histdlg">
-  <div class="h-inner">
-    <button id="histClose" class="h-close" type="button" data-i18n-title="h.close" title="Close">✕</button>
-    <div id="histBody"></div>
-  </div>
-</dialog>
 
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261014"></script>
-<script src="js/icons.js?v=20261014"></script>
-<script src="js/app.js?v=20261014"></script>
+<script src="js/i18n.js?v=20261015"></script>
+<script src="js/icons.js?v=20261015"></script>
+<script src="js/app.js?v=20261015"></script>
 </body>
 </html>

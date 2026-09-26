@@ -589,6 +589,7 @@ $('savedList').addEventListener('click', async (e) => {
   if (act === 'fly') { initMap(); pickPoint(loc.lat, loc.lon, loc.name); map.setView([loc.lat, loc.lon], 10); }
   if (act === 'del' && confirm(t('confirm.delete', { n: loc.name }))) {
     await api('api/locations.php?id=' + loc.id, { method: 'DELETE' });
+    if (histState && histState.loc.id === loc.id) closeHistory();
     await loadLocations(state.current && state.current.id !== loc.id ? state.current.id : undefined);
     drawSavedMarkers();
   }
@@ -604,7 +605,7 @@ document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click',
 document.addEventListener('click', (e) => { const a = e.target.closest('[data-goto]'); if (a) { e.preventDefault(); showView(a.dataset.goto); } });
 
 /* ================= History dialog ================= */
-const histDlg = $('histDlg');
+const histSec = $('histSec');
 let histState = null;   // { loc, data }
 
 function niceNum(v, d = 1) { return v == null ? '–' : Number(v).toLocaleString(dateLocale(), { minimumFractionDigits: d, maximumFractionDigits: d }); }
@@ -678,7 +679,9 @@ function renderHistory() {
 
 async function openHistory(loc, refresh = false) {
   histState = { loc, data: null, fresh: false, added: 0 };
-  if (!histDlg.open) histDlg.showModal();
+  const wasHidden = histSec.hidden;
+  histSec.hidden = false;
+  if (wasHidden || !refresh) histSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
   $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="loading"><div class="spinner"></div> <span>${t('h.loading.first')}</span></div>`;
   try {
     const h = await api(`api/history.php?id=${loc.id}${refresh ? '&refresh=1' : ''}`);
@@ -689,14 +692,13 @@ async function openHistory(loc, refresh = false) {
     $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="notice error">${esc(err.message)}</div>`;
   }
 }
-$('histClose').addEventListener('click', () => histDlg.close());
-histDlg.addEventListener('click', (e) => { if (e.target === histDlg) histDlg.close(); });
-histDlg.addEventListener('close', () => { histState = null; });
+function closeHistory() { histSec.hidden = true; histState = null; $('histBody').innerHTML = ''; }
+$('histClose').addEventListener('click', closeHistory);
 
 /* ================= Language ================= */
 function onLangChange() {
   renderSaved();
-  if (histDlg.open && histState && histState.data) renderHistory();
+  if (!histSec.hidden && histState && histState.data) renderHistory();
   if (state.data) renderAll();
 }
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));

@@ -38,7 +38,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Locations & Map](docs/screenshots/locations-map.png)
 
-**Location history** – records, annual/monthly climate and charts since 1940 for a saved location (downloaded once, then cached)
+**Location history** – shown below the map when you click *History*: records, annual/monthly climate and charts since 1940 (downloaded once, then only new days are added)
 
 ![Location history](docs/screenshots/history.png)
 
@@ -84,7 +84,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ### Location history
 
-Click **History** next to a saved location to see what the weather has been like there since **1940**:
+Click **History** next to a saved location and a section opens **below the map** (nothing is shown until you choose a location) with what the weather has been like there since **1940**:
 
 - **Coverage:** which data grid point was used (its coordinates, its distance from your location and its elevation), the period and the number of days available.
 - **Records:** hottest day, coldest night, wettest day, strongest gust, snowiest day, with dates.

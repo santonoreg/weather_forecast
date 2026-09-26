@@ -243,12 +243,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* History dialog */
 .saved button[data-act="hist"] { color: var(--accent); }
-.histdlg { border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(980px, 96vw); max-height: 92vh; background: var(--bg); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
-.histdlg::backdrop { background: rgba(8, 15, 30, .55); }
-.h-inner { padding: 20px 22px 24px; position: relative; overflow: auto; max-height: 92vh; }
+.histsec { position: relative; margin-top: 18px; padding: 20px 22px 24px; background: var(--bg); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); scroll-margin-top: 76px; }
 .h-close { position: absolute; top: 12px; right: 14px; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; font-size: 15px; }
-.h-inner h2 { margin: 0 44px 12px 0; font-size: 20px; }
-.h-inner h3 { margin: 22px 0 8px; font-size: 15px; }
+.histsec h2 { margin: 0 44px 12px 0; font-size: 20px; }
+.histsec h3 { margin: 22px 0 8px; font-size: 15px; }
 .h-info { display: flex; flex-direction: column; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; }
 .h-info .muted { color: var(--muted); font-size: 12.5px; }
 .h-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--good); font-weight: 600; font-size: 13px; margin-top: 4px; }
