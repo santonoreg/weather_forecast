@@ -136,10 +136,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* Τρέχον διάστημα: σκίαση ολόκληρης στήλης */
 .grid td.now { position: relative; }
-.grid td.now::after { content: ""; position: absolute; inset: 0; background: rgba(37, 99, 235, .13); border-left: 2px solid rgba(37, 99, 235, .55); border-right: 2px solid rgba(37, 99, 235, .55); pointer-events: none; }
-.grid tbody tr:last-child td.now::after { border-bottom: 2px solid rgba(37, 99, 235, .55); }
-.grid th.now { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); }
-@media (prefers-color-scheme: dark) { .grid td.now::after { background: rgba(91, 155, 255, .18); border-color: rgba(91, 155, 255, .6); } }
+.grid td.now::after { content: ""; position: absolute; inset: 0; background: rgba(37, 99, 235, .06); border-left: 1px solid rgba(37, 99, 235, .25); border-right: 1px solid rgba(37, 99, 235, .25); pointer-events: none; }
+.grid tbody tr:last-child td.now::after { border-bottom: 1px solid rgba(37, 99, 235, .25); }
+.grid th.now { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+@media (prefers-color-scheme: dark) { .grid td.now::after { background: rgba(91, 155, 255, .09); border-color: rgba(91, 155, 255, .3); } }
 
 /* Στάθμιση & αξιοπιστία */
 .chk { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; padding-bottom: 8px; }
