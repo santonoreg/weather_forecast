@@ -107,6 +107,13 @@ foreach (rows($pdo, "SELECT m, AVG(tmean) tmean, AVG(tmax) tmax, AVG(tmin) tmin,
     $monthly[] = ['m' => (int)$r['m'], 'tmean' => rnd($r['tmean']), 'tmax' => rnd($r['tmax']), 'tmin' => rnd($r['tmin']), 'prcp' => rnd($r['prcp']), 'rainy' => rnd($r['rainy'])];
 }
 
+// Month-by-month series [year, month, mean temperature, precipitation, days] (used by the period selector)
+$series = [];
+foreach (rows($pdo, "SELECT CAST(substr(d,1,4) AS INTEGER) y, CAST(substr(d,6,2) AS INTEGER) m, AVG(tmean) t, SUM(prcp) p, COUNT(*) n
+        FROM history_daily WHERE loc_id = ? GROUP BY y, m ORDER BY y, m", [$id]) as $r) {
+    $series[] = [(int)$r['y'], (int)$r['m'], rnd($r['t']), rnd($r['p'], 0), (int)$r['n']];
+}
+
 // Annual summary
 $annual = [];
 foreach (rows($pdo, "SELECT substr(d,1,4) y, COUNT(*) n, AVG(tmean) tmean, MAX(tmax) tmax, MIN(tmin) tmin, SUM(prcp) prcp,
@@ -127,5 +134,6 @@ json_out([
     'added' => $added,
     'records' => $rec,
     'monthly' => $monthly,
+    'series' => $series,
     'annual' => $annual,
 ]);

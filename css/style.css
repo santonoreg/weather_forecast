@@ -264,3 +264,14 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .htable th:first-child { text-align: left; } .htable thead th { position: sticky; top: 0; background: var(--panel); font-size: 12px; color: var(--muted); }
 .pbar { position: relative; min-width: 90px; height: 18px; } .pbar i { position: absolute; left: 0; top: 2px; bottom: 2px; background: color-mix(in srgb, var(--rain) 35%, transparent); border-radius: 4px; } .pbar span { position: relative; padding-right: 2px; }
 @media (max-width: 760px) { .h-charts { grid-template-columns: 1fr; } .saved li { flex-wrap: wrap; } }
+
+/* History: spacing between sections, period selector, climate diagram */
+.rcards { margin-bottom: 18px; }
+.h-toolbar { display: flex; justify-content: flex-end; margin: 4px 0 10px; }
+.hperiod { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.hperiod select { height: 34px; font-size: 13.5px; padding: 0 10px; }
+.h-charts { margin-top: 4px; }
+.h-charts h3 { margin-top: 12px; }
+.h-climate { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; }
+.clegend { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.clegend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }

@@ -643,15 +643,51 @@ function histChart(points, { kind, color, unit, d = 1, trend = false }) {
   return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
 }
 
+/* Climate diagram: bars = rainfall per month (right axis), lines = max / mean / min temperature (left axis) */
+function climateChart(monthly) {
+  if (monthly.length < 12) return '';
+  const W = 900, H = 260, pl = 46, pr = 46, pt = 16, pb = 30;
+  const tv = monthly.flatMap((r) => [r.tmax, r.tmin]);
+  let tmin = Math.min(...tv), tmax = Math.max(...tv);
+  const tpad = (tmax - tmin) * 0.1 || 1; tmin = Math.floor(tmin - tpad); tmax = Math.ceil(tmax + tpad);
+  const pmax = Math.ceil(Math.max(...monthly.map((r) => r.prcp)) / 10) * 10 || 10;
+  const x = (i) => pl + ((i + 0.5) * (W - pl - pr)) / 12;
+  const yT = (v) => pt + (H - pt - pb) * (1 - (v - tmin) / (tmax - tmin));
+  const yP = (v) => pt + (H - pt - pb) * (1 - v / pmax);
+  const bw = ((W - pl - pr) / 12) * 0.55;
+  let g = '';
+  for (let i = 0; i <= 4; i++) {
+    const tvv = tmin + ((tmax - tmin) * i) / 4, pv = (pmax * i) / 4;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${yT(tvv)}" y2="${yT(tvv)}" class="gl"/>`
+      + `<text x="${pl - 6}" y="${yT(tvv) + 4}" text-anchor="end" class="tx">${Math.round(tvv)}°</text>`
+      + `<text x="${W - pr + 6}" y="${yT(tvv) + 4}" class="tx" fill="var(--rain)">${Math.round(pv)}</text>`;
+  }
+  const bars = monthly.map((r, i) => `<rect x="${x(i) - bw / 2}" y="${yP(r.prcp)}" width="${bw}" height="${yP(0) - yP(r.prcp)}" fill="var(--rain)" opacity=".35"><title>${monthName(r.m)}: ${niceNum(r.prcp, 0)} mm</title></rect>`).join('');
+  const line = (key, color, dash = '') => `<path d="${monthly.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${yT(r[key]).toFixed(1)}`).join('')}" fill="none" stroke="${color}" stroke-width="2.2" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`
+    + monthly.map((r, i) => `<circle cx="${x(i)}" cy="${yT(r[key])}" r="3" fill="${color}"><title>${monthName(r.m)}: ${niceNum(r[key])} °C</title></circle>`).join('');
+  const labels = monthly.map((r, i) => `<text x="${x(i)}" y="${H - 9}" text-anchor="middle" class="tx">${monthName(r.m, true)}</text>`).join('');
+  const legend = [['h.lg.max', 'var(--bad)'], ['h.lg.mean', 'var(--accent)'], ['h.lg.min', '#38bdf8'], ['h.lg.rain', 'var(--rain)']]
+    .map(([k, c]) => `<span><i style="background:${c}"></i>${t(k)}</span>`).join('');
+  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${bars}${line('tmax', 'var(--bad)')}${line('tmean', 'var(--accent)')}${line('tmin', '#38bdf8')}${labels}</svg><div class="clegend">${legend}</div>`;
+}
+
 function renderHistory() {
   if (!histState) return;
   const { loc, data: h, fresh, added } = histState;
   if (!h) { return; }
   const m = h.meta;
+  const period = histState.period || 'all';
   const complete = h.annual.filter((a) => a.n >= 350);
+  // Series for the two charts: whole year (annual values) or one calendar month of every year
+  const seriesT = period === 'all' ? complete.filter((a) => a.tmean != null).map((a) => ({ x: a.y, v: a.tmean }))
+    : h.series.filter((r) => r[1] === +period && r[4] >= 25 && r[2] != null).map((r) => ({ x: r[0], v: r[2] }));
+  const seriesP = period === 'all' ? complete.filter((a) => a.prcp != null).map((a) => ({ x: a.y, v: a.prcp }))
+    : h.series.filter((r) => r[1] === +period && r[4] >= 25 && r[3] != null).map((r) => ({ x: r[0], v: r[3] }));
+  const pName = period === 'all' ? '' : monthName(+period);
+  const periodSel = `<label class="hperiod">${t('h.periodsel')} <select id="histPeriod"><option value="all">${t('h.period.all')}</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${+period === i + 1 ? 'selected' : ''}>${monthName(i + 1)}</option>`).join('')}</select></label>`;
   const fmtDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
   const rec = (k, unit, d = 1) => (h.records[k] ? `<div class="rcard"><span>${t('h.rec.' + k)}</span><b>${niceNum(h.records[k].v, d)} ${unit}</b><small>${fmtDate(h.records[k].d)}</small></div>` : '');
-  const months = h.monthly.map((r) => `<tr><th>${new Date(2000, r.m - 1, 1).toLocaleDateString(dateLocale(), { month: 'long' })}</th><td>${niceNum(r.tmean)}</td><td>${niceNum(r.tmax)}</td><td>${niceNum(r.tmin)}</td><td>${niceNum(r.prcp, 0)}</td><td>${niceNum(r.rainy, 1)}</td></tr>`).join('');
+  const months = h.monthly.map((r) => `<tr><th>${monthName(r.m)}</th><td>${niceNum(r.tmean)}</td><td>${niceNum(r.tmax)}</td><td>${niceNum(r.tmin)}</td><td>${niceNum(r.prcp, 0)}</td><td>${niceNum(r.rainy, 1)}</td></tr>`).join('');
   const maxP = Math.max(...h.annual.map((a) => a.prcp || 0), 1);
   const years = h.annual.slice().reverse().map((a) => `<tr><th>${a.y}${a.n < 350 ? '*' : ''}</th><td>${niceNum(a.tmean)}</td><td>${niceNum(a.tmax)}</td><td>${niceNum(a.tmin)}</td>
       <td><div class="pbar"><i style="width:${Math.round(((a.prcp || 0) / maxP) * 100)}%"></i><span>${niceNum(a.prcp, 0)}</span></div></td><td>${a.rainy}</td><td>${niceNum(a.gust, 0)}</td><td>${niceNum(a.snow)}</td></tr>`).join('');
@@ -665,20 +701,24 @@ function renderHistory() {
     </div>
     <h3>${t('h.rec.title')}</h3>
     <div class="rcards">${rec('hottest', '°C')}${rec('coldest', '°C')}${rec('wettest', 'mm')}${rec('windiest', 'km/h', 0)}${(h.records.snowiest && h.records.snowiest.v > 0) ? rec('snowiest', 'cm') : ''}</div>
+    <div class="h-toolbar">${periodSel}</div>
     <div class="h-charts">
-      <div><h3>${t('h.chart.temp')}</h3>${histChart(complete.filter((a) => a.tmean != null).map((a) => ({ x: a.y, v: a.tmean })), { kind: 'line', color: 'var(--accent)', unit: '°C', trend: true })}</div>
-      <div><h3>${t('h.chart.prcp')}</h3>${histChart(complete.filter((a) => a.prcp != null).map((a) => ({ x: a.y, v: a.prcp })), { kind: 'bar', color: 'var(--rain)', unit: 'mm', d: 0 })}</div>
+      <div><h3>${period === 'all' ? t('h.chart.temp') : t('h.chart.temp.m', { m: pName })}</h3>${histChart(seriesT, { kind: 'line', color: 'var(--accent)', unit: '°C', trend: true })}</div>
+      <div><h3>${period === 'all' ? t('h.chart.prcp') : t('h.chart.prcp.m', { m: pName })}</h3>${histChart(seriesP, { kind: 'bar', color: 'var(--rain)', unit: 'mm', d: 0 })}</div>
     </div>
+    <h3>${t('h.climate')}</h3>
+    <div class="h-climate">${climateChart(h.monthly)}</div>
     <h3>${t('h.monthly')}</h3>
     <div class="h-tablewrap"><table class="htable"><thead><tr><th>${t('h.col.month')}</th><th>${t('h.col.mean')}</th><th>${t('h.col.max')}</th><th>${t('h.col.min')}</th><th>${t('h.col.prcp')}</th><th>${t('h.col.rainy')}</th></tr></thead><tbody>${months}</tbody></table></div>
     <h3>${t('h.annual')}</h3>
     <div class="h-tablewrap tall"><table class="htable"><thead><tr><th>${t('h.col.year')}</th><th>${t('h.col.mean')}</th><th>${t('h.col.max')}</th><th>${t('h.col.min')}</th><th>${t('h.col.prcp')}</th><th>${t('h.col.rainy')}</th><th>${t('h.col.gust')}</th><th>${t('h.col.snow')}</th></tr></thead><tbody>${years}</tbody></table></div>
     <p class="hint">${t('h.partial')}</p>`;
   $('histUpdate').addEventListener('click', () => openHistory(loc, true));
+  $('histPeriod').addEventListener('change', (e) => { histState.period = e.target.value; renderHistory(); });
 }
 
 async function openHistory(loc, refresh = false) {
-  histState = { loc, data: null, fresh: false, added: 0 };
+  histState = { loc, data: null, fresh: false, added: 0, period: (histState && histState.loc.id === loc.id && histState.period) || 'all' };
   const wasHidden = histSec.hidden;
   histSec.hidden = false;
   if (wasHidden || !refresh) histSec.scrollIntoView({ behavior: 'smooth', block: 'start' });

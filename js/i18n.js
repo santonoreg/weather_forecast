@@ -33,6 +33,11 @@ const I18N = {
     'h.rec.hottest': 'Hottest day', 'h.rec.coldest': 'Coldest night', 'h.rec.wettest': 'Wettest day', 'h.rec.windiest': 'Strongest gust', 'h.rec.snowiest': 'Snowiest day',
     'h.chart.temp': 'Annual mean temperature', 'h.chart.prcp': 'Annual precipitation',
     'h.trend': 'Trend: {v} °C per decade',
+    'h.periodsel': 'Period',
+    'h.period.all': 'Whole year',
+    'h.chart.temp.m': 'Mean temperature – {m} of each year', 'h.chart.prcp.m': 'Precipitation – {m} of each year',
+    'h.climate': 'Climate diagram (average year)',
+    'h.lg.max': 'Max temp', 'h.lg.mean': 'Mean temp', 'h.lg.min': 'Min temp', 'h.lg.rain': 'Rainfall (mm)',
     'h.monthly': 'Monthly climate (average over all years)', 'h.annual': 'Year by year',
     'h.col.month': 'Month', 'h.col.year': 'Year', 'h.col.mean': 'Mean °C', 'h.col.max': 'Max °C', 'h.col.min': 'Min °C', 'h.col.prcp': 'Rain mm', 'h.col.rainy': 'Rainy days', 'h.col.gust': 'Gust km/h', 'h.col.snow': 'Snow cm',
     'h.partial': '* incomplete year. “Rainy days” = days with at least 1 mm.',
@@ -139,6 +144,11 @@ const I18N = {
     'h.rec.hottest': 'Θερμότερη ημέρα', 'h.rec.coldest': 'Ψυχρότερη νύχτα', 'h.rec.wettest': 'Πιο βροχερή ημέρα', 'h.rec.windiest': 'Ισχυρότερη ριπή', 'h.rec.snowiest': 'Πιο χιονισμένη ημέρα',
     'h.chart.temp': 'Μέση ετήσια θερμοκρασία', 'h.chart.prcp': 'Ετήσια βροχόπτωση',
     'h.trend': 'Τάση: {v} °C ανά δεκαετία',
+    'h.periodsel': 'Περίοδος',
+    'h.period.all': 'Ολόκληρο το έτος',
+    'h.chart.temp.m': 'Μέση θερμοκρασία – {m} κάθε έτους', 'h.chart.prcp.m': 'Βροχόπτωση – {m} κάθε έτους',
+    'h.climate': 'Κλιματικό διάγραμμα (μέσο έτος)',
+    'h.lg.max': 'Μέγ. θερμοκρασία', 'h.lg.mean': 'Μέση θερμοκρασία', 'h.lg.min': 'Ελάχ. θερμοκρασία', 'h.lg.rain': 'Βροχή (mm)',
     'h.monthly': 'Κλίμα ανά μήνα (μέσος όρος όλων των ετών)', 'h.annual': 'Έτος προς έτος',
     'h.col.month': 'Μήνας', 'h.col.year': 'Έτος', 'h.col.mean': 'Μέση °C', 'h.col.max': 'Μέγ. °C', 'h.col.min': 'Ελάχ. °C', 'h.col.prcp': 'Βροχή mm', 'h.col.rainy': 'Βροχερές ημέρες', 'h.col.gust': 'Ριπή km/h', 'h.col.snow': 'Χιόνι cm',
     'h.partial': '* ημιτελές έτος. «Βροχερές ημέρες» = ημέρες με τουλάχιστον 1 mm.',
@@ -214,6 +224,15 @@ const I18N = {
   },
 };
 
+const MONTHS = {
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  el: ['Ιανουάριος', 'Φεβρουάριος', 'Μάρτιος', 'Απρίλιος', 'Μάιος', 'Ιούνιος', 'Ιούλιος', 'Αύγουστος', 'Σεπτέμβριος', 'Οκτώβριος', 'Νοέμβριος', 'Δεκέμβριος'],
+};
+const MONTHS_SHORT = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  el: ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μάι', 'Ιουν', 'Ιουλ', 'Αυγ', 'Σεπ', 'Οκτ', 'Νοε', 'Δεκ'],
+};
+
 let LANG = 'en';
 try { const s = localStorage.getItem('wefo.lang'); if (s && I18N[s]) LANG = s; } catch (e) { /* ignore */ }
 
@@ -224,6 +243,7 @@ function t(key, vars) {
   return s;
 }
 const hasT = (key) => !!(I18N[LANG] && I18N[LANG][key]) || !!I18N.en[key];
+const monthName = (m, short = false) => (short ? MONTHS_SHORT : MONTHS)[LANG]?.[m - 1] || (short ? MONTHS_SHORT : MONTHS).en[m - 1];
 const dateLocale = () => (LANG === 'el' ? 'el-GR' : 'en-GB');
 
 /* Static texts in index.html: data-i18n (text), data-i18n-html, data-i18n-ph (placeholder), data-i18n-title */
