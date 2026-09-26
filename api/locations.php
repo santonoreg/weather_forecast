@@ -25,6 +25,8 @@ if ($method === 'POST') {
 if ($method === 'DELETE') {
     $id = (int)($_GET['id'] ?? 0);
     $pdo->prepare('DELETE FROM locations WHERE id = ?')->execute([$id]);
+    $pdo->prepare('DELETE FROM history_daily WHERE loc_id = ?')->execute([$id]);
+    $pdo->prepare('DELETE FROM history_meta WHERE loc_id = ?')->execute([$id]);
     json_out(['ok' => true]);
 }
 

@@ -72,6 +72,19 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 - Pick a place by **clicking on the map**, typing **latitude/longitude**, **searching by name**, or using **My location**.
 - The name is filled in automatically (reverse geocoding) and you can edit it.
 - **Save** the location: it is stored in the SQLite database and appears in the *Location* drop-down of the Forecast page. Saved locations are shown on the map and can be deleted.
+- **History** button next to every saved location: opens the long-term weather history for that place (see below).
+
+### Location history
+
+Click **History** next to a saved location to see what the weather has been like there since **1940**:
+
+- **Coverage:** which data grid point was used (its coordinates, its distance from your location and its elevation), the period and the number of days available.
+- **Records:** hottest day, coldest night, wettest day, strongest gust, snowiest day, with dates.
+- **Charts:** annual mean temperature with a trend line (°C per decade) and annual precipitation.
+- **Monthly climate:** average temperature (mean / max / min), rainfall and rainy days for each month over all years.
+- **Year by year:** mean / max / min temperature, precipitation (with bars), rainy days (≥ 1 mm), strongest gust and snowfall.
+
+The first time you open it, the app downloads the complete daily series (about 1.5 MB, a few seconds) from the Open-Meteo Historical Weather API for the grid point **nearest to the coordinates** (ERA5 / ERA5-Land reanalysis, ~10 km resolution) and **stores it in SQLite**. Every later visit is served from the local database in a fraction of a second; when the stored data is more than a week old, only the missing recent days are appended (or use *Check for newer data*). Deleting a location also deletes its stored history. Note that this is a reanalysis (a model constrained by observations), not station measurements.
 
 ### Forecast
 
@@ -271,10 +284,11 @@ api/locations.php   GET / POST / DELETE saved locations
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
+api/history.php     long-term daily history per saved location (download once, cached in SQLite)
 data/               SQLite database (created automatically, git-ignored)
 ```
 
-Database tables (created automatically): `locations(id, name, lat, lon, created_at)` and `cache(k, body, fetched_at)`.
+Database tables (created automatically): `locations(id, name, lat, lon, created_at)`, `cache(k, body, fetched_at)`, `history_daily(loc_id, d, tmax, tmin, tmean, prcp, wmax, gust, snow)` and `history_meta(loc_id, grid_lat, grid_lon, elevation, timezone, first_date, last_date, fetched_at)`. The history of one location takes roughly 2–3 MB.
 
 ## HTTP API
 
@@ -287,6 +301,7 @@ Database tables (created automatically): `locations(id, name, lat, lon, created_
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
 | `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
+| `GET api/history.php?id=ID[&refresh=1]` | history summary (records, monthly, annual) for a saved location; downloads and stores the data on first use |
 
 Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 
@@ -294,7 +309,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 
 ## Data, privacy and external services
 
-- **Server side:** saved locations and cached API responses in `data/wefo.sqlite`. No personal data or cookies.
+- **Server side:** saved locations, cached API responses and the downloaded weather history in `data/wefo.sqlite`. No personal data or cookies.
 - **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
 - **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station) and (reverse geocoding) Nominatim.
 - **Requests made by the browser:** map tiles (OpenStreetMap), Leaflet (unpkg CDN) and the Inter font (Google Fonts).

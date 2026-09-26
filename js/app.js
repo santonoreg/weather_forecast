@@ -575,6 +575,7 @@ function renderSaved() {
   $('savedList').innerHTML = state.locations.length ? state.locations.map((l) => `
     <li data-id="${l.id}">
       <div class="nm" data-act="fly"><b>${esc(l.name)}</b><small>${l.lat.toFixed(3)}, ${l.lon.toFixed(3)}</small></div>
+      <button data-act="hist">${t('saved.history')}</button>
       <button data-act="fc">${t('saved.forecast')}</button>
       <button class="del" data-act="del" title="${t('saved.delete')}">✕</button>
     </li>`).join('') : `<li><span class="hint">${t('saved.none')}</span></li>`;
@@ -584,6 +585,7 @@ $('savedList').addEventListener('click', async (e) => {
   if (!li || !act) return;
   const loc = state.locations.find((l) => l.id == li.dataset.id);
   if (act === 'fc') setCurrent(loc, true);
+  if (act === 'hist') openHistory(loc);
   if (act === 'fly') { initMap(); pickPoint(loc.lat, loc.lon, loc.name); map.setView([loc.lat, loc.lon], 10); }
   if (act === 'del' && confirm(t('confirm.delete', { n: loc.name }))) {
     await api('api/locations.php?id=' + loc.id, { method: 'DELETE' });
@@ -601,9 +603,100 @@ function showView(name) {
 document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
 document.addEventListener('click', (e) => { const a = e.target.closest('[data-goto]'); if (a) { e.preventDefault(); showView(a.dataset.goto); } });
 
+/* ================= History dialog ================= */
+const histDlg = $('histDlg');
+let histState = null;   // { loc, data }
+
+function niceNum(v, d = 1) { return v == null ? '–' : Number(v).toLocaleString(dateLocale(), { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+/* Simple SVG chart: kind = 'line' | 'bar', points = [{x: year, v: value}] */
+function histChart(points, { kind, color, unit, d = 1, trend = false }) {
+  if (points.length < 2) return '';
+  const W = 640, H = 190, pl = 44, pr = 10, pt = 12, pb = 24;
+  const ys = points.map((p) => p.v);
+  let min = Math.min(...ys), max = Math.max(...ys);
+  if (kind === 'bar') min = 0; else { const pad = (max - min) * 0.12 || 1; min -= pad; max += pad; }
+  const x = (i) => pl + (i * (W - pl - pr)) / (points.length - 1);
+  const y = (v) => pt + (H - pt - pb) * (1 - (v - min) / (max - min || 1));
+  let g = '';
+  for (let i = 0; i <= 3; i++) {
+    const v = min + ((max - min) * i) / 3;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="gl"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" class="tx">${niceNum(v, d === 0 ? 0 : d)}</text>`;
+  }
+  points.forEach((p, i) => { if (p.x % 10 === 0) g += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" class="tx">${p.x}</text>`; });
+  let body = '';
+  if (kind === 'bar') {
+    const bw = Math.max(1.5, (W - pl - pr) / points.length - 1);
+    body = points.map((p, i) => `<rect x="${x(i) - bw / 2}" y="${y(p.v)}" width="${bw}" height="${y(min) - y(p.v)}" fill="${color}" opacity=".85"><title>${p.x}: ${niceNum(p.v, d)} ${unit}</title></rect>`).join('');
+  } else {
+    body = `<path d="${points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`).join('')}" fill="none" stroke="${color}" stroke-width="1.6"/>`
+      + points.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.v)}" r="2.2" fill="${color}"><title>${p.x}: ${niceNum(p.v, d)} ${unit}</title></circle>`).join('');
+    if (trend) {
+      const n = points.length, mx = mean(points.map((p) => p.x)), my = mean(ys);
+      const slope = points.reduce((a, p) => a + (p.x - mx) * (p.v - my), 0) / points.reduce((a, p) => a + (p.x - mx) ** 2, 0);
+      const y0 = my + slope * (points[0].x - mx), y1 = my + slope * (points[n - 1].x - mx);
+      body += `<line x1="${x(0)}" y1="${y(y0)}" x2="${x(n - 1)}" y2="${y(y1)}" stroke="var(--bad)" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+      body += `<text x="${W - pr}" y="${pt + 8}" text-anchor="end" class="tx" fill="var(--bad)">${t('h.trend', { v: (slope * 10 >= 0 ? '+' : '') + niceNum(slope * 10, 2) })}</text>`;
+    }
+  }
+  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
+}
+
+function renderHistory() {
+  if (!histState) return;
+  const { loc, data: h, fresh } = histState;
+  if (!h) { return; }
+  const m = h.meta;
+  const complete = h.annual.filter((a) => a.n >= 350);
+  const fmtDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  const rec = (k, unit, d = 1) => (h.records[k] ? `<div class="rcard"><span>${t('h.rec.' + k)}</span><b>${niceNum(h.records[k].v, d)} ${unit}</b><small>${fmtDate(h.records[k].d)}</small></div>` : '');
+  const months = h.monthly.map((r) => `<tr><th>${new Date(2000, r.m - 1, 1).toLocaleDateString(dateLocale(), { month: 'long' })}</th><td>${niceNum(r.tmean)}</td><td>${niceNum(r.tmax)}</td><td>${niceNum(r.tmin)}</td><td>${niceNum(r.prcp, 0)}</td><td>${niceNum(r.rainy, 1)}</td></tr>`).join('');
+  const maxP = Math.max(...h.annual.map((a) => a.prcp || 0), 1);
+  const years = h.annual.slice().reverse().map((a) => `<tr><th>${a.y}${a.n < 350 ? '*' : ''}</th><td>${niceNum(a.tmean)}</td><td>${niceNum(a.tmax)}</td><td>${niceNum(a.tmin)}</td>
+      <td><div class="pbar"><i style="width:${Math.round(((a.prcp || 0) / maxP) * 100)}%"></i><span>${niceNum(a.prcp, 0)}</span></div></td><td>${a.rainy}</td><td>${niceNum(a.gust, 0)}</td><td>${niceNum(a.snow)}</td></tr>`).join('');
+  $('histBody').innerHTML = `
+    <h2>${t('h.title')} – ${esc(loc.name)}</h2>
+    <div class="h-info">
+      <div>📍 ${t('h.grid', { lat: m.grid_lat.toFixed(4), lon: m.grid_lon.toFixed(4), km: m.distance_km, el: Math.round(m.elevation ?? 0) })}</div>
+      <div>📅 ${t('h.period', { first: m.first, last: m.last, days: m.days.toLocaleString(dateLocale()) })}</div>
+      <div class="muted">${t('h.source', { date: new Date(m.fetched_at * 1000).toLocaleDateString(dateLocale()) })}</div>
+      <div class="h-status">${fresh ? t('h.status.new') : t('h.status.cached')} <button type="button" class="btn ghost small" id="histUpdate">${t('h.update')}</button></div>
+    </div>
+    <h3>${t('h.rec.title')}</h3>
+    <div class="rcards">${rec('hottest', '°C')}${rec('coldest', '°C')}${rec('wettest', 'mm')}${rec('windiest', 'km/h', 0)}${(h.records.snowiest && h.records.snowiest.v > 0) ? rec('snowiest', 'cm') : ''}</div>
+    <div class="h-charts">
+      <div><h3>${t('h.chart.temp')}</h3>${histChart(complete.filter((a) => a.tmean != null).map((a) => ({ x: a.y, v: a.tmean })), { kind: 'line', color: 'var(--accent)', unit: '°C', trend: true })}</div>
+      <div><h3>${t('h.chart.prcp')}</h3>${histChart(complete.filter((a) => a.prcp != null).map((a) => ({ x: a.y, v: a.prcp })), { kind: 'bar', color: 'var(--rain)', unit: 'mm', d: 0 })}</div>
+    </div>
+    <h3>${t('h.monthly')}</h3>
+    <div class="h-tablewrap"><table class="htable"><thead><tr><th>${t('h.col.month')}</th><th>${t('h.col.mean')}</th><th>${t('h.col.max')}</th><th>${t('h.col.min')}</th><th>${t('h.col.prcp')}</th><th>${t('h.col.rainy')}</th></tr></thead><tbody>${months}</tbody></table></div>
+    <h3>${t('h.annual')}</h3>
+    <div class="h-tablewrap tall"><table class="htable"><thead><tr><th>${t('h.col.year')}</th><th>${t('h.col.mean')}</th><th>${t('h.col.max')}</th><th>${t('h.col.min')}</th><th>${t('h.col.prcp')}</th><th>${t('h.col.rainy')}</th><th>${t('h.col.gust')}</th><th>${t('h.col.snow')}</th></tr></thead><tbody>${years}</tbody></table></div>
+    <p class="hint">${t('h.partial')}</p>`;
+  $('histUpdate').addEventListener('click', () => openHistory(loc, true));
+}
+
+async function openHistory(loc, refresh = false) {
+  histState = { loc, data: null, fresh: false };
+  if (!histDlg.open) histDlg.showModal();
+  $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="loading"><div class="spinner"></div> <span>${t('h.loading.first')}</span></div>`;
+  try {
+    const h = await api(`api/history.php?id=${loc.id}${refresh ? '&refresh=1' : ''}`);
+    if (!histState || histState.loc.id !== loc.id) return;
+    histState.data = h; histState.fresh = h.downloaded;
+    renderHistory();
+  } catch (err) {
+    $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="notice error">${esc(err.message)}</div>`;
+  }
+}
+$('histClose').addEventListener('click', () => histDlg.close());
+histDlg.addEventListener('click', (e) => { if (e.target === histDlg) histDlg.close(); });
+histDlg.addEventListener('close', () => { histState = null; });
+
 /* ================= Language ================= */
 function onLangChange() {
   renderSaved();
+  if (histDlg.open && histState && histState.data) renderHistory();
   if (state.data) renderAll();
 }
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));

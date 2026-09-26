@@ -53,6 +53,18 @@ function db(): PDO
         body TEXT NOT NULL,
         fetched_at INTEGER NOT NULL
     )');
+    // Long-term daily history per saved location (downloaded once, then cached here)
+    $pdo->exec('CREATE TABLE IF NOT EXISTS history_daily (
+        loc_id INTEGER NOT NULL,
+        d TEXT NOT NULL,
+        tmax REAL, tmin REAL, tmean REAL, prcp REAL, wmax REAL, gust REAL, snow REAL,
+        PRIMARY KEY (loc_id, d)
+    ) WITHOUT ROWID');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS history_meta (
+        loc_id INTEGER PRIMARY KEY,
+        grid_lat REAL, grid_lon REAL, elevation REAL, timezone TEXT,
+        first_date TEXT, last_date TEXT, fetched_at INTEGER NOT NULL
+    )');
     return $pdo;
 }
 
