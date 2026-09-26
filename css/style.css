@@ -208,3 +208,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* METAR values inside the reliability table */
 .grid td small.obs { color: var(--accent); font-weight: 600; }
+
+/* Reliability cells with explicit source labels */
+.src { display: flex; align-items: baseline; justify-content: center; gap: 5px; line-height: 1.35; white-space: nowrap; }
+.src i { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; color: var(--muted); }
+.src b { font-weight: 600; }
+.src small { display: inline !important; }
+.src.obs, .src.obs i { color: var(--accent); }
+.relnote { margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--panel); color: var(--muted); font-size: 13px; line-height: 1.5; }

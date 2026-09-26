@@ -285,15 +285,18 @@ function renderReliability() {
   if (!v) {
     $('grid').innerHTML = `<tbody><tr><td class="pad">${state.verifyErr ? esc(t('r.unavailable', { e: state.verifyErr })) : t('r.loading')}</td></tr></tbody>`;
     $('legend').textContent = '';
+    $('relNote').hidden = true;
     return;
   }
   const ids = Object.entries(v.models).sort((a, b) => (b[1].score ?? -1) - (a[1].score ?? -1));
+  const src = (label, value, extra = '', cls = '') => `<div class="src ${cls}"><i>${label}</i> <b>${value}</b>${extra}</div>`;
   const mae = (m, k, d = 1) => {
     if (m.mae[k] == null) return '–';
     const o = m.obs?.mae?.[k];
-    return `${m.mae[k].toFixed(d)}<small>${t('r.bias', { v: (m.bias[k] > 0 ? '+' : '') + m.bias[k].toFixed(d) })}</small>${o != null ? `<small class="obs">${t('r.obs', { v: o.toFixed(d) })}</small>` : ''}`;
+    const bias = `<small>${t('r.bias', { v: (m.bias[k] > 0 ? '+' : '') + m.bias[k].toFixed(d) })}</small>`;
+    return src('ERA5', m.mae[k].toFixed(d), bias) + (o != null ? src('METAR', o.toFixed(d), '', 'obs') : '');
   };
-  const pct = (e, o) => (e != null ? Math.round(e * 100) + '%' : '–') + (o != null ? `<small class="obs">${t('r.obs', { v: Math.round(o * 100) + '%' })}</small>` : '');
+  const pct = (e, o) => (e != null ? src('ERA5', Math.round(e * 100) + '%') : '–') + (o != null ? src('METAR', Math.round(o * 100) + '%', '', 'obs') : '');
   let html = `<thead><tr><th class="rowh">${t('r.model')}</th><th>${t('r.score')}</th><th>${t('r.temp')}</th><th>${t('r.wind')}</th><th>${t('r.cloud')}</th><th>${t('r.hum')}</th><th>${t('r.press')}</th><th>${t('r.rain')}</th><th>${t('r.code')}</th></tr></thead><tbody>`;
   ids.forEach(([id, m]) => {
     html += `<tr class="${state.disabled.has(id) ? 'off' : ''}"><th class="rowh">${esc(nameById(id))}${state.disabled.has(id) ? ` <small>${t('r.disabled')}</small>` : ''}</th>
@@ -303,6 +306,7 @@ function renderReliability() {
       <td class="cell">${pct(m.csi, m.obs?.csi)}</td><td class="cell">${pct(m.code_acc, m.obs?.code_acc)}</td></tr>`;
   });
   $('grid').innerHTML = html + '</tbody>';
+  $('relNote').innerHTML = t('r.howto'); $('relNote').hidden = false;
   const st = v.station
     ? t('r.station', { id: v.station.id, name: esc(v.station.name), km: v.station.km, n: v.station.reports, start: v.station.start, end: v.station.end })
     : t('r.nostation', { km: 60 });
@@ -313,6 +317,7 @@ const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc 
 
 function renderGrid() {
   const { data, param } = state;
+  $('relNote').hidden = param !== 'reliability';
   if (param === 'reliability') return renderReliability();
   const cols = columns();
   const { rows, summary, prob, summaryLabel, probLabel } = buildRows(param, cols);

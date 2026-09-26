@@ -47,6 +47,7 @@ const I18N = {
     'r.station': '<b>Real observations:</b> METAR {id} – {name}, {km} km from the location, {n} hourly reports ({start} – {end}).',
     'r.nostation': '<b>Real observations:</b> no METAR station with enough recent reports within {km} km – ERA5 only.',
     'r.obs': 'METAR {v}',
+    'r.howto': '<b>How to read it:</b> in each cell <b>ERA5</b> is the model’s error against the ERA5 reanalysis and <b>METAR</b> (blue) is its error against real airport measurements. Lower is better. In the rain and weather columns the values are the share of correct detections – higher is better. The score combines both sources.',
     'vf.loading': '· loading reliability…', 'vf.unavail': '· unavailable',
 
     'm.active': '{a}/{n} active', 'm.dup': 'Same data as {n} (outside its coverage) – not counted twice',
@@ -132,6 +133,7 @@ const I18N = {
     'r.station': '<b>Πραγματικές μετρήσεις:</b> METAR {id} – {name}, {km} km από την τοποθεσία, {n} ωριαίες αναφορές ({start} – {end}).',
     'r.nostation': '<b>Πραγματικές μετρήσεις:</b> δεν υπάρχει σταθμός METAR με αρκετές πρόσφατες αναφορές σε απόσταση {km} km – χρησιμοποιείται μόνο το ERA5.',
     'r.obs': 'METAR {v}',
+    'r.howto': '<b>Πώς διαβάζεται:</b> σε κάθε κελί το <b>ERA5</b> είναι το σφάλμα του μοντέλου ως προς την ανάλυση ERA5 και το <b>METAR</b> (μπλε) το σφάλμα ως προς πραγματικές μετρήσεις αεροδρομίου. Όσο μικρότερο τόσο καλύτερο. Στις στήλες βροχής και καιρού οι τιμές είναι το ποσοστό σωστών εντοπισμών – όσο μεγαλύτερο τόσο καλύτερο. Ο βαθμός συνδυάζει και τις δύο πηγές.',
     'vf.loading': '· φόρτωση αξιοπιστίας…', 'vf.unavail': '· μη διαθέσιμη',
 
     'm.active': '{a}/{n} ενεργά', 'm.dup': 'Ίδια δεδομένα με {n} (εκτός περιοχής κάλυψης) – δεν μετράει διπλά',
