@@ -195,3 +195,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .models summary::after { content: "▾"; color: var(--muted); font-size: 12px; }
 .models summary span { margin: 0; color: var(--text); font-size: inherit; }
 .toolbar .chk { height: 38px; padding-bottom: 0; }
+
+/* Ίδια γραμματοσειρά σε όλα τα στοιχεία της γραμμής εργαλείων */
+.toolbar select, .models summary, .models summary span, .toolbar .btn, .toolbar .chk { font-family: "Inter", system-ui, "Segoe UI", Roboto, sans-serif; font-size: 14px; font-weight: 500; line-height: 1.2; color: var(--text); }
+.toolbar .chk { font-size: 13px; }
