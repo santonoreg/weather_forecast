@@ -257,6 +257,16 @@ function buildRows(param, cols) {
   return { rows, summary, prob, summaryLabel, probLabel };
 }
 
+/* Κεντράρει οριζόντια την τρέχουσα ώρα/διάστημα όταν ο πίνακας έχει scroll */
+function centerNow() {
+  const wrap = document.querySelector('.table-wrap'), th = document.querySelector('#grid thead th.now'), first = document.querySelector('#grid thead .rowh');
+  if (!wrap) return;
+  if (!th || wrap.scrollWidth <= wrap.clientWidth) { wrap.scrollLeft = 0; return; }
+  const w = wrap.getBoundingClientRect(), t = th.getBoundingClientRect();
+  const visible = wrap.clientWidth - first.offsetWidth;   // η πρώτη στήλη μένει καρφωμένη
+  wrap.scrollLeft = Math.max(0, wrap.scrollLeft + (t.left - w.left) - first.offsetWidth - (visible - t.width) / 2);
+}
+
 const scoreCls = (v) => (v >= 80 ? 'hi' : v >= 60 ? 'mid' : 'lo');
 
 function renderReliability() {
@@ -297,6 +307,7 @@ function renderGrid() {
   html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
   html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr></tbody>`;
   $('grid').innerHTML = html;
+  centerNow();
   $('legend').textContent = LEGENDS[param] + ` Πάροχοι με δεδομένα: ${rows.length}.` + (weightsOn() ? ' Η τελευταία γραμμή στηρίζεται σε στάθμιση με την αξιοπιστία κάθε μοντέλου (καρτέλα Αξιοπιστία).' : '');
 }
 
