@@ -38,6 +38,14 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Locations & Map](docs/screenshots/locations-map.png)
 
+**Location history** – records, annual/monthly climate and charts since 1940 for a saved location (downloaded once, then cached)
+
+![Location history](docs/screenshots/history.png)
+
+**Dark theme**
+
+![Dark theme](docs/screenshots/forecast-dark.png)
+
 **Responsive layout** (phone) and **Greek UI**
 
 <p>
