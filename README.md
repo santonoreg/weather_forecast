@@ -92,7 +92,7 @@ Click **History** next to a saved location to see what the weather has been like
 - **Monthly climate:** average temperature (mean / max / min), rainfall and rainy days for each month over all years.
 - **Year by year:** mean / max / min temperature, precipitation (with bars), rainy days (≥ 1 mm), strongest gust and snowfall.
 
-The first time you open it, the app downloads the complete daily series (about 1.5 MB, a few seconds) from the Open-Meteo Historical Weather API for the grid point **nearest to the coordinates** (ERA5 / ERA5-Land reanalysis, ~10 km resolution) and **stores it in SQLite**. Every later visit is served from the local database in a fraction of a second; when the stored data is more than a week old, only the missing recent days are appended (or use *Check for newer data*). Deleting a location also deletes its stored history. Note that this is a reanalysis (a model constrained by observations), not station measurements.
+The first time you open it, the app downloads the complete daily series (about 1.5 MB, a few seconds) from the Open-Meteo Historical Weather API for the grid point **nearest to the coordinates** (ERA5 / ERA5-Land reanalysis, ~10 km resolution) and **stores it in SQLite**. Every later visit is served from the local database in a fraction of a second, and **only the days that are not stored yet are downloaded and appended** (checked at most once every 6 hours, or immediately with *Check for new data now*). Deleting a location also deletes its stored history. Note that this is a reanalysis (a model constrained by observations), not station measurements.
 
 ### Forecast
 

@@ -644,7 +644,7 @@ function histChart(points, { kind, color, unit, d = 1, trend = false }) {
 
 function renderHistory() {
   if (!histState) return;
-  const { loc, data: h, fresh } = histState;
+  const { loc, data: h, fresh, added } = histState;
   if (!h) { return; }
   const m = h.meta;
   const complete = h.annual.filter((a) => a.n >= 350);
@@ -660,7 +660,7 @@ function renderHistory() {
       <div>📍 ${t('h.grid', { lat: m.grid_lat.toFixed(4), lon: m.grid_lon.toFixed(4), km: m.distance_km, el: Math.round(m.elevation ?? 0) })}</div>
       <div>📅 ${t('h.period', { first: m.first, last: m.last, days: m.days.toLocaleString(dateLocale()) })}</div>
       <div class="muted">${t('h.source', { date: new Date(m.fetched_at * 1000).toLocaleDateString(dateLocale()) })}</div>
-      <div class="h-status">${fresh ? t('h.status.new') : t('h.status.cached')} <button type="button" class="btn ghost small" id="histUpdate">${t('h.update')}</button></div>
+      <div class="h-status">${fresh ? t('h.status.new') : added > 0 ? t('h.status.added', { n: added }) : t('h.status.cached')} <button type="button" class="btn ghost small" id="histUpdate">${t('h.update')}</button></div>
     </div>
     <h3>${t('h.rec.title')}</h3>
     <div class="rcards">${rec('hottest', '°C')}${rec('coldest', '°C')}${rec('wettest', 'mm')}${rec('windiest', 'km/h', 0)}${(h.records.snowiest && h.records.snowiest.v > 0) ? rec('snowiest', 'cm') : ''}</div>
@@ -677,13 +677,13 @@ function renderHistory() {
 }
 
 async function openHistory(loc, refresh = false) {
-  histState = { loc, data: null, fresh: false };
+  histState = { loc, data: null, fresh: false, added: 0 };
   if (!histDlg.open) histDlg.showModal();
   $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="loading"><div class="spinner"></div> <span>${t('h.loading.first')}</span></div>`;
   try {
     const h = await api(`api/history.php?id=${loc.id}${refresh ? '&refresh=1' : ''}`);
     if (!histState || histState.loc.id !== loc.id) return;
-    histState.data = h; histState.fresh = h.downloaded;
+    histState.data = h; histState.fresh = h.downloaded; histState.added = h.added || 0;
     renderHistory();
   } catch (err) {
     $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="notice error">${esc(err.message)}</div>`;

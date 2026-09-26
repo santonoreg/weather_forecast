@@ -2,14 +2,15 @@
 // Long-term daily weather history for a saved location.
 // First request: downloads the whole ERA5 / ERA5-Land archive (1940 -> today-6 days) from the Open-Meteo Historical
 // Weather API for the grid point nearest to the location and stores it in SQLite. Later requests are served from the
-// database; only the missing recent days are appended (when the data is older than a week or on refresh=1).
+// database; every time the history is opened only the days that are not stored yet are downloaded and appended
+// (at most one check per HIST_CHECK_SECONDS, or immediately with refresh=1).
 declare(strict_types=1);
 require __DIR__ . '/db.php';
 set_time_limit(240);
 
 const HIST_START = '1940-01-01';
 const HIST_LAG_DAYS = 6;          // the archive is published with a delay of a few days
-const HIST_STALE_SECONDS = 7 * 86400;
+const HIST_CHECK_SECONDS = 6 * 3600;   // do not ask the API again more often than this (unless refresh=1)
 
 $id = (int)($_GET['id'] ?? 0);
 $pdo = db();
@@ -25,8 +26,10 @@ $meta = $mt->fetch() ?: null;
 $end = gmdate('Y-m-d', time() - HIST_LAG_DAYS * 86400);
 $refresh = !empty($_GET['refresh']);
 $downloaded = false;
+$added = 0;
 
-$needFetch = !$meta || ($meta['last_date'] < $end && ($refresh || time() - (int)$meta['fetched_at'] > HIST_STALE_SECONDS));
+$prevLast = $meta['last_date'] ?? null;
+$needFetch = !$meta || ($meta['last_date'] < $end && ($refresh || time() - (int)$meta['fetched_at'] > HIST_CHECK_SECONDS));
 if ($needFetch) {
     $from = $meta ? gmdate('Y-m-d', strtotime($meta['last_date'] . ' UTC') - 3 * 86400) : HIST_START;
     $url = 'https://archive-api.open-meteo.com/v1/archive?' . http_build_query([
@@ -49,6 +52,7 @@ if ($needFetch) {
                     $D['precipitation_sum'][$i] ?? null, $D['wind_speed_10m_max'][$i] ?? null, $D['wind_gusts_10m_max'][$i] ?? null, $D['snowfall_sum'][$i] ?? null];
             if ($row[0] === null && $row[1] === null && $row[3] === null) continue;   // not published yet
             $ins->execute(array_merge([$id, $d], $row));
+            if ($prevLast === null || $d > $prevLast) $added++;
             $first = $first ?? $d;
             $last = $d;
         }
@@ -56,7 +60,7 @@ if ($needFetch) {
         $pdo->prepare('INSERT OR REPLACE INTO history_meta (loc_id, grid_lat, grid_lon, elevation, timezone, first_date, last_date, fetched_at) VALUES (?,?,?,?,?,?,?,?)')
             ->execute([$id, $j['latitude'] ?? null, $j['longitude'] ?? null, $j['elevation'] ?? null, $j['timezone'] ?? null,
                        $meta['first_date'] ?? $first, $last ?? ($meta['last_date'] ?? null), time()]);
-        $downloaded = true;
+        $downloaded = !$prevLast;   // true only for the very first download
         $mt->execute([$id]);
         $meta = $mt->fetch();
     }
@@ -120,6 +124,7 @@ json_out([
         'first' => $meta['first_date'], 'last' => $meta['last_date'], 'days' => (int)$cnt['c'], 'fetched_at' => (int)$meta['fetched_at'],
     ] : null,
     'downloaded' => $downloaded,
+    'added' => $added,
     'records' => $rec,
     'monthly' => $monthly,
     'annual' => $annual,
