@@ -25,7 +25,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Forecast – wind](docs/screenshots/forecast-wind.png)
 
-**Reliability** – per-model score, error and bias against ERA5 over the last 28 days
+**Reliability** – per-model score, error and bias against ERA5 (last 28 days) and, in blue, against real METAR observations of the nearest airport
 
 ![Reliability](docs/screenshots/reliability.png)
 
@@ -114,7 +114,7 @@ Choose a saved location and you get:
 | ECMWF IFS, NOAA GFS, DWD ICON, Environment Canada GEM, Météo-France, UK Met Office, JMA, CMA GRAPES, BOM ACCESS, KNMI, DMI, MET Norway Nordic | one request to the [Open-Meteo forecast API](https://open-meteo.com/) with the `models=` parameter |
 | MET Norway / Yr (global) | directly from the [MET Norway Locationforecast API](https://api.met.no/) (converted to the same hourly format) |
 
-Models that return no data for the location are dropped automatically. Everything is fetched **server-side** (`api/forecast.php`) and cached in SQLite for **30 minutes** per location.
+Real observations used only for the reliability score come from [aviationweather.gov](https://aviationweather.gov/data/api/) (METAR). Models that return no data for the location are dropped automatically. Everything is fetched **server-side** (`api/forecast.php`) and cached in SQLite for **30 minutes** per location.
 
 ### Consensus and probability
 
@@ -131,15 +131,23 @@ The thresholds are constants at the top of `js/app.js` (`RAIN_THR`, `WIND_THR`, 
 
 ### Model verification (Reliability tab)
 
-To find out which models have recently been closest to reality **for your location**, `api/verify.php`:
+To find out which models have recently been closest to reality **for your location**, `api/verify.php` compares every model's *archived forecasts* (Open-Meteo **Historical Forecast API**) with two references:
 
-1. downloads the last **28 days** (ending 6 days ago, because ERA5 is published with a delay) of *archived model forecasts* from the Open-Meteo **Historical Forecast API**, and
-2. downloads the **ERA5 reanalysis** from the Open-Meteo **Archive API** as the reference ("what actually happened"),
-3. computes per model: mean absolute error and bias for temperature, wind, cloud cover, humidity and pressure; the *critical success index* for detecting wet hours (≥ 0.1 mm); and the share of hours with the correct weather category.
+1. **ERA5 reanalysis** (Open-Meteo **Archive API**) – a gridded "what actually happened" for the last **28 days** (ending 6 days ago, because ERA5 is published with a delay). Available everywhere, but it is a model product, produced with ECMWF's system, so it slightly favours ECMWF.
+2. **Real METAR observations** – the hourly weather reports of the **nearest airport station** within 60 km (from [aviationweather.gov](https://aviationweather.gov/data/api/), no key needed). Roughly the last 1–2 weeks (the API returns up to ~400 reports). METAR gives measured temperature, dew point (→ relative humidity), wind, pressure, cloud cover and present weather (rain, snow, thunderstorm, fog).
 
-The **score (0–100)** is the mean skill across those parameters. The score is turned into **weights between 0.5 and 1.8** (average = 1) per parameter. With *Weight by reliability* enabled, the averages, chances and weather-category shares above use these weights, so better models count more. The result is cached for 24 hours per location.
+For each model and reference it computes: mean absolute error and bias for temperature, wind, cloud cover, humidity and pressure; the *critical success index* for detecting wet hours; and the share of hours with the correct weather category (drizzle and rain are treated as one category for this comparison).
 
-Models without archived data for the area (regional models outside their domain) and Yr are not scored and count with weight 1. Rain weights are only applied when the period contains enough rain events to be meaningful.
+**Combining the two:** per parameter, `skill = 0.6 × METAR skill + 0.4 × ERA5 skill` when at least 48 matched hourly observations exist; otherwise ERA5 alone is used. Observations get the larger share because ERA5 is not independent of the models being judged. The **score (0–100)** is the mean skill across parameters, and the skills are turned into **weights between 0.5 and 1.8** (average = 1) per parameter. With *Weight by reliability* enabled, the averages, chances and weather-category shares use these weights, so better models count more. Results are cached for 24 hours per location.
+
+In the Reliability table every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table names the station, its distance and the number of reports used.
+
+Notes and caveats:
+
+- An airport is a point measurement. Distance, elevation and local effects (sea breeze, urban heat) add errors that affect all models similarly; the station is shown so you can judge how representative it is.
+- Pressure comes from the METAR sea-level pressure (or altimeter setting), and rain/weather from the *present-weather* code at report time – rain detection against METAR is therefore approximate.
+- Models without archived data for the area (regional models outside their domain) and Yr are not scored and count with weight 1. Rain weights are only used when the period contains enough rain events to be meaningful.
+- If no METAR station with enough reports is near the location, ERA5 alone is used and the note says so.
 
 ---
 
@@ -148,7 +156,7 @@ Models without archived data for the area (regional models outside their domain)
 - **PHP 8.0+** (developed on 8.4) with the extensions **`pdo_sqlite`** and **`curl`** (`mbstring` is optional)
 - A web server that can run PHP (Apache, Nginx + PHP-FPM, or the built-in PHP server for development)
 - Write permission for the web-server user on the `data/` directory
-- Outbound HTTPS access to `open-meteo.com`, `api.met.no`, `nominatim.openstreetmap.org`, `unpkg.com`, `fonts.googleapis.com` and OpenStreetMap tile servers
+- Outbound HTTPS access to `open-meteo.com`, `api.met.no`, `aviationweather.gov`, `nominatim.openstreetmap.org`, `unpkg.com`, `fonts.googleapis.com` and OpenStreetMap tile servers
 
 ## Installation
 
@@ -241,7 +249,8 @@ There is no config file. The relevant constants are:
 |---|---|---|
 | `api/forecast.php` | `CACHE_TTL` (1800) | forecast cache in seconds |
 | `api/forecast.php` | `$MODELS` | Open-Meteo model ids and display names |
-| `api/verify.php` | `WINDOW_DAYS` (28), `LAG_DAYS` (6), `VERIFY_TTL` (86400) | verification window, ERA5 delay, cache |
+| `api/verify.php` | `WINDOW_DAYS` (28), `LAG_DAYS` (6), `VERIFY_TTL` (86400) | ERA5 window, ERA5 delay, cache |
+| `api/verify.php` | `MAX_STATION_KM` (60), `MIN_OBS` (48), `OBS_WEIGHT` (0.6), `METAR_HOURS` (360) | METAR station distance limit, minimum matched observations, METAR share of the blended skill, how far back to ask for reports |
 | `api/verify.php` | `$TOL` | error at which a parameter's skill reaches 0 |
 | `api/db.php` | `http_get()` | User-Agent and cURL options |
 | `js/app.js` | `RAIN_THR`, `WIND_THR`, `TOL` | thresholds for the probabilities |
@@ -260,7 +269,7 @@ api/db.php          SQLite connection, JSON helpers, HTTP client, error handling
 api/locations.php   GET / POST / DELETE saved locations
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/forecast.php    multi-model forecast aggregation + 30 min cache
-api/verify.php      model verification against ERA5 + 24 h cache
+api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
 data/               SQLite database (created automatically, git-ignored)
 ```
 
@@ -276,7 +285,7 @@ Database tables (created automatically): `locations(id, name, lat, lon, created_
 | `GET api/geocode.php?q=TEXT&lang=en\|el` | search places |
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
-| `GET api/verify.php?lat=..&lon=..` | per-model scores, errors and weights |
+| `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
 
 Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 
@@ -286,13 +295,13 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 
 - **Server side:** saved locations and cached API responses in `data/wefo.sqlite`. No personal data or cookies.
 - **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
-- **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway and (reverse geocoding) Nominatim.
+- **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station) and (reverse geocoding) Nominatim.
 - **Requests made by the browser:** map tiles (OpenStreetMap), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
-- **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim and MET Norway have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment.
+- **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment.
 
 ## Limitations
 
-- The reference for verification is **ERA5 reanalysis, not station measurements**, and ERA5 is produced with ECMWF's model, so ECMWF is slightly favoured.
+- ERA5 is a reanalysis produced with ECMWF's model, so on its own it slightly favours ECMWF; real METAR observations reduce this bias where a station is near, but an airport is a single point that may not represent your exact spot.
 - Archived forecasts mostly represent short lead times, so the score reflects short-range skill more than day-5 skill.
 - Weather icons for models without a weather code are derived heuristically.
 - cURL certificate verification is disabled in `api/db.php` (`CURLOPT_SSL_VERIFYPEER => false`) so it works out of the box on Windows without a CA bundle. On a production server, remove that line (or point cURL at a CA bundle).
@@ -310,4 +319,5 @@ Open `js/i18n.js`, copy the `en` block to a new key (for example `de: { ... }`),
 | *Failed to fetch data from Open-Meteo* | no outbound HTTPS from the server, or the API rate limit was hit – retry later |
 | Table looks old after an update | hard refresh (Ctrl+F5); check the `?v=` version in `index.html` |
 | Reliability tab empty / "unavailable" | the historical APIs could not be reached; the forecast tabs still work |
+| Reliability note says "ERA5 only" | no METAR station with enough recent reports within 60 km – normal for remote locations |
 | KNMI / DMI / MET Norway Nordic rows are "greyed out" | they do not cover your location and returned a copy of another model; they are counted once |
