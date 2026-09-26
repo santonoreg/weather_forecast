@@ -16,6 +16,7 @@ const I18N = {
     'pl.hint': 'Click on the map, enter coordinates or search for an area.', 'pl.saved': 'Saved locations',
     'footer.html': 'Data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (ECMWF, GFS, ICON, GEM, Météo-France, UKMO, JMA, CMA, KNMI, DMI, MET Norway) and <a href="https://api.met.no/" target="_blank" rel="noopener">MET Norway / Yr</a>. Map © OpenStreetMap. Probabilities are derived from the agreement between models and are not an official forecast.',
     'today': 'Today',
+    'theme.title': 'Switch light / dark theme',
 
     'p.weather': 'Weather', 'p.temperature_2m': 'Temperature', 'p.precip': 'Rain', 'p.wind': 'Wind', 'p.storm': 'Thunderstorm',
     'p.cloud_cover': 'Cloud cover', 'p.relative_humidity_2m': 'Humidity', 'p.pressure_msl': 'Pressure', 'p.reliability': 'Reliability',
@@ -102,6 +103,7 @@ const I18N = {
     'pl.hint': 'Κάνε κλικ στον χάρτη, γράψε συντεταγμένες ή αναζήτησε μια περιοχή.', 'pl.saved': 'Αποθηκευμένες τοποθεσίες',
     'footer.html': 'Δεδομένα: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (ECMWF, GFS, ICON, GEM, Météo-France, UKMO, JMA, CMA, KNMI, DMI, MET Norway) και <a href="https://api.met.no/" target="_blank" rel="noopener">MET Norway / Yr</a>. Χάρτης © OpenStreetMap. Οι πιθανότητες προκύπτουν από τη συμφωνία των μοντέλων και δεν αποτελούν επίσημη πρόγνωση.',
     'today': 'Σήμερα',
+    'theme.title': 'Εναλλαγή φωτεινού / σκούρου θέματος',
 
     'p.weather': 'Καιρός', 'p.temperature_2m': 'Θερμοκρασία', 'p.precip': 'Βροχή', 'p.wind': 'Άνεμος', 'p.storm': 'Καταιγίδα',
     'p.cloud_cover': 'Νεφοκάλυψη', 'p.relative_humidity_2m': 'Υγρασία', 'p.pressure_msl': 'Πίεση', 'p.reliability': 'Αξιοπιστία',

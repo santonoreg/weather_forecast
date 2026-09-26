@@ -609,6 +609,19 @@ function onLangChange() {
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
 applyStaticI18n();
 
+/* ================= Theme (light / dark) ================= */
+const sysDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const effectiveTheme = () => document.documentElement.getAttribute('data-theme') || (sysDark && sysDark.matches ? 'dark' : 'light');
+const syncThemeBtn = () => $('themeBtn').classList.toggle('is-dark', effectiveTheme() === 'dark');
+$('themeBtn').addEventListener('click', () => {
+  const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('wefo.theme', next); } catch (e) { /* ignore */ }
+  syncThemeBtn();
+});
+if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', syncThemeBtn);
+syncThemeBtn();
+
 $('brandIcon').innerHTML = WI.svg(2, false);
 loadLocations().catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
 

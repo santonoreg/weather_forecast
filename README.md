@@ -5,6 +5,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 - Backend: **PHP 8** + **SQLite** (no framework, no Composer)
 - Frontend: plain **HTML / CSS / JavaScript** (no build step), [Leaflet](https://leafletjs.com/) for the map
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
+- **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
 - No API keys, no accounts
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
@@ -294,7 +295,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 ## Data, privacy and external services
 
 - **Server side:** saved locations and cached API responses in `data/wefo.sqlite`. No personal data or cookies.
-- **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
+- **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
 - **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station) and (reverse geocoding) Nominatim.
 - **Requests made by the browser:** map tiles (OpenStreetMap), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
 - **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment.

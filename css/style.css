@@ -4,12 +4,21 @@
   --sun: #f5b301; --moon: #c7d2e4; --cloud: #94a3b8; --rain: #3b82f6; --snow: #7dd3fc; --bolt: #f59e0b;
   --cloud-top: #eef3fb; --cloud-bot: #8fa2c0; --moon-mid: #dbe3f2; --moon-dark: #98a6c2; --summary: #eef4ff; --prob: #e3edff; --shadow: 0 1px 3px rgba(15, 30, 60, .08), 0 4px 14px rgba(15, 30, 60, .06);
 }
+/* Theme: follows the system unless the user picks one (html[data-theme]) */
+:root { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #0d1420; --panel: #151f2f; --text: #e6edf7; --muted: #94a3b8; --line: #26344a;
     --accent: #5b9bff; --accent-2: #86b4ff; --cloud: #7f8ea6; --moon: #dbe4f3;
     --cloud-top: #e4ebf7; --cloud-bot: #6b7b96; --moon-mid: #d5deef; --moon-dark: #8391b0; --summary: #1a2740; --prob: #1d3358; --shadow: none;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+    --bg: #0d1420; --panel: #151f2f; --text: #e6edf7; --muted: #94a3b8; --line: #26344a;
+    --accent: #5b9bff; --accent-2: #86b4ff; --cloud: #7f8ea6; --moon: #dbe4f3;
+    --cloud-top: #e4ebf7; --cloud-bot: #6b7b96; --moon-mid: #d5deef; --moon-dark: #8391b0; --summary: #1a2740; --prob: #1d3358; --shadow: none;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 "Inter", system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -139,7 +148,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid td.now::after { content: ""; position: absolute; inset: 0; background: rgba(37, 99, 235, .06); border-left: 1px solid rgba(37, 99, 235, .25); border-right: 1px solid rgba(37, 99, 235, .25); pointer-events: none; }
 .grid tbody tr:last-child td.now::after { border-bottom: 1px solid rgba(37, 99, 235, .25); }
 .grid th.now { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
-@media (prefers-color-scheme: dark) { .grid td.now::after { background: rgba(91, 155, 255, .09); border-color: rgba(91, 155, 255, .3); } }
+.grid td.now::after { }
+:root[data-theme="dark"] .grid td.now::after { background: rgba(91, 155, 255, .09); border-color: rgba(91, 155, 255, .3); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grid td.now::after { background: rgba(91, 155, 255, .09); border-color: rgba(91, 155, 255, .3); } }
 
 /* Στάθμιση & αξιοπιστία */
 .chk { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; padding-bottom: 8px; }
@@ -216,3 +227,16 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .src small { display: inline !important; }
 .src.obs, .src.obs i { color: var(--accent); }
 .relnote { margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--panel); color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+/* Theme switch button */
+.themebtn { width: 34px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); cursor: pointer; padding: 0; }
+.themebtn:hover { border-color: var(--accent); }
+.themebtn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.themebtn .i-sun { display: none; }
+.themebtn.is-dark .i-sun { display: block; } .themebtn.is-dark .i-moon { display: none; }
+/* Dark map: soften the bright OpenStreetMap tiles */
+:root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); } }
+/* Better contrast of active controls on the dark accent colour */
+:root[data-theme="dark"] .nav-btn.active, :root[data-theme="dark"] .tab.active, :root[data-theme="dark"] .lang button.active, :root[data-theme="dark"] .btn.primary { color: #0b1220; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nav-btn.active, :root:not([data-theme="light"]) .tab.active, :root:not([data-theme="light"]) .lang button.active, :root:not([data-theme="light"]) .btn.primary { color: #0b1220; } }
