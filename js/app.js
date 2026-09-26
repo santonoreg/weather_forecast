@@ -308,6 +308,7 @@ function renderGrid() {
   html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr></tbody>`;
   $('grid').innerHTML = html;
   centerNow();
+  requestAnimationFrame(() => requestAnimationFrame(centerNow));
   $('legend').textContent = LEGENDS[param] + ` Πάροχοι με δεδομένα: ${rows.length}.` + (weightsOn() ? ' Η τελευταία γραμμή στηρίζεται σε στάθμιση με την αξιοπιστία κάθε μοντέλου (καρτέλα Αξιοπιστία).' : '');
 }
 
@@ -366,6 +367,7 @@ $('tabs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-param]'); if (!b) return;
   state.param = b.dataset.param; renderTabs(); renderGrid();
 });
+state.step = +$('stepSelect').value || 3;
 $('stepSelect').addEventListener('change', (e) => { state.step = +e.target.value; if (state.data) renderGrid(); });
 
 /* ================= Φόρτωση πρόγνωσης ================= */
@@ -543,3 +545,6 @@ document.addEventListener('click', (e) => { const a = e.target.closest('[data-go
 
 $('brandIcon').innerHTML = WI.svg(2, false);
 loadLocations().catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
+
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(centerNow, 50));
+window.addEventListener('load', () => setTimeout(centerNow, 100));
