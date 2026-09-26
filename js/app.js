@@ -15,7 +15,7 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 3, param: 'weather', token: 0 };
+const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
@@ -425,7 +425,7 @@ $('tabs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-param]'); if (!b) return;
   state.param = b.dataset.param; renderTabs(); renderGrid();
 });
-state.step = +$('stepSelect').value || 3;
+state.step = +$('stepSelect').value || 1;
 $('stepSelect').addEventListener('change', (e) => { state.step = +e.target.value; if (state.data) renderGrid(); });
 
 /* ================= Φόρτωση πρόγνωσης ================= */
