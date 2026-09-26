@@ -11,19 +11,56 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ---
 
+## Screenshots
+
+**Forecast – weather** (one row per model, last row = most likely weather with the share of every category; the current interval is highlighted)
+
+![Forecast – weather](docs/screenshots/forecast-weather.png)
+
+**Rain** – per-model rainfall per step, average and chance of rain
+
+![Forecast – rain](docs/screenshots/forecast-rain.png)
+
+**Wind** – speed, direction arrow and gusts per model, chance of strong wind
+
+![Forecast – wind](docs/screenshots/forecast-wind.png)
+
+**Reliability** – per-model score, error and bias against ERA5 over the last 28 days
+
+![Reliability](docs/screenshots/reliability.png)
+
+**Models drop-down** – enable/disable models, regional notes and reliability scores
+
+![Models drop-down](docs/screenshots/models-dropdown.png)
+
+**Locations & Map** – pick a point on the map, search, save locations
+
+![Locations & Map](docs/screenshots/locations-map.png)
+
+**Responsive layout** (phone) and **Greek UI**
+
+<p>
+  <img src="docs/screenshots/mobile-forecast.png" alt="Mobile layout" width="260">
+  &nbsp;
+  <img src="docs/screenshots/forecast-weather-el.png" alt="Greek UI" width="620">
+</p>
+
+---
+
 ## Table of contents
 
-1. [What it shows](#what-it-shows)
-2. [How it works](#how-it-works)
-3. [Requirements](#requirements)
-4. [Installation](#installation)
-5. [Configuration](#configuration)
-6. [Project structure](#project-structure)
-7. [HTTP API](#http-api)
-8. [Data, privacy and external services](#data-privacy-and-external-services)
-9. [Limitations](#limitations)
-10. [Adding a language](#adding-a-language)
-11. [Troubleshooting](#troubleshooting)
+1. [Screenshots](#screenshots)
+2. [What it shows](#what-it-shows)
+3. [How it works](#how-it-works)
+4. [Requirements](#requirements)
+5. [Installation](#installation)
+6. [Configuration](#configuration)
+7. [Project structure](#project-structure)
+8. [HTTP API](#http-api)
+9. [Data, privacy and external services](#data-privacy-and-external-services)
+10. [Limitations](#limitations)
+11. [Adding a language](#adding-a-language)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
