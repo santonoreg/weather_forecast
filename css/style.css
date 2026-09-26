@@ -176,3 +176,22 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .mdl span:first-of-type { flex: 1; }
 .btn.small { font-size: 13px; padding: 6px 10px; margin-top: 6px; }
 .grid tr.off td, .grid tr.off .rowh { opacity: .45; }
+.mdl-panel { max-height: 70vh; overflow-y: auto; min-width: 340px; max-width: 92vw; }
+.mdl { align-items: flex-start; }
+.mdl input { margin-top: 3px; }
+.mdl .mtxt { flex: 1; display: flex; flex-direction: column; line-height: 1.3; }
+.mdl .mtxt b { font-weight: 600; font-size: 14px; }
+.mdl .mtxt small { color: var(--muted); font-size: 11.5px; }
+.mdl.off { opacity: .5; cursor: default; padding-left: 32px; }
+.mdl.off:hover { background: none; }
+.mdl .rel { margin-top: 2px; }
+.mdl-sep { margin: 8px 8px 2px; font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Ίδιο ύψος και label για όλα τα στοιχεία της γραμμής εργαλείων */
+.fld { display: flex; flex-direction: column; gap: 4px; }
+.fld .lbl { font-size: 12.5px; color: var(--muted); }
+.toolbar select, .models summary, .toolbar .btn { height: 38px; box-sizing: border-box; }
+.models summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 132px; padding: 0 12px; font-size: inherit; }
+.models summary::after { content: "▾"; color: var(--muted); font-size: 12px; }
+.models summary span { margin: 0; color: var(--text); font-size: inherit; }
+.toolbar .chk { height: 38px; padding-bottom: 0; }

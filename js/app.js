@@ -20,8 +20,10 @@ try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* αγνόηση */ }
+// Πάροχοι με ταυτόσημα δεδομένα με άλλον (p.dupOf) μετρούν μόνο μία φορά
+const uniqueProviders = () => state.data.providers.filter((p) => !p.dupOf);
 const activeProviders = () => {
-  const all = state.data.providers, act = all.filter((p) => !state.disabled.has(p.id));
+  const all = uniqueProviders(), act = all.filter((p) => !state.disabled.has(p.id));
   return act.length ? act : all;   // ποτέ κενό σύνολο
 };
 
@@ -41,6 +43,12 @@ function prepare(data) {
   const n = data.time.length;
   data.providers.forEach((p) => {
     p.hourly.code = p.hourly.weather_code.map((c, i) => (c != null ? c : deriveCode(p, i)));
+  });
+  // Μοντέλα εκτός περιοχής κάλυψης επιστρέφουν αντίγραφο ενός άλλου μοντέλου: εντοπισμός ταυτόσημων προβλέψεων
+  const seen = new Map();
+  data.providers.forEach((p) => {
+    const sig = ['temperature_2m', 'precipitation', 'wind_speed_10m', 'pressure_msl'].map((k) => p.hourly[k].join(',')).join('|');
+    if (seen.has(sig)) p.dupOf = seen.get(sig); else seen.set(sig, p.id);
   });
   data.isDay = Array.from({ length: n }, (_, i) => {
     for (const p of data.providers) if (p.hourly.is_day[i] != null) return p.hourly.is_day[i];
@@ -360,13 +368,40 @@ function renderTabs() {
   $('tabs').innerHTML = Object.entries(PARAMS).map(([k, v]) => `<button class="tab ${k === state.param ? 'active' : ''}" data-param="${k}">${v.label}</button>`).join('');
 }
 
+// Για ποιες περιοχές ενδείκνυται κάθε μοντέλο (γενική περιγραφή)
+const MODEL_INFO = {
+  ecmwf_ifs025: { name: 'ECMWF IFS', region: 'Παγκόσμιο · γενικά το πιο ακριβές σε μεσοπρόθεσμο ορίζοντα' },
+  gfs_seamless: { name: 'NOAA GFS', region: 'Παγκόσμιο · ισχυρότερο στη Β. Αμερική' },
+  icon_seamless: { name: 'DWD ICON', region: 'Παγκόσμιο · εξαιρετικό για Ευρώπη (ICON-EU), κυρίως Γερμανία/Κεντρική Ευρώπη' },
+  gem_seamless: { name: 'Environment Canada GEM', region: 'Παγκόσμιο · ισχυρότερο σε Καναδά και Β. Αμερική' },
+  meteofrance_seamless: { name: 'Météo-France', region: 'Ευρώπη · ιδανικό για Γαλλία και Δυτική Ευρώπη (AROME/ARPEGE)' },
+  ukmo_seamless: { name: 'UK Met Office', region: 'Παγκόσμιο · ιδανικό για Βρετανία και Βόρεια Ευρώπη' },
+  jma_seamless: { name: 'JMA (Ιαπωνία)', region: 'Παγκόσμιο · ιδανικό για Ιαπωνία και Ανατολική Ασία' },
+  cma_grapes_global: { name: 'CMA GRAPES (Κίνα)', region: 'Παγκόσμιο · ιδανικό για Κίνα και Ανατολική Ασία' },
+  bom_access_global: { name: 'BOM ACCESS (Αυστραλία)', region: 'Αυστραλία και Ωκεανία' },
+  knmi_seamless: { name: 'KNMI (Ολλανδία)', region: 'Μόνο Βορειοδυτική Ευρώπη (Ολλανδία, Βέλγιο, Βόρεια Γερμανία)' },
+  dmi_seamless: { name: 'DMI (Δανία)', region: 'Μόνο Βόρεια Ευρώπη (Δανία, Σκανδιναβία, Βαλτική)' },
+  metno_seamless: { name: 'MET Norway (Nordic)', region: 'Μόνο Σκανδιναβία / Βόρεια Ευρώπη' },
+  yr: { name: 'MET Norway / Yr', region: 'Παγκόσμιο · ιδανικό για Νορβηγία και Σκανδιναβία' },
+};
+
 function renderModels() {
-  const all = state.data.providers, off = all.filter((p) => state.disabled.has(p.id)).length;
-  $('mdlCount').textContent = `${all.length - off}/${all.length}`;
-  $('mdlList').innerHTML = all.map((p) => {
-    const sc = state.verify?.models?.[p.id]?.score;
-    return `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${state.disabled.has(p.id) ? '' : 'checked'}> <span>${esc(p.name)}</span>${sc != null ? `<span class="rel ${scoreCls(sc)}">${sc}</span>` : ''}</label>`;
-  }).join('') + '<button type="button" class="btn ghost small" id="mdlAll">Ενεργοποίηση όλων</button>';
+  const all = state.data.providers, uniq = uniqueProviders(), off = uniq.filter((p) => state.disabled.has(p.id)).length;
+  $('mdlCount').textContent = `${uniq.length - off}/${uniq.length} ενεργά`;
+  const nameOf = (id) => all.find((q) => q.id === id)?.name || id;
+  const row = (p) => {
+    if (p.dupOf) {
+      return `<div class="mdl off"><span class="mtxt"><b>${esc(p.name)}</b><small>Ίδια δεδομένα με ${esc(nameOf(p.dupOf))} (εκτός περιοχής κάλυψης) – δεν μετράει διπλά</small></span></div>`;
+    }
+    const sc = state.verify?.models?.[p.id]?.score, info = MODEL_INFO[p.id];
+    return `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${state.disabled.has(p.id) ? '' : 'checked'}>
+      <span class="mtxt"><b>${esc(p.name)}</b>${info ? `<small>${info.region}</small>` : ''}</span>${sc != null ? `<span class="rel ${scoreCls(sc)}" title="Βαθμός αξιοπιστίας">${sc}</span>` : ''}</label>`;
+  };
+  // Μοντέλα χωρίς δεδομένα για αυτή την τοποθεσία (εκτός περιοχής κάλυψης)
+  const missing = Object.entries(MODEL_INFO).filter(([id]) => !all.some((p) => p.id === id));
+  $('mdlList').innerHTML = all.map(row).join('')
+    + (missing.length ? `<div class="mdl-sep">Χωρίς κάλυψη για αυτή την τοποθεσία</div>${missing.map(([, i]) => `<div class="mdl off"><span class="mtxt"><b>${i.name}</b><small>${i.region}</small></span></div>`).join('')}` : '')
+    + '<button type="button" class="btn ghost small" id="mdlAll">Ενεργοποίηση όλων</button>';
 }
 function saveDisabled() {
   try { localStorage.setItem('wefo.disabled', JSON.stringify([...state.disabled])); } catch (e) { /* αγνόηση */ }
@@ -374,7 +409,7 @@ function saveDisabled() {
 $('mdlList').addEventListener('change', (e) => {
   const id = e.target.dataset.mid; if (!id) return;
   if (e.target.checked) state.disabled.delete(id);
-  else if (state.data.providers.filter((p) => !state.disabled.has(p.id)).length > 1) state.disabled.add(id);
+  else if (uniqueProviders().filter((p) => !state.disabled.has(p.id)).length > 1) state.disabled.add(id);
   else e.target.checked = true;   // πρέπει να μείνει τουλάχιστον ένα μοντέλο
   saveDisabled(); renderAll();
 });
@@ -387,7 +422,7 @@ document.addEventListener('click', (e) => { if (!e.target.closest('.models')) $(
 function renderAll() {
   renderModels(); renderDays(); renderTabs(); renderGrid();
   const d = state.data, loc = state.current;
-  $('meta').textContent = `${loc.name} · ${d.lat.toFixed(3)}, ${d.lon.toFixed(3)} · υψόμ. ${Math.round(d.elevation ?? 0)} m · ${activeProviders().length}/${d.providers.length} πάροχοι · ενημέρωση ${new Date(d.generated).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`;
+  $('meta').textContent = `${loc.name} · ${d.lat.toFixed(3)}, ${d.lon.toFixed(3)} · υψόμ. ${Math.round(d.elevation ?? 0)} m · ${activeProviders().length}/${uniqueProviders().length} πάροχοι · ενημέρωση ${new Date(d.generated).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 $('days').addEventListener('click', (e) => {
