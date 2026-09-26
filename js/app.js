@@ -15,7 +15,8 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, day: 0, step: 3, param: 'weather', token: 0 };
+const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 3, param: 'weather', token: 0 };
+try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* αγνόηση */ }
 
 /* ================= Προετοιμασία δεδομένων ================= */
 function deriveCode(p, i) {
@@ -88,6 +89,7 @@ const PARAMS = {
   cloud_cover: { label: 'Νεφοκάλυψη', unit: '%', d: 0, bg: bgCloud },
   relative_humidity_2m: { label: 'Υγρασία', unit: '%', d: 0, bg: bgHum },
   pressure_msl: { label: 'Πίεση', unit: ' hPa', d: 0, bg: bgPress },
+  reliability: { label: 'Αξιοπιστία' },
 };
 
 const LEGENDS = {
@@ -130,13 +132,21 @@ function columns() {
 
 const cell = (html, bg = '', cls = '') => ({ html, bg, cls });
 
+/* Στάθμιση με αξιοπιστία: κάθε πάροχος έχει βάρος ανά παράμετρο (1 = ουδέτερο) */
+const weightsOn = () => state.weighted && !!state.verify;
+const W = (p, key) => (weightsOn() && state.verify.models[p.id]?.weights?.[key]) || 1;
+const wpairs = (key, fn) => state.data.providers.map((p) => ({ v: fn(p), w: W(p, key) })).filter((x) => x.v != null && !Number.isNaN(x.v));
+const wsum = (pr) => pr.reduce((a, x) => a + x.w, 0);
+const wmean = (pr) => (pr.length ? pr.reduce((a, x) => a + x.v * x.w, 0) / wsum(pr) : null);
+const wshare = (pr, f) => (pr.length ? pr.filter((x) => f(x.v)).reduce((a, x) => a + x.w, 0) / wsum(pr) : null);
+
 function buildRows(param, cols) {
   const { data, step } = state;
   const P = data.providers;
   const rows = [];   // ενδιάμεσες γραμμές παρόχων
   let summary, prob, summaryLabel, probLabel;
 
-  const perProvider = (fn) => P.map((p) => ({ name: p.name, cells: cols.map((c) => fn(p, c)) }))
+  const perProvider = (fn) => P.map((p) => ({ name: p.name, id: p.id, cells: cols.map((c) => fn(p, c)) }))
     .filter((r) => r.cells.some((c) => c.has));
 
   if (param === 'weather') {
@@ -146,18 +156,18 @@ function buildRows(param, cols) {
     }));
     summaryLabel = 'Θερμοκρασία (μ.ο.)';
     summary = cols.map((c) => {
-      const v = nn(P.map((p) => agg(p, 'temperature_2m', c.a, c.b)));
-      return cell(`<b>${fmt(mean(v))}°</b>`, bgTemp(mean(v)));
+      const m = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
+      return cell(`<b>${fmt(m)}°</b>`, bgTemp(m));
     });
     probLabel = 'Πιθανότερος καιρός';
     prob = cols.map((c) => {
-      const cats = nn(P.map((p) => agg(p, 'code', c.a, c.b))).map(WI.category);
-      if (!cats.length) return cell('–');
-      const cnt = {}; cats.forEach((k) => (cnt[k] = (cnt[k] || 0) + 1));
+      const pr = wpairs('weather', (p) => { const code = agg(p, 'code', c.a, c.b); return code == null ? null : WI.category(code); });
+      if (!pr.length) return cell('–');
+      const tot = wsum(pr), cnt = {}; pr.forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
       const [top, n] = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0];
       // Αν υπάρχει καταιγίδα με ≥ 30% συμφωνία, την επισημαίνουμε ως δεύτερη πιθανότητα
-      const th = cnt.thunder && top !== 'thunder' && cnt.thunder / cats.length >= 0.3 ? `<small>⚡ καταιγίδα ${Math.round(cnt.thunder / cats.length * 100)}%</small>` : '';
-      return cell(`${WI.svg(WI.CAT_CODE[top], c.night, 'big')}<div class="pct">${Math.round(n / cats.length * 100)}%</div><small>${WI.CAT_LABEL[top]}</small>${th}`);
+      const th = cnt.thunder && top !== 'thunder' && cnt.thunder / tot >= 0.3 ? `<small>⚡ καταιγίδα ${Math.round(cnt.thunder / tot * 100)}%</small>` : '';
+      return cell(`${WI.svg(WI.CAT_CODE[top], c.night, 'big')}<div class="pct">${Math.round(n / tot * 100)}%</div><small>${WI.CAT_LABEL[top]}</small>${th}`);
     });
   } else if (param === 'precip') {
     rows.push(...perProvider((p, c) => {
@@ -167,14 +177,14 @@ function buildRows(param, cols) {
     summaryLabel = 'Μέσος όρος (mm)';
     summary = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, 'precip', c.a, c.b)));
-      const m = mean(v);
+      const m = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
       return cell(v.length ? `<b>${fmt(m, 1)}</b><small>έως ${fmt(Math.max(...v), 1)}</small>` : '–', bgRain(m, step));
     });
     probLabel = 'Πιθανότητα βροχής';
     prob = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, 'precip', c.a, c.b)));
       if (!v.length) return cell('–');
-      const pr = v.filter((x) => x >= RAIN_THR).length / v.length;
+      const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
       return cell(`<div class="pct">${Math.round(pr * 100)}%</div>`, `hsla(215,85%,50%,${pr * 0.55})`);
     });
   } else if (param === 'wind') {
@@ -187,14 +197,14 @@ function buildRows(param, cols) {
       const v = nn(P.map((p) => agg(p, 'wind_speed_10m', c.a, c.b)));
       const dirs = P.map((p) => agg(p, 'dir', c.a, c.b));
       const dd = nn(dirs);
-      const m = mean(v);
+      const m = wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)));
       return cell(v.length ? `<b>${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}</b><small>${fmt(Math.min(...v))}–${fmt(Math.max(...v))}</small>` : '–', bgWind(m));
     });
     probLabel = `Πιθανότητα ισχυρού ανέμου (≥${WIND_THR})`;
     prob = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, 'wind_speed_10m', c.a, c.b)));
       if (!v.length) return cell('–');
-      const pr = v.filter((x) => x >= WIND_THR).length / v.length;
+      const pr = wshare(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)), (x) => x >= WIND_THR);
       const g = nn(P.map((p) => agg(p, 'gust', c.a, c.b)));
       const gp = g.length ? `<small>ριπές ≥60: ${Math.round(g.filter((x) => x >= 60).length / g.length * 100)}%</small>` : '';
       return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${gp}`, `hsla(170,70%,40%,${pr * 0.5})`);
@@ -219,9 +229,9 @@ function buildRows(param, cols) {
     });
     probLabel = 'Πιθανότητα καταιγίδας';
     prob = cols.map((c) => {
-      const v = nn(P.map((p) => signal(p, c).s));
-      if (!v.length) return cell('–');
-      const pr = mean(v);
+      const pw = wpairs('storm', (p) => signal(p, c).s);
+      if (!pw.length) return cell('–');
+      const pr = wmean(pw);
       return cell(`${pr >= 0.5 ? WI.bolt24 + ' ' : ''}<div class="pct" style="display:inline">${Math.round(pr * 100)}%</div>`, `hsla(35,95%,50%,${pr * 0.6})`);
     });
   } else {
@@ -233,7 +243,7 @@ function buildRows(param, cols) {
     summaryLabel = 'Μέσος όρος' + (def.unit === '%' ? ' (%)' : def.unit === '°C' ? ' (°C)' : ' (hPa)');
     summary = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, param, c.a, c.b)));
-      const m = mean(v);
+      const m = wmean(wpairs(param, (p) => agg(p, param, c.a, c.b)));
       return cell(v.length ? `<b>${fmt(m, def.d)}${def.unit === '°C' ? '°' : ''}</b><small>${fmt(Math.min(...v), def.d)}–${fmt(Math.max(...v), def.d)}</small>` : '–', def.bg(m));
     });
     probLabel = 'Συμφωνία μοντέλων';
@@ -246,19 +256,47 @@ function buildRows(param, cols) {
   return { rows, summary, prob, summaryLabel, probLabel };
 }
 
+const scoreCls = (v) => (v >= 80 ? 'hi' : v >= 60 ? 'mid' : 'lo');
+
+function renderReliability() {
+  const v = state.verify;
+  if (!v) {
+    $('grid').innerHTML = `<tbody><tr><td class="pad">${state.verifyErr ? esc(state.verifyErr) : 'Φόρτωση δεδομένων επαλήθευσης…'}</td></tr></tbody>`;
+    $('legend').textContent = '';
+    return;
+  }
+  const ids = Object.entries(v.models).sort((a, b) => (b[1].score ?? -1) - (a[1].score ?? -1));
+  const name = (id) => state.data.providers.find((p) => p.id === id)?.name || id;
+  const mae = (m, k, d = 1) => (m.mae[k] != null ? `${m.mae[k].toFixed(d)}<small>${m.bias[k] > 0 ? '+' : ''}${m.bias[k].toFixed(d)} μεροληψία</small>` : '–');
+  let html = `<thead><tr><th class="rowh">Μοντέλο</th><th>Βαθμός</th><th>Θερμοκρασία<br>σφάλμα °C</th><th>Άνεμος<br>σφάλμα km/h</th><th>Νέφωση<br>σφάλμα %</th><th>Υγρασία<br>σφάλμα %</th><th>Πίεση<br>σφάλμα hPa</th><th>Εντοπισμός<br>βροχής</th><th>Σωστός<br>καιρός</th></tr></thead><tbody>`;
+  ids.forEach(([id, m]) => {
+    html += `<tr><th class="rowh">${esc(name(id))}</th>
+      <td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b></td>
+      <td class="cell">${mae(m, 'temperature_2m')}</td><td class="cell">${mae(m, 'wind_speed_10m')}</td><td class="cell">${mae(m, 'cloud_cover', 0)}</td>
+      <td class="cell">${mae(m, 'relative_humidity_2m', 0)}</td><td class="cell">${mae(m, 'pressure_msl', 2)}</td>
+      <td class="cell">${m.csi != null ? Math.round(m.csi * 100) + '%' : '–'}</td><td class="cell">${m.code_acc != null ? Math.round(m.code_acc * 100) + '%' : '–'}</td></tr>`;
+  });
+  $('grid').innerHTML = html + '</tbody>';
+  $('legend').innerHTML = `Επαλήθευση για την περίοδο ${v.start} – ${v.end} (${v.hours} ώρες) στην τοποθεσία «${esc(state.current.name)}». Οι προβλέψεις κάθε μοντέλου (Open-Meteo Historical Forecast) συγκρίνονται με την ανάλυση ERA5. Ο βαθμός (0–100) είναι ο μέσος όρος της επίδοσης ανά παράμετρο και από αυτόν προκύπτουν τα βάρη (0,5–1,8) που ζυγίζουν την πρόβλεψη όταν είναι ενεργή η στάθμιση.
+    <br><b>Περιορισμοί:</b> το ERA5 δεν είναι μέτρηση σταθμού και παράγεται από το μοντέλο του ECMWF, άρα ευνοεί ελαφρά το ECMWF. Οι αρχειοθετημένες προβλέψεις αφορούν κυρίως βραχυπρόθεσμο ορίζοντα. Μοντέλα που δεν καλύπτουν την περιοχή (π.χ. KNMI, DMI, MET Norway Nordic) και το Yr δεν αξιολογούνται και μετρούν με βάρος 1. Ο εντοπισμός βροχής εξαρτάται από το πόσες μέρες έβρεξε στην περίοδο.`;
+}
+
+const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="Βαθμός αξιοπιστίας μοντέλου (0–100)">${sc}</span>` : ''; };
+
 function renderGrid() {
   const { data, param } = state;
+  if (param === 'reliability') return renderReliability();
   const cols = columns();
   const { rows, summary, prob, summaryLabel, probLabel } = buildRows(param, cols);
   const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
   let html = `<thead><tr><th class="rowh">Πάροχος / μοντέλο</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach((r) => {
-    html += `<tr><th class="rowh">${esc(r.name)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    html += `<tr><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
   });
   html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
   html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr></tbody>`;
   $('grid').innerHTML = html;
-  $('legend').textContent = LEGENDS[param] + ` Πάροχοι με δεδομένα: ${rows.length}.`;
+  $('legend').textContent = LEGENDS[param] + ` Πάροχοι με δεδομένα: ${rows.length}.` + (weightsOn() ? ' Η τελευταία γραμμή στηρίζεται σε στάθμιση με την αξιοπιστία κάθε μοντέλου (καρτέλα Αξιοπιστία).' : '');
 }
 
 /* ================= Ημέρες & καρτέλες ================= */
@@ -278,15 +316,15 @@ function renderDays() {
   const { data } = state;
   $('days').innerHTML = data.dates.map((date, d) => {
     const a = d * 24, b = Math.min(a + 24, data.time.length);
-    const cats = nn(data.providers.map((p) => dayCategory(p.hourly.code.slice(a + 6, a + 22))));
-    const cnt = {}; cats.forEach((k) => (cnt[k] = (cnt[k] || 0) + 1));
+    const cnt = {};
+    wpairs('weather', (p) => dayCategory(p.hourly.code.slice(a + 6, a + 22))).forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
     const top = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0];
-    const hi = mean(nn(data.providers.map((p) => { const v = nn(p.hourly.temperature_2m.slice(a, b)); return v.length ? Math.max(...v) : null; })));
-    const lo = mean(nn(data.providers.map((p) => { const v = nn(p.hourly.temperature_2m.slice(a, b)); return v.length ? Math.min(...v) : null; })));
-    const rainV = nn(data.providers.map((p) => { const v = nn(p.hourly.precipitation.slice(a, b)); return v.length ? v.reduce((s, x) => s + x, 0) : null; }));
-    const rain = rainV.length ? Math.round(rainV.filter((x) => x >= 1).length / rainV.length * 100) : null;
-    const storms = data.providers.filter((p) => nn(p.hourly.weather_code.slice(a, b)).length).map((p) => nn(p.hourly.weather_code.slice(a, b)).some((x) => x >= 95));
-    const storm = storms.length ? Math.round(storms.filter(Boolean).length / storms.length * 100) : 0;
+    const ext = (fn) => wmean(wpairs('temperature_2m', (p) => { const v = nn(p.hourly.temperature_2m.slice(a, b)); return v.length ? fn(...v) : null; }));
+    const hi = ext(Math.max), lo = ext(Math.min);
+    const rp = wshare(wpairs('precip', (p) => { const v = nn(p.hourly.precipitation.slice(a, b)); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
+    const rain = rp == null ? null : Math.round(rp * 100);
+    const sp = wshare(wpairs('storm', (p) => { const v = nn(p.hourly.weather_code.slice(a, b)); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
+    const storm = sp == null ? 0 : Math.round(sp * 100);
     const dt = new Date(date + 'T12:00:00');
     const name = d === 0 ? 'Σήμερα' : dt.toLocaleDateString('el-GR', { weekday: 'short' });
     return `<button class="day ${d === state.day ? 'active' : ''}" data-day="${d}">
@@ -330,14 +368,38 @@ async function loadForecast(refresh = false) {
     if (token !== state.token) return;
     state.data = prepare(data);
     state.day = 0;
+    state.verify = null; state.verifyErr = null;
     $('loading').hidden = true; $('forecastBody').hidden = false;
     renderAll();
+    loadVerify(loc, token);
   } catch (err) {
     if (token !== state.token) return;
     $('loading').hidden = true;
     $('error').textContent = err.message; $('error').hidden = false;
   }
 }
+
+async function loadVerify(loc, token) {
+  $('vfStatus').textContent = '· φόρτωση αξιοπιστίας…';
+  try {
+    const v = await api(`api/verify.php?lat=${loc.lat}&lon=${loc.lon}`);
+    if (token !== state.token) return;
+    state.verify = v;
+    $('vfStatus').textContent = '';
+    renderAll();
+  } catch (err) {
+    if (token !== state.token) return;
+    state.verifyErr = 'Η επαλήθευση δεν ήταν διαθέσιμη: ' + err.message;
+    $('vfStatus').textContent = '· μη διαθέσιμη';
+    if (state.param === 'reliability') renderGrid();
+  }
+}
+$('weightChk').checked = state.weighted;
+$('weightChk').addEventListener('change', (e) => {
+  state.weighted = e.target.checked;
+  try { localStorage.setItem('wefo.weighted', state.weighted ? '1' : '0'); } catch (err) { /* αγνόηση */ }
+  if (state.data) renderAll();
+});
 
 function setCurrent(loc, go = false) {
   state.current = loc || null;

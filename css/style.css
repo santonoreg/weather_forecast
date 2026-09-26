@@ -133,3 +133,24 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
   main { padding: 12px; }
   .meta { margin-left: 0; width: 100%; }
 }
+
+/* Τρέχον διάστημα: σκίαση ολόκληρης στήλης */
+.grid td.now { position: relative; }
+.grid td.now::after { content: ""; position: absolute; inset: 0; background: rgba(37, 99, 235, .13); border-left: 2px solid rgba(37, 99, 235, .55); border-right: 2px solid rgba(37, 99, 235, .55); pointer-events: none; }
+.grid tbody tr:last-child td.now::after { border-bottom: 2px solid rgba(37, 99, 235, .55); }
+.grid th.now { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); }
+@media (prefers-color-scheme: dark) { .grid td.now::after { background: rgba(91, 155, 255, .18); border-color: rgba(91, 155, 255, .6); } }
+
+/* Στάθμιση & αξιοπιστία */
+.chk { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; padding-bottom: 8px; }
+.chk input { accent-color: var(--accent); width: 16px; height: 16px; }
+.chk span { color: var(--muted); }
+.rel { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; vertical-align: 1px; }
+.rel.hi, .score.hi { background: rgba(22, 163, 74, .18); color: var(--good); }
+.rel.mid, .score.mid { background: rgba(217, 119, 6, .18); color: var(--mid); }
+.rel.lo, .score.lo { background: rgba(220, 38, 38, .16); color: var(--bad); }
+.score { display: inline-block; margin-top: 3px; padding: 1px 9px; border-radius: 999px; font-size: 13px; }
+.bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; min-width: 80px; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #16a34a); border-radius: 999px; }
+.grid td.pad { padding: 28px; color: var(--muted); }
+.grid thead th { line-height: 1.25; }
