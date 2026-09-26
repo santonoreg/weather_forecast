@@ -154,3 +154,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .bar i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #16a34a); border-radius: 999px; }
 .grid td.pad { padding: 28px; color: var(--muted); }
 .grid thead th { line-height: 1.25; }
+
+/* Πιθανότερος καιρός: λίστα κατηγοριών με ποσοστά */
+.wlist { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; min-width: 128px; }
+.wline { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--muted); text-align: left; }
+.wline span { flex: 1; }
+.wline b { font-variant-numeric: tabular-nums; font-weight: 700; }
+.wline.top { color: var(--text); font-size: 13px; font-weight: 700; }
+.wi.mini { width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(20, 40, 80, .25)); }

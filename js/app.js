@@ -164,10 +164,11 @@ function buildRows(param, cols) {
       const pr = wpairs('weather', (p) => { const code = agg(p, 'code', c.a, c.b); return code == null ? null : WI.category(code); });
       if (!pr.length) return cell('–');
       const tot = wsum(pr), cnt = {}; pr.forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
-      const [top, n] = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0];
-      // Αν υπάρχει καταιγίδα με ≥ 30% συμφωνία, την επισημαίνουμε ως δεύτερη πιθανότητα
-      const th = cnt.thunder && top !== 'thunder' && cnt.thunder / tot >= 0.3 ? `<small>⚡ καταιγίδα ${Math.round(cnt.thunder / tot * 100)}%</small>` : '';
-      return cell(`${WI.svg(WI.CAT_CODE[top], c.night, 'big')}<div class="pct">${Math.round(n / tot * 100)}%</div><small>${WI.CAT_LABEL[top]}</small>${th}`);
+      const sorted = Object.entries(cnt).sort((x, y) => y[1] - x[1]);
+      const top = sorted[0][0];
+      // Όλες οι κατηγορίες που προβλέπουν τα μοντέλα, με το ποσοστό τους
+      const lines = sorted.slice(0, 4).map(([k, w], i) => `<div class="wline${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${WI.CAT_LABEL[k]}</span><b>${Math.round(w / tot * 100)}%</b></div>`).join('');
+      return cell(`${WI.svg(WI.CAT_CODE[top], c.night, 'big')}<div class="wlist">${lines}</div>`);
     });
   } else if (param === 'precip') {
     rows.push(...perProvider((p, c) => {
