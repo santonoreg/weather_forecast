@@ -17,7 +17,7 @@ $TOL = ['temperature_2m' => 4.0, 'wind_speed_10m' => 15.0, 'cloud_cover' => 50.0
 
 $lat = filter_var($_GET['lat'] ?? null, FILTER_VALIDATE_FLOAT);
 $lon = filter_var($_GET['lon'] ?? null, FILTER_VALIDATE_FLOAT);
-if ($lat === false || $lon === false || abs($lat) > 90 || abs($lon) > 180) json_out(['error' => 'Μη έγκυρες συντεταγμένες'], 400);
+if ($lat === false || $lon === false || abs($lat) > 90 || abs($lon) > 180) json_out(['error' => 'Invalid coordinates'], 400);
 $lat = round($lat, 2);
 $lon = round($lon, 2);
 
@@ -41,7 +41,7 @@ $fcBody = http_get('https://historical-forecast-api.open-meteo.com/v1/forecast?'
 $truth = $truthBody ? json_decode($truthBody, true) : null;
 $fc = $fcBody ? json_decode($fcBody, true) : null;
 if (!$truth || !$fc || !isset($truth['hourly']['time'], $fc['hourly']['time'])) {
-    json_out(['error' => 'Δεν ήταν δυνατή η λήψη ιστορικών δεδομένων για επαλήθευση'], 502);
+    json_out(['error' => 'Could not fetch historical data for verification'], 502);
 }
 
 function cat($c): ?string

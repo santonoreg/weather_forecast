@@ -51,18 +51,9 @@ const WI = (() => {
     if (code >= 95) return 'thunder';
     return 'cloudy';
   }
-  const CAT_LABEL = { clear: 'Αίθριος', partly: 'Λίγες νεφώσεις', cloudy: 'Συννεφιά', fog: 'Ομίχλη', drizzle: 'Ψιχάλες', rain: 'Βροχή', snow: 'Χιόνι', thunder: 'Καταιγίδα' };
   const CAT_CODE = { clear: 0, partly: 2, cloudy: 3, fog: 45, drizzle: 51, rain: 63, snow: 73, thunder: 95 };
 
-  const LABELS = {
-    0: 'Αίθριος', 1: 'Κυρίως αίθριος', 2: 'Λίγες νεφώσεις', 3: 'Συννεφιά', 45: 'Ομίχλη', 48: 'Παγωμένη ομίχλη',
-    51: 'Ελαφριές ψιχάλες', 53: 'Ψιχάλες', 55: 'Έντονες ψιχάλες', 56: 'Παγωμένες ψιχάλες', 57: 'Παγωμένες ψιχάλες',
-    61: 'Ασθενής βροχή', 63: 'Βροχή', 65: 'Έντονη βροχή', 66: 'Παγωμένη βροχή', 67: 'Παγωμένη βροχή',
-    71: 'Ασθενής χιονόπτωση', 73: 'Χιονόπτωση', 75: 'Έντονη χιονόπτωση', 77: 'Κόκκοι χιονιού',
-    80: 'Ασθενείς μπόρες', 81: 'Μπόρες', 82: 'Ισχυρές μπόρες', 85: 'Χιονομπόρες', 86: 'Έντονες χιονομπόρες',
-    95: 'Καταιγίδα', 96: 'Καταιγίδα με χαλάζι', 99: 'Ισχυρή καταιγίδα με χαλάζι',
-  };
-  const label = (code) => LABELS[code] || 'Άγνωστο';
+  const label = (code) => (hasT('wx.' + code) ? t('wx.' + code) : t('wx.unknown'));
 
   function key(code, night) {
     if (code == null) return null;
@@ -99,5 +90,5 @@ const WI = (() => {
     <linearGradient id="g-bolt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:#ffe66b"/><stop offset="1" style="stop-color:#f57c00"/></linearGradient>
   </defs></svg>`;
   document.body.insertAdjacentHTML('afterbegin', defs);
-  return { svg, category, CAT_LABEL, CAT_CODE, label, arrow, bolt24 };
+  return { svg, category, CAT_CODE, label, arrow, bolt24 };
 })();

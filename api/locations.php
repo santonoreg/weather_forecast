@@ -15,7 +15,7 @@ if ($method === 'POST') {
     $lat = filter_var($in['lat'] ?? null, FILTER_VALIDATE_FLOAT);
     $lon = filter_var($in['lon'] ?? null, FILTER_VALIDATE_FLOAT);
     if ($name === '' || $lat === false || $lon === false || abs($lat) > 90 || abs($lon) > 180) {
-        json_out(['error' => 'Μη έγκυρα στοιχεία τοποθεσίας'], 400);
+        json_out(['error' => 'Invalid location data'], 400);
     }
     $st = $pdo->prepare('INSERT INTO locations (name, lat, lon) VALUES (?, ?, ?)');
     $st->execute([(function_exists('mb_substr') ? mb_substr($name, 0, 120) : substr($name, 0, 200)), round($lat, 5), round($lon, 5)]);
@@ -28,4 +28,4 @@ if ($method === 'DELETE') {
     json_out(['ok' => true]);
 }
 
-json_out(['error' => 'Μη υποστηριζόμενη μέθοδος'], 405);
+json_out(['error' => 'Method not allowed'], 405);

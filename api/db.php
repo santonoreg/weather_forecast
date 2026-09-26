@@ -9,14 +9,14 @@ ini_set('display_errors', '0');
 set_exception_handler(function (Throwable $e) {
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['error' => 'Σφάλμα διακομιστή: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['error' => 'Server error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 });
 register_shutdown_function(function () {
     $e = error_get_last();
     if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true) && !headers_sent()) {
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['error' => 'Σφάλμα PHP: ' . $e['message']], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['error' => 'PHP error: ' . $e['message']], JSON_UNESCAPED_UNICODE);
     }
 });
 
@@ -26,18 +26,18 @@ function db(): PDO
     if ($pdo) return $pdo;
     $dir = __DIR__ . '/../data';
     if (!extension_loaded('pdo_sqlite')) {
-        json_out(['error' => 'Λείπει η επέκταση PHP pdo_sqlite (π.χ. apt install php-sqlite3)'], 500);
+        json_out(['error' => 'The PHP extension pdo_sqlite is missing (e.g. apt install php-sqlite3)'], 500);
     }
     if (!is_dir($dir) && !@mkdir($dir, 0775, true)) {
-        json_out(['error' => 'Δεν μπορεί να δημιουργηθεί ο φάκελος data/. Δώσε δικαιώματα εγγραφής στον χρήστη του web server'], 500);
+        json_out(['error' => 'Cannot create the data/ directory. Grant write permission to the web server user'], 500);
     }
     if (!is_writable($dir)) {
-        json_out(['error' => 'Ο φάκελος data/ δεν είναι εγγράψιμος από τον web server (chown www-data data && chmod 775 data)'], 500);
+        json_out(['error' => 'The data/ directory is not writable by the web server (chown www-data data && chmod 775 data)'], 500);
     }
     try {
         $pdo = new PDO('sqlite:' . $dir . '/wefo.sqlite');
     } catch (PDOException $e) {
-        json_out(['error' => 'Σφάλμα βάσης: ' . $e->getMessage()], 500);
+        json_out(['error' => 'Database error: ' . $e->getMessage()], 500);
     }
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);

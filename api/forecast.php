@@ -12,11 +12,11 @@ $MODELS = [
     'gem_seamless'      => 'Environment Canada GEM',
     'meteofrance_seamless' => 'Météo-France',
     'ukmo_seamless'     => 'UK Met Office',
-    'jma_seamless'      => 'JMA (Ιαπωνία)',
-    'cma_grapes_global' => 'CMA GRAPES (Κίνα)',
-    'bom_access_global' => 'BOM ACCESS (Αυστραλία)',
-    'knmi_seamless'     => 'KNMI (Ολλανδία)',
-    'dmi_seamless'      => 'DMI (Δανία)',
+    'jma_seamless'      => 'JMA (Japan)',
+    'cma_grapes_global' => 'CMA GRAPES (China)',
+    'bom_access_global' => 'BOM ACCESS (Australia)',
+    'knmi_seamless'     => 'KNMI (Netherlands)',
+    'dmi_seamless'      => 'DMI (Denmark)',
     'metno_seamless'    => 'MET Norway (Nordic)',
 ];
 $VARS = ['temperature_2m', 'apparent_temperature', 'precipitation', 'wind_speed_10m', 'wind_gusts_10m',
@@ -24,7 +24,7 @@ $VARS = ['temperature_2m', 'apparent_temperature', 'precipitation', 'wind_speed_
 
 $lat = filter_var($_GET['lat'] ?? null, FILTER_VALIDATE_FLOAT);
 $lon = filter_var($_GET['lon'] ?? null, FILTER_VALIDATE_FLOAT);
-if ($lat === false || $lon === false || abs($lat) > 90 || abs($lon) > 180) json_out(['error' => 'Μη έγκυρες συντεταγμένες'], 400);
+if ($lat === false || $lon === false || abs($lat) > 90 || abs($lon) > 180) json_out(['error' => 'Invalid coordinates'], 400);
 $lat = round($lat, 3);
 $lon = round($lon, 3);
 
@@ -49,7 +49,7 @@ $url = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
 ]);
 $body = http_get($url);
 $om = $body ? json_decode($body, true) : null;
-if (!$om || !isset($om['hourly']['time'])) json_out(['error' => 'Αποτυχία λήψης δεδομένων από Open-Meteo'], 502);
+if (!$om || !isset($om['hourly']['time'])) json_out(['error' => 'Failed to fetch data from Open-Meteo'], 502);
 
 $time = $om['hourly']['time'];
 $offset = (int)($om['utc_offset_seconds'] ?? 0);

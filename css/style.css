@@ -199,3 +199,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 /* Ίδια γραμματοσειρά σε όλα τα στοιχεία της γραμμής εργαλείων */
 .toolbar select, .models summary, .models summary span, .toolbar .btn, .toolbar .chk { font-family: "Inter", system-ui, "Segoe UI", Roboto, sans-serif; font-size: 14px; font-weight: 500; line-height: 1.2; color: var(--text); }
 .toolbar .chk { font-size: 13px; }
+
+/* Language switch */
+.topright { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.lang button { border: 0; background: var(--panel); color: var(--muted); font: 600 12.5px "Inter", system-ui, sans-serif; padding: 7px 10px; cursor: pointer; }
+.lang button.active { background: var(--accent); color: #fff; }
