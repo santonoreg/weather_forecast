@@ -162,3 +162,17 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .wline b { font-variant-numeric: tabular-nums; font-weight: 700; }
 .wline.top { color: var(--text); font-size: 13px; font-weight: 700; }
 .wi.mini { width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(20, 40, 80, .25)); }
+
+/* Επιλογή μοντέλων */
+.models { position: relative; padding-bottom: 0; }
+.models summary { list-style: none; cursor: pointer; font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 8px 14px; border-radius: 8px; user-select: none; }
+.models summary::-webkit-details-marker { display: none; }
+.models[open] summary { border-color: var(--accent); }
+.models summary span { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
+.mdl-panel { position: absolute; z-index: 1100; top: calc(100% + 6px); left: 0; min-width: 270px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.mdl { flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; font-size: 14px; color: var(--text); cursor: pointer; }
+.mdl:hover { background: var(--summary); }
+.mdl input { accent-color: var(--accent); width: 16px; height: 16px; }
+.mdl span:first-of-type { flex: 1; }
+.btn.small { font-size: 13px; padding: 6px 10px; margin-top: 6px; }
+.grid tr.off td, .grid tr.off .rowh { opacity: .45; }

@@ -17,6 +17,13 @@ async function api(path, opts) {
 
 const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 3, param: 'weather', token: 0 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* αγνόηση */ }
+// Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
+state.disabled = new Set();
+try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* αγνόηση */ }
+const activeProviders = () => {
+  const all = state.data.providers, act = all.filter((p) => !state.disabled.has(p.id));
+  return act.length ? act : all;   // ποτέ κενό σύνολο
+};
 
 /* ================= Προετοιμασία δεδομένων ================= */
 function deriveCode(p, i) {
@@ -135,14 +142,14 @@ const cell = (html, bg = '', cls = '') => ({ html, bg, cls });
 /* Στάθμιση με αξιοπιστία: κάθε πάροχος έχει βάρος ανά παράμετρο (1 = ουδέτερο) */
 const weightsOn = () => state.weighted && !!state.verify;
 const W = (p, key) => (weightsOn() && state.verify.models[p.id]?.weights?.[key]) || 1;
-const wpairs = (key, fn) => state.data.providers.map((p) => ({ v: fn(p), w: W(p, key) })).filter((x) => x.v != null && !Number.isNaN(x.v));
+const wpairs = (key, fn) => activeProviders().map((p) => ({ v: fn(p), w: W(p, key) })).filter((x) => x.v != null && !Number.isNaN(x.v));
 const wsum = (pr) => pr.reduce((a, x) => a + x.w, 0);
 const wmean = (pr) => (pr.length ? pr.reduce((a, x) => a + x.v * x.w, 0) / wsum(pr) : null);
 const wshare = (pr, f) => (pr.length ? pr.filter((x) => f(x.v)).reduce((a, x) => a + x.w, 0) / wsum(pr) : null);
 
 function buildRows(param, cols) {
   const { data, step } = state;
-  const P = data.providers;
+  const P = activeProviders();
   const rows = [];   // ενδιάμεσες γραμμές παρόχων
   let summary, prob, summaryLabel, probLabel;
 
@@ -281,7 +288,7 @@ function renderReliability() {
   const mae = (m, k, d = 1) => (m.mae[k] != null ? `${m.mae[k].toFixed(d)}<small>${m.bias[k] > 0 ? '+' : ''}${m.bias[k].toFixed(d)} μεροληψία</small>` : '–');
   let html = `<thead><tr><th class="rowh">Μοντέλο</th><th>Βαθμός</th><th>Θερμοκρασία<br>σφάλμα °C</th><th>Άνεμος<br>σφάλμα km/h</th><th>Νέφωση<br>σφάλμα %</th><th>Υγρασία<br>σφάλμα %</th><th>Πίεση<br>σφάλμα hPa</th><th>Εντοπισμός<br>βροχής</th><th>Σωστός<br>καιρός</th></tr></thead><tbody>`;
   ids.forEach(([id, m]) => {
-    html += `<tr><th class="rowh">${esc(name(id))}</th>
+    html += `<tr class="${state.disabled.has(id) ? 'off' : ''}"><th class="rowh">${esc(name(id))}${state.disabled.has(id) ? ' <small>(ανενεργό)</small>' : ''}</th>
       <td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b></td>
       <td class="cell">${mae(m, 'temperature_2m')}</td><td class="cell">${mae(m, 'wind_speed_10m')}</td><td class="cell">${mae(m, 'cloud_cover', 0)}</td>
       <td class="cell">${mae(m, 'relative_humidity_2m', 0)}</td><td class="cell">${mae(m, 'pressure_msl', 2)}</td>
@@ -353,10 +360,34 @@ function renderTabs() {
   $('tabs').innerHTML = Object.entries(PARAMS).map(([k, v]) => `<button class="tab ${k === state.param ? 'active' : ''}" data-param="${k}">${v.label}</button>`).join('');
 }
 
+function renderModels() {
+  const all = state.data.providers, off = all.filter((p) => state.disabled.has(p.id)).length;
+  $('mdlCount').textContent = `${all.length - off}/${all.length}`;
+  $('mdlList').innerHTML = all.map((p) => {
+    const sc = state.verify?.models?.[p.id]?.score;
+    return `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${state.disabled.has(p.id) ? '' : 'checked'}> <span>${esc(p.name)}</span>${sc != null ? `<span class="rel ${scoreCls(sc)}">${sc}</span>` : ''}</label>`;
+  }).join('') + '<button type="button" class="btn ghost small" id="mdlAll">Ενεργοποίηση όλων</button>';
+}
+function saveDisabled() {
+  try { localStorage.setItem('wefo.disabled', JSON.stringify([...state.disabled])); } catch (e) { /* αγνόηση */ }
+}
+$('mdlList').addEventListener('change', (e) => {
+  const id = e.target.dataset.mid; if (!id) return;
+  if (e.target.checked) state.disabled.delete(id);
+  else if (state.data.providers.filter((p) => !state.disabled.has(p.id)).length > 1) state.disabled.add(id);
+  else e.target.checked = true;   // πρέπει να μείνει τουλάχιστον ένα μοντέλο
+  saveDisabled(); renderAll();
+});
+$('mdlList').addEventListener('click', (e) => {
+  if (e.target.id !== 'mdlAll') return;
+  state.disabled.clear(); saveDisabled(); renderAll();
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('.models')) $('models').open = false; });
+
 function renderAll() {
-  renderDays(); renderTabs(); renderGrid();
+  renderModels(); renderDays(); renderTabs(); renderGrid();
   const d = state.data, loc = state.current;
-  $('meta').textContent = `${loc.name} · ${d.lat.toFixed(3)}, ${d.lon.toFixed(3)} · υψόμ. ${Math.round(d.elevation ?? 0)} m · ${d.providers.length} πάροχοι · ενημέρωση ${new Date(d.generated).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`;
+  $('meta').textContent = `${loc.name} · ${d.lat.toFixed(3)}, ${d.lon.toFixed(3)} · υψόμ. ${Math.round(d.elevation ?? 0)} m · ${activeProviders().length}/${d.providers.length} πάροχοι · ενημέρωση ${new Date(d.generated).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 $('days').addEventListener('click', (e) => {
