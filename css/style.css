@@ -287,3 +287,8 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hlegend { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); }
 .hlegend svg { width: 240px; height: 10px; }
 .h-climate .hint { margin: 6px 0 0; text-align: center; }
+
+/* Full-width history charts, each with its own month selector */
+.h-chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px 12px; margin-top: 14px; }
+.h-charthead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.h-charthead h3 { margin: 6px 0 !important; }
