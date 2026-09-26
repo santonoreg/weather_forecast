@@ -643,32 +643,66 @@ function histChart(points, { kind, color, unit, d = 1, trend = false }) {
   return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
 }
 
-/* Climate diagram: bars = rainfall per month (right axis), lines = max / mean / min temperature (left axis) */
+/* Average year: max / mean / min temperature for each month (temperature only) */
 function climateChart(monthly) {
   if (monthly.length < 12) return '';
-  const W = 900, H = 260, pl = 46, pr = 46, pt = 16, pb = 30;
+  const W = 900, H = 240, pl = 46, pr = 14, pt = 16, pb = 30;
   const tv = monthly.flatMap((r) => [r.tmax, r.tmin]);
   let tmin = Math.min(...tv), tmax = Math.max(...tv);
   const tpad = (tmax - tmin) * 0.1 || 1; tmin = Math.floor(tmin - tpad); tmax = Math.ceil(tmax + tpad);
-  const pmax = Math.ceil(Math.max(...monthly.map((r) => r.prcp)) / 10) * 10 || 10;
   const x = (i) => pl + ((i + 0.5) * (W - pl - pr)) / 12;
   const yT = (v) => pt + (H - pt - pb) * (1 - (v - tmin) / (tmax - tmin));
-  const yP = (v) => pt + (H - pt - pb) * (1 - v / pmax);
-  const bw = ((W - pl - pr) / 12) * 0.55;
   let g = '';
   for (let i = 0; i <= 4; i++) {
-    const tvv = tmin + ((tmax - tmin) * i) / 4, pv = (pmax * i) / 4;
-    g += `<line x1="${pl}" x2="${W - pr}" y1="${yT(tvv)}" y2="${yT(tvv)}" class="gl"/>`
-      + `<text x="${pl - 6}" y="${yT(tvv) + 4}" text-anchor="end" class="tx">${Math.round(tvv)}°</text>`
-      + `<text x="${W - pr + 6}" y="${yT(tvv) + 4}" class="tx" fill="var(--rain)">${Math.round(pv)}</text>`;
+    const v = tmin + ((tmax - tmin) * i) / 4;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${yT(v)}" y2="${yT(v)}" class="gl"/><text x="${pl - 6}" y="${yT(v) + 4}" text-anchor="end" class="tx">${Math.round(v)}°</text>`;
   }
-  const bars = monthly.map((r, i) => `<rect x="${x(i) - bw / 2}" y="${yP(r.prcp)}" width="${bw}" height="${yP(0) - yP(r.prcp)}" fill="var(--rain)" opacity=".35"><title>${monthName(r.m)}: ${niceNum(r.prcp, 0)} mm</title></rect>`).join('');
-  const line = (key, color, dash = '') => `<path d="${monthly.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${yT(r[key]).toFixed(1)}`).join('')}" fill="none" stroke="${color}" stroke-width="2.2" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`
+  const line = (key, color) => `<path d="${monthly.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${yT(r[key]).toFixed(1)}`).join('')}" fill="none" stroke="${color}" stroke-width="2.2"/>`
     + monthly.map((r, i) => `<circle cx="${x(i)}" cy="${yT(r[key])}" r="3" fill="${color}"><title>${monthName(r.m)}: ${niceNum(r[key])} °C</title></circle>`).join('');
   const labels = monthly.map((r, i) => `<text x="${x(i)}" y="${H - 9}" text-anchor="middle" class="tx">${monthName(r.m, true)}</text>`).join('');
-  const legend = [['h.lg.max', 'var(--bad)'], ['h.lg.mean', 'var(--accent)'], ['h.lg.min', '#38bdf8'], ['h.lg.rain', 'var(--rain)']]
+  const legend = [['h.lg.max', 'var(--bad)'], ['h.lg.mean', 'var(--accent)'], ['h.lg.min', '#38bdf8']]
     .map(([k, c]) => `<span><i style="background:${c}"></i>${t(k)}</span>`).join('');
-  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${bars}${line('tmax', 'var(--bad)')}${line('tmean', 'var(--accent)')}${line('tmin', '#38bdf8')}${labels}</svg><div class="clegend">${legend}</div>`;
+  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${line('tmax', 'var(--bad)')}${line('tmean', 'var(--accent)')}${line('tmin', '#38bdf8')}${labels}</svg><div class="clegend">${legend}</div>`;
+}
+
+/* Heatmap: one cell per month of every year. mode 'anom' = difference from that month's long-term average, 'abs' = mean temperature */
+function heatColor(v, lo, mid, hi, cols) {
+  const [c0, c1, c2] = cols;
+  const mix = (a, b, f) => a.map((x, i) => Math.round(x + (b[i] - x) * f));
+  const rgb = v <= mid ? mix(c0, c1, clamp((v - lo) / (mid - lo || 1))) : mix(c1, c2, clamp((v - mid) / (hi - mid || 1)));
+  return `rgb(${rgb.join(',')})`;
+}
+function heatmap(series, mode) {
+  const rows = series.filter((r) => r[4] >= 25 && r[2] != null);
+  if (rows.length < 24) return '';
+  const years = rows.map((r) => r[0]), y0 = Math.min(...years), y1 = Math.max(...years), ny = y1 - y0 + 1;
+  const sums = Array(13).fill(0), cnts = Array(13).fill(0);
+  rows.forEach((r) => { sums[r[1]] += r[2]; cnts[r[1]]++; });
+  const avg = sums.map((s, m) => (cnts[m] ? s / cnts[m] : 0));
+  const val = (r) => (mode === 'anom' ? r[2] - avg[r[1]] : r[2]);
+  const vals = rows.map(val);
+  let lo, mid, hi, cols;
+  if (mode === 'anom') {
+    const abs = vals.map(Math.abs).sort((x, y) => x - y);
+    const lim = Math.max(1.5, Math.ceil(abs[Math.floor(abs.length * 0.92)] * 2) / 2);   // saturate at the 92nd percentile so the colours stay readable
+    lo = -lim; mid = 0; hi = lim; cols = [[37, 99, 235], [243, 244, 246], [220, 38, 38]];
+  } else {
+    lo = Math.min(...vals); hi = Math.max(...vals); mid = (lo + hi) / 2; cols = [[37, 99, 235], [250, 204, 21], [220, 38, 38]];
+  }
+  const W = 900, pl = 42, pr = 10, pt = 8, ch = 22, pb = 22, H = pt + 12 * ch + pb;
+  const cw = (W - pl - pr) / ny;
+  let cells = '';
+  rows.forEach((r) => {
+    const v = val(r);
+    cells += `<rect x="${(pl + (r[0] - y0) * cw).toFixed(2)}" y="${pt + (r[1] - 1) * ch}" width="${(cw + 0.4).toFixed(2)}" height="${ch - 1}" fill="${heatColor(v, lo, mid, hi, cols)}"><title>${monthName(r[1])} ${r[0]}: ${niceNum(r[2])} °C${mode === 'anom' ? ` (${v >= 0 ? '+' : ''}${niceNum(v)})` : ''}</title></rect>`;
+  });
+  let axes = '';
+  for (let m = 1; m <= 12; m++) axes += `<text x="${pl - 6}" y="${pt + (m - 1) * ch + ch / 2 + 3}" text-anchor="end" class="tx">${monthName(m, true)}</text>`;
+  for (let y = Math.ceil(y0 / 10) * 10; y <= y1; y += 10) axes += `<text x="${pl + (y - y0 + 0.5) * cw}" y="${H - 6}" text-anchor="middle" class="tx">${y}</text>`;
+  const stops = Array.from({ length: 11 }, (_, i) => `<stop offset="${i * 10}%" stop-color="${heatColor(lo + ((hi - lo) * i) / 10, lo, mid, hi, cols)}"/>`).join('');
+  const fmtL = (v) => (mode === 'anom' ? `${v > 0 ? '+' : ''}${niceNum(v, 1)}°` : `${niceNum(v, 0)}°`);
+  const legend = `<div class="hlegend"><span>${fmtL(lo)}</span><svg viewBox="0 0 200 10" preserveAspectRatio="none"><defs><linearGradient id="hg">${stops}</linearGradient></defs><rect width="200" height="10" rx="5" fill="url(#hg)"/></svg><span>${fmtL(hi)}</span></div>`;
+  return `<svg class="hchart heat" viewBox="0 0 ${W} ${H}" role="img">${cells}${axes}</svg>${legend}`;
 }
 
 function renderHistory() {
@@ -677,6 +711,7 @@ function renderHistory() {
   if (!h) { return; }
   const m = h.meta;
   const period = histState.period || 'all';
+  const heatMode = histState.heat || 'anom';
   const complete = h.annual.filter((a) => a.n >= 350);
   // Series for the two charts: whole year (annual values) or one calendar month of every year
   const seriesT = period === 'all' ? complete.filter((a) => a.tmean != null).map((a) => ({ x: a.y, v: a.tmean }))
@@ -706,6 +741,9 @@ function renderHistory() {
       <div><h3>${period === 'all' ? t('h.chart.temp') : t('h.chart.temp.m', { m: pName })}</h3>${histChart(seriesT, { kind: 'line', color: 'var(--accent)', unit: '°C', trend: true })}</div>
       <div><h3>${period === 'all' ? t('h.chart.prcp') : t('h.chart.prcp.m', { m: pName })}</h3>${histChart(seriesP, { kind: 'bar', color: 'var(--rain)', unit: 'mm', d: 0 })}</div>
     </div>
+    <div class="h-heathead"><h3>${t('h.heat')}</h3>
+      <div class="seg" role="group"><button type="button" data-heat="anom" class="${heatMode === 'anom' ? 'active' : ''}">${t('h.heat.anom')}</button><button type="button" data-heat="abs" class="${heatMode === 'abs' ? 'active' : ''}">${t('h.heat.abs')}</button></div></div>
+    <div class="h-climate">${heatmap(h.series, heatMode)}<p class="hint">${t('h.heat.hint.' + heatMode)}</p></div>
     <h3>${t('h.climate')}</h3>
     <div class="h-climate">${climateChart(h.monthly)}</div>
     <h3>${t('h.monthly')}</h3>
@@ -714,11 +752,12 @@ function renderHistory() {
     <div class="h-tablewrap tall"><table class="htable"><thead><tr><th>${t('h.col.year')}</th><th>${t('h.col.mean')}</th><th>${t('h.col.max')}</th><th>${t('h.col.min')}</th><th>${t('h.col.prcp')}</th><th>${t('h.col.rainy')}</th><th>${t('h.col.gust')}</th><th>${t('h.col.snow')}</th></tr></thead><tbody>${years}</tbody></table></div>
     <p class="hint">${t('h.partial')}</p>`;
   $('histUpdate').addEventListener('click', () => openHistory(loc, true));
+  document.querySelectorAll('[data-heat]').forEach((b) => b.addEventListener('click', () => { histState.heat = b.dataset.heat; renderHistory(); }));
   $('histPeriod').addEventListener('change', (e) => { histState.period = e.target.value; renderHistory(); });
 }
 
 async function openHistory(loc, refresh = false) {
-  histState = { loc, data: null, fresh: false, added: 0, period: (histState && histState.loc.id === loc.id && histState.period) || 'all' };
+  histState = { loc, data: null, fresh: false, added: 0, period: (histState && histState.loc.id === loc.id && histState.period) || 'all', heat: (histState && histState.heat) || 'anom' };
   const wasHidden = histSec.hidden;
   histSec.hidden = false;
   if (wasHidden || !refresh) histSec.scrollIntoView({ behavior: 'smooth', block: 'start' });

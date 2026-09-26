@@ -89,7 +89,8 @@ Click **History** next to a saved location and a section opens **below the map**
 - **Coverage:** which data grid point was used (its coordinates, its distance from your location and its elevation), the period and the number of days available.
 - **Records:** hottest day, coldest night, wettest day, strongest gust, snowiest day, with dates.
 - **Charts:** annual mean temperature with a trend line (°C per decade) and annual precipitation. A **Period** selector switches both charts from the whole year to a single calendar month (e.g. *July of each year*), which shows how each month has changed over time.
-- **Climate diagram:** the average year at a glance – max / mean / min temperature lines and rainfall bars for each month.
+- **Temperature heatmap:** one cell for every month of every year since 1940 (columns = years, rows = months). By default the colour is the **difference from that month's long-term average** (red warmer, blue colder), so you can see at once how every month has changed over the whole history; a switch shows the actual temperature instead.
+- **Average year:** max / mean / min temperature for each month (temperature only).
 - **Monthly climate:** average temperature (mean / max / min), rainfall and rainy days for each month over all years.
 - **Year by year:** mean / max / min temperature, precipitation (with bars), rainy days (≥ 1 mm), strongest gust and snowfall.
 
