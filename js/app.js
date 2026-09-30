@@ -15,7 +15,7 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, verify: null, observed: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
+const state = { locations: [], current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
@@ -426,6 +426,15 @@ function renderHero() {
   if (obs) {
     $('heroObs').innerHTML = `<b>${t('hero.obs', { loc: esc(state.current.name) })}:</b> ${fmt(obs.temp)}°${obs.rain != null ? ` · ${obs.rain ? t('hero.obs.wet') : t('hero.obs.dry')}` : ''}${obs.wind_kmh != null ? ` · ${t('hero.obs.wind', { v: fmt(obs.wind_kmh) })}` : ''}${obs.humidity != null ? ` · ${t('hero.obs.hum', { v: obs.humidity })}` : ''}
       <small>${t('hero.obs.station', { name: esc(obs.station.name), km: obs.station.km })}</small>`;
+  }
+  const radar = state.radar;
+  $('heroRadar').hidden = !radar;
+  if (radar) {
+    const localTime = (iso) => { const d = new Date(new Date(iso).getTime() + state.data.utc_offset_seconds * 1000); return d.toISOString().slice(11, 16); };
+    const msg = radar.changeAt
+      ? t(radar.now ? 'hero.radar.break' : 'hero.radar.start', { time: localTime(radar.changeAt) })
+      : t(radar.now ? 'hero.radar.now' : 'hero.radar.clear');
+    $('heroRadar').innerHTML = `${RAIN_DOT}<span>${msg}</span>`;
   }
   const outlook = rainOutlook(c);
   $('heroRain').hidden = !outlook;
@@ -867,11 +876,12 @@ async function loadForecast(refresh = false) {
     if (token !== state.token) return;
     state.data = prepare(data);
     state.day = 0; state.vHours = 24;
-    state.verify = null; state.verifyErr = null; state.observed = null;
+    state.verify = null; state.verifyErr = null; state.observed = null; state.radar = null;
     $('loading').hidden = true; $('forecastBody').hidden = false;
     renderAll();
     loadVerify(loc, token);
     loadObserved(loc, token);
+    loadRadar(loc, token);
   } catch (err) {
     if (token !== state.token) return;
     $('loading').hidden = true;
@@ -889,6 +899,18 @@ async function loadObserved(loc, token) {
     state.observed = r.observed || null;
     renderHero();
   } catch (err) { /* silent: this line is a nice-to-have, not core */ }
+}
+
+/* "Next break": a short-term rain nowcast sampled from RainViewer's real radar composite at this exact
+   point (not a map) — independent of, and usually more precise near-term than, the model-based outlook
+   in #heroRain below it. Silent failure keeps the line hidden. */
+async function loadRadar(loc, token) {
+  try {
+    const r = await api(`api/radar.php?lat=${loc.lat}&lon=${loc.lon}`);
+    if (token !== state.token) return;
+    state.radar = r.radar || null;
+    renderHero();
+  } catch (err) { /* silent */ }
 }
 
 async function loadVerify(loc, token) {
