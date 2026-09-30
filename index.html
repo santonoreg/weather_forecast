@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261026">
+<link rel="stylesheet" href="css/style.css?v=20261027">
 </head>
 <body>
 <header class="topbar">
@@ -66,6 +66,13 @@
           <section id="hero" class="hero card">
             <div id="heroNow" class="now"></div>
             <div id="heroVerdict" class="verdict"></div>
+            <div id="heroRain" class="rainline" hidden></div>
+            <div class="hero-foot">
+              <button id="heroHist" type="button" class="hist">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 5-7 4 4"/><path d="M3 21h18"/></svg>
+                <span data-i18n="hero.history">View full history</span>
+              </button>
+            </div>
           </section>
           <section class="week card">
             <div class="sec-h"><h2 data-i18n="wk.title">Days ahead</h2></div>
@@ -131,8 +138,8 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261026"></script>
-<script src="js/icons.js?v=20261026"></script>
-<script src="js/app.js?v=20261026"></script>
+<script src="js/i18n.js?v=20261027"></script>
+<script src="js/icons.js?v=20261027"></script>
+<script src="js/app.js?v=20261027"></script>
 </body>
 </html>

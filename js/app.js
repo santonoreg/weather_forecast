@@ -342,6 +342,22 @@ function nowColumn() {
 }
 
 /* Hero card: the answer first — current conditions and how much the models agree on them */
+/* When does the rain situation next change? Scans the weighted rain-probability consensus hour by hour
+   from now, up to 24h ahead, for the first switch between "raining" and "dry" (≥ 50% of models agree). */
+function rainOutlook(c0) {
+  const { data } = state;
+  const start = c0.a, horizon = Math.min(24, data.time.length - start);
+  if (horizon <= 1) return null;
+  const wetAt = (i) => { const s = wshare(wpairs('precip', (p) => agg(p, 'precip', i, i + 1)), (x) => x >= RAIN_THR); return s != null && s >= 0.5; };
+  const nowWet = wetAt(start);
+  for (let k = 1; k < horizon; k++) {
+    const i = start + k;
+    if (wetAt(i) !== nowWet) return nowWet ? t('hero.rain.break', { time: data.time[i].slice(11, 16) }) : t('hero.rain.start', { time: data.time[i].slice(11, 16) });
+  }
+  return nowWet ? t('hero.rain.continues') : t('hero.rain.none', { h: horizon });
+}
+const RAIN_DOT = '<svg class="rdot" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c4 5 7 8.5 7 12a7 7 0 0 1-14 0c0-3.5 3-7 7-12z" fill="var(--rain)"/></svg>';
+
 function renderHero() {
   if (!state.data || !state.current) return;
   const c = nowColumn();
@@ -365,7 +381,11 @@ function renderHero() {
     $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
     $('heroVerdict').hidden = false;
   } else { $('heroVerdict').hidden = true; }
+  const outlook = rainOutlook(c);
+  $('heroRain').hidden = !outlook;
+  if (outlook) $('heroRain').innerHTML = `${RAIN_DOT}<span>${outlook}</span>`;
 }
+$('heroHist').addEventListener('click', () => { if (state.current) { showView('places'); openHistory(state.current); } });
 
 /* Colour legend for the weather-category icons, shown above the table only on the Weather tab */
 function renderSegKey() {
@@ -451,6 +471,44 @@ function renderMeteogram() {
     <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI })}</div>`;
 }
 
+/* Weather tab only, "time across" mode: instead of one summary/prob pair, show every key metric as its
+   own row at once (weather, agreement, temperature, rain, wind) — a compact dashboard, with the
+   per-provider detail still available (collapsed) via "Show all N models" underneath. */
+function buildWeatherLanes(cols) {
+  const lane = (name, cells) => ({ name, cells });
+  const wx = cols.map((c) => {
+    const shares = weatherShares(c);
+    return shares ? cell(`${WI.svg(WI.CAT_CODE[shares[0][0]], c.night, 'big')}<small>${t('cat.' + shares[0][0])}</small>`) : cell('–');
+  });
+  const agree = cols.map((c) => {
+    const shares = weatherShares(c);
+    if (!shares) return cell('–');
+    const pct = Math.round(shares[0][1] * 100);
+    return cell(`<div class="pct ${pct >= 75 ? '' : pct >= 50 ? 'dim' : 'dim'}">${pct}%</div>`);
+  });
+  const temp = cols.map((c) => {
+    const m = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
+    return cell(`<b>${fmt(m)}°</b>`, bgTemp(m));
+  });
+  const rain = cols.map((c) => {
+    const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
+    if (pr == null) return cell('–');
+    const m = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
+    return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${m != null && m >= 0.05 ? `<small>${fmt(m, 1)} mm</small>` : ''}`, `hsla(215,85%,50%,${pr * 0.4})`);
+  });
+  const wind = cols.map((c) => {
+    const m = wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)));
+    if (m == null) return cell('–');
+    const g = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
+    const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
+    return cell(`${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`, bgWind(m));
+  });
+  return [
+    lane(t('lane.weather'), wx), lane(t('lane.agree'), agree), lane(t('lane.temp'), temp),
+    lane(t('lane.rain'), rain), lane(t('lane.wind'), wind),
+  ];
+}
+
 function renderGrid() {
   const { param } = state;
   const notReliability = param !== 'reliability';
@@ -477,8 +535,14 @@ function renderGrid() {
     let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
     // Consensus-first: the individual provider rows are collapsed by default, behind "Show all N models"
     if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
-    html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-    html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    if (param === 'weather') {
+      buildWeatherLanes(cols).forEach((l, li) => {
+        html += `<tr class="lane${li === 0 ? ' first' : ''}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+      });
+    } else {
+      html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+      html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    }
     if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
     html += '</tbody>';
     $('grid').innerHTML = html;

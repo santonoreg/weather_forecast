@@ -16,7 +16,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ## Screenshots
 
-**Forecast – weather** (hero card and days-ahead on the left; per-provider table expanded via "Show all models" on the right, last row = most likely weather with the share of every category; the current interval is highlighted)
+**Forecast – weather** (hero card with rain outlook and days-ahead on the left; on the right, the Weather tab's five-lane dashboard – Weather, Agree, Temp, Rain, Wind – with the individual providers collapsed behind "Show all models"; the current interval is highlighted)
 
 ![Forecast – weather](docs/screenshots/forecast-weather.png)
 
@@ -109,13 +109,13 @@ The first time you open it, the app downloads the complete daily series (about 1
 
 Choose a saved location and you get a two-column layout: a **hero card** and the **days-ahead** list on the left, the hour-by-hour table on the right (stacked on narrow screens).
 
-1. **Hero card**: current conditions right now (icon, temperature, feels-like, wind) and a **verdict** strip — a 1–5 dot scale plus a sentence saying how much the models agree (*"The models mostly/partly agree" / "are split"*), with the temperature range behind it.
+1. **Hero card**: current conditions right now (icon, temperature, feels-like, wind) and a **verdict** strip — a 1–5 dot scale plus a sentence saying how much the models agree (*"The models mostly/partly agree" / "are split"*), with the temperature range behind it. Below it, a one-line **rain outlook** (*"Rain expected from 13:00"*, *"Next break: dry from …"*, *"No rain expected in the next Nh"*), computed by scanning the next 24 hours for the next change in the rain-probability consensus. A **View full history** link jumps straight to that location's [long-term history](#location-history).
 2. **Days ahead** (7 days): one row per day with icon, high/low, chance of rain (≥ 1 mm) and peak gust; click a day to jump the table below to it.
-3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: it shows only the average/agreement rows (plus, on the Weather tab, the named AI models) – a **"Show all N models"** button reveals every individual provider's row underneath. A **→ Time across / ↓ Time down / 〰 Meteogram** switch changes how the table is shown: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda (average + probability only, better for narrow screens or scanning many hours at once); *Meteogram* replaces the table with charts – temperature (with a shaded band for the spread between providers), precipitation and wind speed for the selected day, all at once and independent of which tab is selected. All three always reflect the same underlying **Weight by reliability** setting.
+3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: on the **Weather** tab it shows a five-row dashboard — **Weather** (top category icon), **Agree** (its share), **Temp**, **Rain** (chance + mm) and **Wind** (speed, gusts, direction) — all at once; every other tab shows its own average/agreement pair (see the table below). A **"Show all N models"** button reveals every individual provider's row underneath (plus, on the Weather tab, the named AI models, which stay visible either way). A **→ Time across / ↓ Time down / 〰 Meteogram** switch changes how the table is shown: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda (average + probability only, better for narrow screens or scanning many hours at once); *Meteogram* replaces the table with charts – temperature (with a shaded band for the spread between providers), precipitation and wind speed for the selected day, all at once and independent of which tab is selected. All three always reflect the same underlying **Weight by reliability** setting.
 
    | Tab | Provider cells | Second-to-last row | **Last row (probability)** |
    |---|---|---|---|
-   | **Weather** | weather icon + temperature | average temperature | every weather category predicted by the models with its share (e.g. *Clear 55 %, Overcast 27 %, Partly cloudy 18 %*) – the top one also as a large icon |
+   | **Weather** | weather icon + temperature | *(see the five-lane dashboard above instead)* | every weather category predicted by the models with its share (e.g. *Clear 55 %, Overcast 27 %, Partly cloudy 18 %*) is what the **Weather** lane's icon summarises; the **Agree** lane is its share |
    | **Temperature** | °C, colour-coded | average, min–max | agreement % and ± standard deviation |
    | **Rain** | mm per step | average, max | chance of rain (share of models giving ≥ 0.2 mm in the step) |
    | **Wind** | 10 m speed km/h, arrow = direction the wind blows towards, gust in brackets | average and range, mean direction | chance of strong wind (share of models ≥ 30 km/h) and of gusts ≥ 60 km/h |
