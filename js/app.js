@@ -17,7 +17,7 @@ async function api(path, opts) {
 
 const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
-try { state.orient = localStorage.getItem('wefo.orient') === 'v' ? 'v' : 'h'; } catch (e) { /* ignore */ }
+try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
@@ -393,21 +393,85 @@ function renderGridVertical(cols, built) {
   if (nowRow) nowRow.scrollIntoView({ block: 'center' });
 }
 
+/* A small hourly line/bar chart for the meteogram: x = hour of the selected day. `band` (optional) shades
+   the min–max spread between providers behind the average line; `nowI` (optional) draws a dashed marker
+   at the current hour. Deliberately independent of the Step selector — a meteogram is always hourly. */
+function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1 }) {
+  const n = points.length;
+  if (n < 2) return '';
+  const W = 1200, H = kind === 'bar' ? 110 : 170, pl = 40, pr = 12, pt = 10, pb = 22;
+  const vals = nn(points.map((p) => p.v).concat(band ? band.flat() : []));
+  let lo, hi;
+  if (kind === 'bar') { lo = 0; hi = Math.max(2, (vals.length ? Math.max(...vals) : 0) * 1.25); }
+  else { lo = vals.length ? Math.min(...vals) : 0; hi = vals.length ? Math.max(...vals) : 1; const pad = (hi - lo) * 0.15 || 1; lo -= pad; hi += pad; }
+  const x = (i) => pl + (i * (W - pl - pr)) / (n - 1);
+  const y = (v) => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo || 1));
+  let g = '';
+  for (let i = 0; i <= 3; i++) {
+    const v = lo + ((hi - lo) * i) / 3;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="gl"/><text x="${pl - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="tx">${Math.round(v)}</text>`;
+  }
+  points.forEach((p, i) => { if (i % 3 === 0 || i === n - 1) g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="tx">${p.label}</text>`; });
+  let body = '';
+  if (band) {
+    const top = band.map((b_, i) => (b_[1] == null ? '' : `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(b_[1]).toFixed(1)}`)).join('');
+    const bot = band.map((b_, i) => (b_[0] == null ? '' : `L${x(n - 1 - i).toFixed(1)} ${y(band[n - 1 - i][0]).toFixed(1)}`)).join('');
+    body += `<path d="${top}${bot}Z" fill="${color}" opacity=".14"/>`;
+  }
+  if (kind === 'bar') {
+    const bw = Math.max(2, (W - pl - pr) / n - 3);
+    body += points.map((p, i) => (p.v == null ? '' : `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${y(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(p.v)).toFixed(1)}" fill="${color}" opacity=".85"><title>${p.label}: ${p.v.toFixed(d)}${unit}</title></rect>`)).join('');
+  } else {
+    const pts = points.map((p, i) => (p.v == null ? null : `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`)).filter(Boolean).join(' ');
+    body += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/>`;
+    body += points.map((p, i) => (p.v == null ? '' : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.4" fill="${color}"><title>${p.label}: ${p.v.toFixed(d)}${unit}</title></circle>`)).join('');
+  }
+  if (nowI >= 0 && nowI < n) body += `<line x1="${x(nowI).toFixed(1)}" x2="${x(nowI).toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
+}
+
+/* Meteogram: temperature (with model-spread band), precipitation and wind for the selected day, all 24
+   hours at once — independent of the current parameter tab and step. */
+function renderMeteogram() {
+  const { data } = state;
+  const a = state.day * 24, b = Math.min(a + 24, data.time.length);
+  const idx = []; for (let i = a; i < b; i++) idx.push(i);
+  const label = (i) => data.time[i].slice(11, 16);
+  const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
+  const nowI = idx.findIndex((i) => data.time[i].slice(0, 13) === nowStr);
+
+  const temps = idx.map((i) => ({ v: wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', i, i + 1))), label: label(i) }));
+  const band = idx.map((i) => { const v = nn(activeProviders().map((p) => agg(p, 'temperature_2m', i, i + 1))); return v.length ? [Math.min(...v), Math.max(...v)] : [null, null]; });
+  const precs = idx.map((i) => ({ v: wmean(wpairs('precip', (p) => agg(p, 'precip', i, i + 1))), label: label(i) }));
+  const winds = idx.map((i) => ({ v: wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', i, i + 1))), label: label(i) }));
+
+  $('meteo').innerHTML = `
+    <div class="mg-lane"><b>${t('mg.temp')}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, nowI })}</div>
+    <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI })}</div>
+    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI })}</div>`;
+}
+
 function renderGrid() {
   const { param } = state;
   const notReliability = param !== 'reliability';
   $('relNote').hidden = param !== 'reliability';
   $('orientSeg').hidden = !notReliability;
   renderSegKey();
-  if (param === 'reliability') { $('modelsToggle').hidden = true; return renderReliability(); }
+  if (param === 'reliability') { $('modelsToggle').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
   const cols = columns();
   const built = buildRows(param, cols);
   const { rows, summary, prob, summaryLabel, probLabel, extraRows } = built;
 
-  if (state.orient === 'v') {
+  if (state.orient === 'm') {
     $('modelsToggle').hidden = true;
+    $('grid').hidden = true; $('meteo').hidden = false;
+    renderMeteogram();
+  } else if (state.orient === 'v') {
+    $('modelsToggle').hidden = true;
+    $('grid').hidden = false; $('meteo').hidden = true;
     renderGridVertical(cols, built);
   } else {
+    $('grid').hidden = false; $('meteo').hidden = true;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
     const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;

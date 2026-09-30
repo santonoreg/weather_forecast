@@ -70,7 +70,8 @@ const I18N = {
     'lg.compare': ' The rows right after it (marked AI) show the flagship single-model AI forecasts — ECMWF AIFS and, when configured, Google WeatherNext 3 — on their own, for direct comparison with the weighted result above.',
 
     'g.provider': 'Provider / model', 'g.time': 'Time', 'g.temp_avg': 'Temperature (avg)', 'g.prob_weather': 'Most likely weather',
-    'orient.h': '→ Time across', 'orient.v': '↓ Time down',
+    'orient.h': '→ Time across', 'orient.v': '↓ Time down', 'orient.m': '〰 Meteogram',
+    'mg.temp': 'Temperature (line = average, band = model range) °C', 'mg.precip': 'Precipitation (mm/h, average)', 'mg.wind': 'Wind speed (average) km/h',
     'g.avg_mm': 'Average (mm)', 'g.upto': 'up to {v}', 'g.prob_rain': 'Chance of rain',
     'g.avg_kmh': 'Average (km/h)', 'g.prob_wind': 'Chance of strong wind (≥{v})', 'g.gusts': 'gusts ≥60: {v}%',
     'g.storm_yes': 'storm', 'g.storm_maybe': 'possible', 'g.storm_no': 'no',
@@ -198,7 +199,8 @@ const I18N = {
     'lg.compare': ' Οι γραμμές αμέσως μετά (με ένδειξη AI) δείχνουν τις κορυφαίες προβλέψεις μεμονωμένων μοντέλων AI — ECMWF AIFS και, όταν είναι ρυθμισμένο, Google WeatherNext 3 — ξεχωριστά, για άμεση σύγκριση με το παραπάνω σταθμισμένο αποτέλεσμα.',
 
     'g.provider': 'Πάροχος / μοντέλο', 'g.time': 'Ώρα', 'g.temp_avg': 'Θερμοκρασία (μ.ο.)', 'g.prob_weather': 'Πιθανότερος καιρός',
-    'orient.h': '→ Ώρες σε στήλες', 'orient.v': '↓ Ώρες σε γραμμές',
+    'orient.h': '→ Ώρες σε στήλες', 'orient.v': '↓ Ώρες σε γραμμές', 'orient.m': '〰 Μετεωρόγραμμα',
+    'mg.temp': 'Θερμοκρασία (γραμμή = μέσος όρος, ζώνη = εύρος μοντέλων) °C', 'mg.precip': 'Βροχόπτωση (mm/ώρα, μέσος όρος)', 'mg.wind': 'Ταχύτητα ανέμου (μέσος όρος) km/h',
     'g.avg_mm': 'Μέσος όρος (mm)', 'g.upto': 'έως {v}', 'g.prob_rain': 'Πιθανότητα βροχής',
     'g.avg_kmh': 'Μέσος όρος (km/h)', 'g.prob_wind': 'Πιθανότητα ισχυρού ανέμου (≥{v})', 'g.gusts': 'ριπές ≥60: {v}%',
     'g.storm_yes': 'καταιγίδα', 'g.storm_maybe': 'πιθανή', 'g.storm_no': 'όχι',

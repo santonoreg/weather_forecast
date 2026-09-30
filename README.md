@@ -24,6 +24,10 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Time down](docs/screenshots/forecast-timedown.png)
 
+**Meteogram** – temperature (with the model-spread band), precipitation and wind for the selected day as charts, independent of the parameter tab
+
+![Meteogram](docs/screenshots/forecast-meteogram.png)
+
 **Rain** – per-model rainfall per step, average and chance of rain
 
 ![Forecast – rain](docs/screenshots/forecast-rain.png)
@@ -107,7 +111,7 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
 
 1. **Hero card**: current conditions right now (icon, temperature, feels-like, wind) and a **verdict** strip — a 1–5 dot scale plus a sentence saying how much the models agree (*"The models mostly/partly agree" / "are split"*), with the temperature range behind it.
 2. **Days ahead** (7 days): one row per day with icon, high/low, chance of rain (≥ 1 mm) and peak gust; click a day to jump the table below to it.
-3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: it shows only the average/agreement rows (plus, on the Weather tab, the named AI models) – a **"Show all N models"** button reveals every individual provider's row underneath. A **→ Time across / ↓ Time down** switch transposes the table: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda (average + probability only, better for narrow screens or scanning many hours at once).
+3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: it shows only the average/agreement rows (plus, on the Weather tab, the named AI models) – a **"Show all N models"** button reveals every individual provider's row underneath. A **→ Time across / ↓ Time down / 〰 Meteogram** switch changes how the table is shown: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda (average + probability only, better for narrow screens or scanning many hours at once); *Meteogram* replaces the table with charts – temperature (with a shaded band for the spread between providers), precipitation and wind speed for the selected day, all at once and independent of which tab is selected. All three always reflect the same underlying **Weight by reliability** setting.
 
    | Tab | Provider cells | Second-to-last row | **Last row (probability)** |
    |---|---|---|---|
