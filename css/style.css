@@ -158,6 +158,22 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .pct { font-size: 16px; font-weight: 700; }
 .legend { color: var(--muted); font-size: 12.5px; margin-top: 12px; line-height: 1.55; }
 
+/* "See what the models say": per-provider spaghetti chart + precipitation bars */
+.expert { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.expert summary { cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--accent-2); }
+.expert b { display: block; margin: 12px 0 4px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.exlegend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); margin: 2px 0 4px; }
+.exlegend span { display: inline-flex; align-items: center; gap: 6px; }
+.exlegend .sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+.exlegend .sw.l-model { background: var(--muted); opacity: .5; }
+.exlegend .sw.l-wefo { background: var(--accent); height: 3px; }
+.exlegend .sw.b-avg { height: 10px; background: var(--rain); }
+.exlegend .sw.b-wet { height: 10px; background: var(--rain); opacity: .35; }
+.hchart .ex-model { fill: none; stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.hchart .ex-avg { fill: none; stroke: var(--accent); stroke-width: 2.4; }
+.hchart rect.bar-avg { fill: var(--rain); }
+.hchart rect.bar-wet { fill: var(--rain); opacity: .3; }
+
 @media (max-width: 700px) {
   .grid { font-size: 13px; }
   .grid th, .grid td { padding: 7px 5px; min-width: 62px; }

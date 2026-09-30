@@ -653,8 +653,80 @@ $('mdlList').addEventListener('click', (e) => {
 });
 document.addEventListener('click', (e) => { if (!e.target.closest('.models')) $('models').open = false; });
 
+/* "See what the models say": every active provider's own temperature line (thin) plus the weighted
+   average (highlighted), and a precipitation bars pair (model average vs the single wettest model) — the
+   next 48 hours from now, independent of the selected day/tab/step. */
+function spaghettiChart(lines, avg, dayMarks) {
+  const n = avg.length;
+  if (n < 2) return '';
+  const W = 1200, H = 220, pl = 40, pr = 12, pt = 12, pb = 22;
+  const allV = nn(lines.flat().concat(avg));
+  let lo = allV.length ? Math.min(...allV) : 0, hi = allV.length ? Math.max(...allV) : 1;
+  const pad = (hi - lo) * 0.1 || 1; lo -= pad; hi += pad;
+  const x = (i) => pl + (i * (W - pl - pr)) / (n - 1);
+  const y = (v) => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
+  let g = '';
+  for (let i = 0; i <= 3; i++) { const v = lo + ((hi - lo) * i) / 3; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="gl"/><text x="${pl - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="tx">${Math.round(v)}°</text>`; }
+  dayMarks.forEach((dm) => { g += `<line x1="${x(dm.i).toFixed(1)}" x2="${x(dm.i).toFixed(1)}" y1="${pt}" y2="${H - pb}" class="gl" stroke-dasharray="2 3"/><text x="${(x(dm.i) + 4).toFixed(1)}" y="${pt + 10}" class="tx">${dm.label}</text>`; });
+  const path = (arr) => arr.map((v, i) => (v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`)).filter(Boolean).join(' ');
+  let body = lines.map((line) => `<polyline points="${path(line)}" class="ex-model"/>`).join('');
+  body += `<polyline points="${path(avg)}" class="ex-avg"/>`;
+  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
+}
+function dualBarChart(back, front, dayMarks) {
+  const n = front.length;
+  if (n < 2) return '';
+  const W = 1200, H = 130, pl = 40, pr = 12, pt = 10, pb = 22;
+  const vals = nn(back);
+  const hi = Math.max(2, (vals.length ? Math.max(...vals) : 0) * 1.2);
+  const x = (i) => pl + (i * (W - pl - pr)) / (n - 1);
+  const y = (v) => pt + (H - pt - pb) * (1 - v / hi);
+  let g = '';
+  for (let i = 0; i <= 2; i++) { const v = (hi * i) / 2; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="gl"/><text x="${pl - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="tx">${v.toFixed(1)}</text>`; }
+  dayMarks.forEach((dm) => { g += `<line x1="${x(dm.i).toFixed(1)}" x2="${x(dm.i).toFixed(1)}" y1="${pt}" y2="${H - pb}" class="gl" stroke-dasharray="2 3"/>`; });
+  const bw = Math.max(2, (W - pl - pr) / n - 2);
+  const bars = (arr, cls) => arr.map((v, i) => (v == null || v <= 0.01 ? '' : `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" class="${cls}"><title>${v.toFixed(1)} mm</title></rect>`)).join('');
+  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${bars(back, 'bar-wet')}${bars(front, 'bar-avg')}</svg>`;
+}
+function expertDayMarks(idx) {
+  const { data } = state;
+  const marks = []; let prevDate = null;
+  idx.forEach((ti, i) => {
+    const dte = data.time[ti].slice(0, 10);
+    if (dte !== prevDate) {
+      const dayIdx = data.dates.indexOf(dte), dt = new Date(dte + 'T12:00:00');
+      const label = dayIdx === 0 ? t('today') : dayIdx === 1 ? t('tomorrow') : dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
+      marks.push({ i, label: `${label} ${dt.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}` });
+      prevDate = dte;
+    }
+  });
+  return marks;
+}
+function renderExpert() {
+  if (!state.data) return;
+  const { data } = state;
+  const c0 = nowColumn();
+  const end = Math.min(c0.a + 48, data.time.length);
+  const idx = []; for (let i = c0.a; i < end; i++) idx.push(i);
+  if (idx.length < 2) { $('expertBody').innerHTML = ''; return; }
+  const dayMarks = expertDayMarks(idx);
+  const P = activeProviders();
+  const tempLines = P.map((p) => idx.map((i) => agg(p, 'temperature_2m', i, i + 1)));
+  const tempAvg = idx.map((i) => wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', i, i + 1))));
+  const precAvg = idx.map((i) => wmean(wpairs('precip', (p) => agg(p, 'precip', i, i + 1))));
+  const precMax = idx.map((i) => { const v = nn(P.map((p) => agg(p, 'precip', i, i + 1))); return v.length ? Math.max(...v) : null; });
+  $('expertBody').innerHTML = `
+    <p class="hint">${t('ex.hint')}</p>
+    <b>${t('ex.temp')}</b>
+    <div class="exlegend"><span><i class="sw l-model"></i>${t('ex.line.model')}</span><span><i class="sw l-wefo"></i>${t('ex.line.wefo')}</span></div>
+    ${spaghettiChart(tempLines, tempAvg, dayMarks)}
+    <b>${t('ex.precip')}</b>
+    <div class="exlegend"><span><i class="sw b-avg"></i>${t('ex.bar.avg')}</span><span><i class="sw b-wet"></i>${t('ex.bar.wet')}</span></div>
+    ${dualBarChart(precMax, precAvg, dayMarks)}`;
+}
+
 function renderAll() {
-  renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid();
+  renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid(); renderExpert();
   const d = state.data, loc = state.current;
   $('meta').textContent = t('meta', { name: loc.name, lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
 }

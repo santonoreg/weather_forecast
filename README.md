@@ -20,6 +20,10 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Forecast – weather](docs/screenshots/forecast-weather.png)
 
+**See what the models say** – a per-provider spaghetti chart (temperature, next 48h) and precipitation bars, expandable below the table
+
+![See what the models say](docs/screenshots/forecast-expert.png)
+
 **Time down** – the same table transposed to one row per hour (Show all models collapsed to the consensus-only view)
 
 ![Time down](docs/screenshots/forecast-timedown.png)
@@ -121,6 +125,8 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
    | **Wind** | 10 m speed km/h, arrow = direction the wind blows towards, gust in brackets | average and range, mean direction | chance of strong wind (share of models ≥ 30 km/h) and of gusts ≥ 60 km/h |
    | **Thunderstorm** | CAPE (J/kg) and a bolt when the model forecasts a thunderstorm | average CAPE | chance of thunderstorm |
    | **Cloud cover / Humidity / Pressure** | value, colour-coded | average, min–max | agreement % |
+
+   Below the table, a collapsible **"See what the models say"** panel plots the next 48 hours independent of the tab/day/step selection: a spaghetti chart with every active provider's own temperature line (thin) plus the weighted average (highlighted) – tight lines mean the models agree, spread-out lines mean uncertainty – and a precipitation-per-hour bars pair (model average vs. the single wettest model).
    | **Reliability** | see [Model verification](#model-verification-reliability-tab) | | |
 
 4. **Step**: 1, 3, 6 or 12 hours. Values are aggregated per step (rain = sum, gust/CAPE = max, weather code = most severe, wind direction = speed-weighted circular mean, others = mean).
