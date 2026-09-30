@@ -563,7 +563,7 @@ function renderMeteogram() {
    own row at once (weather, agreement, temperature, rain, wind) — a compact dashboard, with the
    per-provider detail still available (collapsed) via "Show all N models" underneath. */
 function buildWeatherLanes(cols) {
-  const lane = (name, cells) => ({ name, cells });
+  const lane = (name, cells, cls) => ({ name, cells, cls });
   const wx = cols.map((c) => {
     const shares = weatherShares(c);
     return shares ? cell(WI.svg(WI.CAT_CODE[shares[0][0]], c.night, 'big')) : cell('–');
@@ -593,8 +593,8 @@ function buildWeatherLanes(cols) {
     return cell(`${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`, bgWind(m));
   });
   return [
-    lane(t('lane.weather'), wx), lane(t('lane.agree'), agree), lane(t('lane.temp'), temp),
-    lane(t('lane.rain'), rain), lane(t('lane.wind'), wind),
+    lane(t('lane.weather'), wx, 'wx'), lane(t('lane.agree'), agree, 'agree'), lane(t('lane.temp'), temp, 'temp'),
+    lane(t('lane.rain'), rain, 'rain'), lane(t('lane.wind'), wind, 'wind'),
   ];
 }
 
@@ -604,10 +604,10 @@ function renderGrid() {
   $('relNote').hidden = param !== 'reliability';
   $('orientSeg').hidden = !notReliability;
   renderSegKey();
-  if (param === 'reliability') { $('grid').classList.remove('vert'); $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
+  if (param === 'reliability') { $('grid').classList.remove('vert', 'lanes'); $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
 
   if (state.orient === 'm') {
-    $('grid').classList.remove('vert');
+    $('grid').classList.remove('vert', 'lanes');
     $('modelsToggle').hidden = true; $('vFooter').hidden = true;
     $('grid').hidden = true; $('meteo').hidden = false;
     renderMeteogram();
@@ -619,12 +619,14 @@ function renderGrid() {
   const { rows, summary, prob, summaryLabel, probLabel, extraRows } = built;
 
   if (state.orient === 'v') {
+    $('grid').classList.remove('lanes');
     $('grid').hidden = false; $('meteo').hidden = true;
     renderGridVertical(cols, built);
     $('modelsToggle').hidden = false;
     $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
   } else {
     $('grid').classList.remove('vert');
+    $('grid').classList.toggle('lanes', param === 'weather');
     $('vFooter').hidden = true;
     $('grid').hidden = false; $('meteo').hidden = true;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
@@ -633,8 +635,8 @@ function renderGrid() {
     // Consensus-first, matching Glett: the weighted answer (lanes / summary+prob) comes first, then the
     // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
     if (param === 'weather') {
-      buildWeatherLanes(cols).forEach((l, li) => {
-        html += `<tr class="lane${li === 0 ? ' first' : ''}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+      buildWeatherLanes(cols).forEach((l) => {
+        html += `<tr class="lane ${l.cls}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
       });
     } else {
       html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;

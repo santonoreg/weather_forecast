@@ -76,6 +76,7 @@ const I18N = {
 
     'g.provider': 'Provider / model', 'g.time': 'Time', 'g.temp_avg': 'Temperature (avg)', 'g.prob_weather': 'Most likely weather',
     'orient.h': '→ Time across', 'orient.v': '↓ Time down', 'orient.m': '〰 Meteogram',
+    'hrs.title': 'Hour by hour', 'hrs.sub': 'from now',
     'lane.weather': 'Weather', 'lane.agree': 'Agree', 'lane.temp': 'Temp', 'lane.rain': 'Rain', 'lane.wind': 'Wind',
     'tomorrow': 'Tomorrow',
     'ex.title': 'See what the models say',
@@ -219,6 +220,7 @@ const I18N = {
 
     'g.provider': 'Πάροχος / μοντέλο', 'g.time': 'Ώρα', 'g.temp_avg': 'Θερμοκρασία (μ.ο.)', 'g.prob_weather': 'Πιθανότερος καιρός',
     'orient.h': '→ Ώρες σε στήλες', 'orient.v': '↓ Ώρες σε γραμμές', 'orient.m': '〰 Μετεωρόγραμμα',
+    'hrs.title': 'Ώρα με την ώρα', 'hrs.sub': 'από τώρα',
     'lane.weather': 'Καιρός', 'lane.agree': 'Συμφωνία', 'lane.temp': 'Θερμ.', 'lane.rain': 'Βροχή', 'lane.wind': 'Άνεμος',
     'tomorrow': 'Αύριο',
     'ex.title': 'Δες τι λένε τα μοντέλα',

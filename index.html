@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261035">
+<link rel="stylesheet" href="css/style.css?v=20261036">
 </head>
 <body>
 <header class="topbar">
@@ -82,12 +82,15 @@
         </div>
         <section class="hours card">
           <div class="hours-h">
-            <div id="tabs" class="tabs"></div>
+            <h2 id="hoursTitle"><span data-i18n="hrs.title">Hour by hour</span> <small data-i18n="hrs.sub">from now</small></h2>
             <div class="seg" id="orientSeg" role="group" aria-label="Table orientation">
               <button type="button" data-orient="h" data-i18n="orient.h">→ Time across</button>
               <button type="button" data-orient="v" data-i18n="orient.v">↓ Time down</button>
               <button type="button" data-orient="m" data-i18n="orient.m">〰 Meteogram</button>
             </div>
+          </div>
+          <div class="tabsrow">
+            <div id="tabs" class="tabs"></div>
           </div>
           <div id="segKey" class="segkey" hidden></div>
           <div id="relNote" class="relnote" hidden></div>
@@ -140,8 +143,8 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261035"></script>
-<script src="js/icons.js?v=20261035"></script>
-<script src="js/app.js?v=20261035"></script>
+<script src="js/i18n.js?v=20261036"></script>
+<script src="js/icons.js?v=20261036"></script>
+<script src="js/app.js?v=20261036"></script>
 </body>
 </html>

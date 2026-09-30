@@ -144,11 +144,14 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .meteo { display: flex; flex-direction: column; gap: 14px; padding: 4px 4px 8px; }
 .mg-lane b { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px 4px; }
 .hours .tabs { margin-top: 0; }
-.hours-h { display: flex; align-items: center; justify-content: space-between; gap: 10px 12px; flex-wrap: wrap; }
-.hours-h .tabs { flex: 1 1 auto; min-width: 0; margin: 0 0 10px; }
-.hours-h .seg { flex: none; margin-bottom: 10px; }
+.hours-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.hours-h h2 { font-size: 17px; margin: 0; font-weight: 600; }
+.hours-h h2 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 4px; }
+.hours-h .seg { flex: none; }
+.tabsrow { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 4px 0 10px; }
+.tabsrow .tabs { margin: 0; flex: 1 1 auto; min-width: 0; }
 .btn.toggle { display: block; margin: 10px auto 0; }
-@media (max-width: 700px) { .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } }
+@media (max-width: 700px) { .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } .hours-h h2 { font-size: 16px; } }
 
 /* Καρτέλες παραμέτρων */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 10px; }
@@ -167,9 +170,21 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid tr.summary td, .grid tr.summary .rowh { background: var(--summary); }
 .grid tr.summary .rowh, .grid tr.prob .rowh { color: var(--accent-2); }
 .grid tr.prob td, .grid tr.prob .rowh { background: var(--prob); font-weight: 700; border-top: 2px solid var(--accent); border-bottom: 0; }
-.grid tr.lane td, .grid tr.lane .rowh { background: var(--summary); }
-.grid tr.lane .rowh { color: var(--accent-2); font-weight: 600; }
-.grid tr.lane.first td, .grid tr.lane.first .rowh { border-top: 2px solid var(--accent); }
+/* Horizontal strip, Weather tab: five lanes (weather, agreement, temperature, rain, wind) — ported
+   from Glett's .grid.lanes rules (same class names) for the same compact row height/typography. */
+.grid.lanes .rowh { min-width: 82px; max-width: 110px; font-weight: 500; font-size: 12.5px; color: var(--muted); white-space: normal; line-height: 1.2; }
+.grid.lanes tr.lane td { border-bottom: 1px solid var(--line); vertical-align: middle; padding: 6px 6px; }
+.grid.lanes tr.lane .rowh { border-bottom: 1px solid var(--line); background: var(--panel); }
+.grid.lanes tr.lane.wx td .wi.big { width: 30px; height: 30px; }
+.grid.lanes tr.lane.agree td { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.grid.lanes tr.lane.agree .segbar { width: 44px; min-width: 0; height: 4px; margin: 3px auto 0; }
+.grid.lanes tr.lane.temp td b { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+.grid.lanes tr.lane td .pct { font-size: 13.5px; font-weight: 600; display: inline; }
+.grid.lanes tr.lane td .pct.dim, .grid.lanes tr.lane td.dim { color: var(--muted); font-weight: 400; }
+.grid.lanes tr.lane.rain td small, .grid.lanes tr.lane.wind td small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
+.grid.lanes tr.lane.wind td { font-size: 13.5px; font-weight: 500; }
+.grid.lanes tr.lane.wind td, .grid.lanes tr.lane.wind .rowh { border-bottom: 2px solid var(--line); }
+.grid.lanes tr.ai td, .grid.lanes tr.ai .rowh { border-top: 0; }
 .grid td.past, .grid th.past { opacity: .9; }
 .grid th.now { color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
 .grid td small { display: block; color: var(--muted); font-weight: 500; font-size: 11.5px; }
