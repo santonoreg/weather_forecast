@@ -15,7 +15,7 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
+const state = { locations: [], current: null, data: null, verify: null, observed: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
@@ -421,6 +421,12 @@ function renderHero() {
     $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
     $('heroVerdict').hidden = false;
   } else { $('heroVerdict').hidden = true; }
+  const obs = state.observed;
+  $('heroObs').hidden = !obs;
+  if (obs) {
+    $('heroObs').innerHTML = `<b>${t('hero.obs', { loc: esc(state.current.name) })}:</b> ${fmt(obs.temp)}°${obs.rain != null ? ` · ${obs.rain ? t('hero.obs.wet') : t('hero.obs.dry')}` : ''}${obs.wind_kmh != null ? ` · ${t('hero.obs.wind', { v: fmt(obs.wind_kmh) })}` : ''}${obs.humidity != null ? ` · ${t('hero.obs.hum', { v: obs.humidity })}` : ''}
+      <small>${t('hero.obs.station', { name: esc(obs.station.name), km: obs.station.km })}</small>`;
+  }
   const outlook = rainOutlook(c);
   $('heroRain').hidden = !outlook;
   if (outlook) $('heroRain').innerHTML = `${RAIN_DOT}<span>${outlook}</span>`;
@@ -861,15 +867,28 @@ async function loadForecast(refresh = false) {
     if (token !== state.token) return;
     state.data = prepare(data);
     state.day = 0; state.vHours = 24;
-    state.verify = null; state.verifyErr = null;
+    state.verify = null; state.verifyErr = null; state.observed = null;
     $('loading').hidden = true; $('forecastBody').hidden = false;
     renderAll();
     loadVerify(loc, token);
+    loadObserved(loc, token);
   } catch (err) {
     if (token !== state.token) return;
     $('loading').hidden = true;
     $('error').textContent = err.message; $('error').hidden = false;
   }
+}
+
+/* "Measured now": the latest real METAR observation from the nearest airport station — actual
+   measured data, not a model forecast. Silent failure (no station nearby, API down) just keeps
+   the hero card's "Measured now" line hidden. */
+async function loadObserved(loc, token) {
+  try {
+    const r = await api(`api/observed.php?lat=${loc.lat}&lon=${loc.lon}`);
+    if (token !== state.token) return;
+    state.observed = r.observed || null;
+    renderHero();
+  } catch (err) { /* silent: this line is a nice-to-have, not core */ }
 }
 
 async function loadVerify(loc, token) {
