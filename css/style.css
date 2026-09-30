@@ -129,7 +129,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid.vert thead th { position: static; text-align: center; font-size: 12px; }
 .grid.vert thead th.prob, .grid.vert thead th.summary { color: var(--accent-2); }
 .grid.vert .rowh { min-width: 0; width: 56px; font-size: 13px; white-space: nowrap; }
-.grid.vert th.model, .grid.vert th.ai, .grid.vert td.model, .grid.vert td.ai { width: 90px; font-size: 12px; white-space: nowrap; }
+.grid.vert th.model, .grid.vert th.ai, .grid.vert td.model, .grid.vert td.ai { width: 64px; font-size: 12px; }
+.grid.vert th.model, .grid.vert th.ai { white-space: normal; line-height: 1.2; padding-left: 3px; padding-right: 3px; vertical-align: bottom; }
+.grid.vert td.model, .grid.vert td.ai { white-space: nowrap; }
 .grid.vert th.ai, .grid.vert td.ai { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
 .grid.vert td.prob { text-align: left; background: var(--prob); font-weight: 700; min-width: 150px; }
 .grid.vert td.prob .wi.big { margin-right: 8px; vertical-align: middle; }
