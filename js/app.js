@@ -101,6 +101,10 @@ const bgCloud = (v) => (v == null ? '' : `hsla(215,18%,55%,${0.04 + clamp(v / 10
 const bgHum = (v) => (v == null ? '' : `hsla(200,80%,50%,${0.03 + clamp(v / 100) * 0.3})`);
 const bgPress = (v) => (v == null ? '' : heat((v - 990) / 50, 260, 120, 0.2));
 const bgRain = (v, step) => (v == null || v < 0.05 ? '' : `hsla(215,85%,50%,${0.12 + clamp(v / (step * 2.5)) * 0.5})`);
+// Solid (opaque) versions of the same scales, for the Meteogram's point markers/bars rather than a cell background.
+const heatTemp = (v) => (v == null ? 'var(--muted)' : heat((v + 5) / 45, 220, 0, 0.95));
+const heatWind = (v) => (v == null ? 'var(--muted)' : heat(v / 60, 170, 10, 0.95));
+const heatRain = (v) => (v == null ? 'var(--muted)' : `hsla(215,85%,50%,${0.35 + clamp(v / 4) * 0.6})`);
 
 /* ================= Παράμετροι ================= */
 // Τυπική απόκλιση μεταξύ παρόχων στην οποία η συμφωνία μηδενίζεται
@@ -473,12 +477,13 @@ function renderGridVertical(cols, built) {
   const cls = (c) => (c.now ? ' now' : '');
   const providerCols = [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...(state.modelsOpen ? rows.map((r) => ({ ...r, cls: 'model' })) : [])];
   const colspan = 3 + providerCols.length;
-  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${weather ? probLabel : summaryLabel}${weather ? `<small class="hint2">${t('g.prob_weather.sub')}</small>` : ''}</th><th class="summary">${weather ? t('g.twr') : probLabel}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${probLabel}${weather ? `<small class="hint2">${t('g.prob_weather.sub')}</small>` : ''}</th><th class="summary">${weather ? t('g.twr') : summaryLabel}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
   let prevDate = -1;
   cols.forEach((c, i) => {
     if (c.dateIdx !== prevDate) { html += `<tr class="dayrow"><th class="dh" colspan="${colspan}"><span>${dayLabelFor(c.dateIdx)}</span></th></tr>`; prevDate = c.dateIdx; }
-    const left = weather ? weatherAgreeCell(c) : summary[i];
-    const right = weather ? tempWindRainCell(c) : prob[i];
+    // Non-weather tabs: agreement first, then the average (swapped from summary-then-prob).
+    const left = weather ? weatherAgreeCell(c) : prob[i];
+    const right = weather ? tempWindRainCell(c) : summary[i];
     const provCells = providerCols.map((r) => { const pc = r.cells[i]; return `<td class="${r.cls}" style="background:${pc && pc.bg || ''}">${pc ? pc.html : ''}</td>`; }).join('');
     html += `<tr class="hr${cls(c)}"><th class="rowh">${c.label}</th><td class="${left.cls || ''}" style="background:${left.bg || ''}">${left.html}</td><td class="${right.cls || ''}" style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
   });
@@ -505,7 +510,7 @@ document.addEventListener('click', (e) => {
 /* A small hourly line/bar chart for the meteogram: x = hour of the selected day. `band` (optional) shades
    the min–max spread between providers behind the average line; `nowI` (optional) draws a dashed marker
    at the current hour. Deliberately independent of the Step selector — a meteogram is always hourly. */
-function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1 }) {
+function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, heat = null }) {
   const n = points.length;
   if (n < 2) return '';
   const W = 1200, H = kind === 'bar' ? 110 : 170, pl = 40, pr = 12, pt = 10, pb = 22;
@@ -529,11 +534,11 @@ function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1 })
   }
   if (kind === 'bar') {
     const bw = Math.max(2, (W - pl - pr) / n - 3);
-    body += points.map((p, i) => (p.v == null ? '' : `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${y(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(p.v)).toFixed(1)}" fill="${color}" opacity=".85"><title>${p.label}: ${p.v.toFixed(d)}${unit}</title></rect>`)).join('');
+    body += points.map((p, i) => (p.v == null ? '' : `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${y(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(p.v)).toFixed(1)}" fill="${heat ? heat(p.v) : color}" opacity=".9"><title>${p.label}: ${p.v.toFixed(d)}${unit}</title></rect>`)).join('');
   } else {
     const pts = points.map((p, i) => (p.v == null ? null : `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`)).filter(Boolean).join(' ');
-    body += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/>`;
-    body += points.map((p, i) => (p.v == null ? '' : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.4" fill="${color}"><title>${p.label}: ${p.v.toFixed(d)}${unit}</title></circle>`)).join('');
+    body += `<polyline points="${pts}" fill="none" stroke="${heat ? 'var(--line)' : color}" stroke-width="2"/>`;
+    body += points.map((p, i) => (p.v == null ? '' : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="${heat ? 3.6 : 2.4}" fill="${heat ? heat(p.v) : color}"><title>${p.label}: ${p.v.toFixed(d)}${unit}</title></circle>`)).join('');
   }
   if (nowI >= 0 && nowI < n) body += `<line x1="${x(nowI).toFixed(1)}" x2="${x(nowI).toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
   return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
@@ -555,9 +560,9 @@ function renderMeteogram() {
   const winds = idx.map((i) => ({ v: wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', i, i + 1))), label: label(i) }));
 
   $('meteo').innerHTML = `
-    <div class="mg-lane"><b>${t('mg.temp')}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, nowI })}</div>
-    <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI })}</div>
-    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI })}</div>`;
+    <div class="mg-lane"><b>${t('mg.temp')}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, nowI, heat: heatTemp })}</div>
+    <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI, heat: heatRain })}</div>
+    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, heat: heatWind })}</div>`;
 }
 
 /* Weather tab only, "time across" mode: instead of one summary/prob pair, show every key metric as its
