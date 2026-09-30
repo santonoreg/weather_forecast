@@ -490,6 +490,7 @@ function renderGridVertical(cols, built) {
   html += '</tbody>';
   $('grid').innerHTML = html;
   $('grid').classList.add('vert');
+  $('grid').classList.toggle('weather-cols', weather);
   const more = hasMoreVerticalHours(state.vHours);
   $('vFooter').hidden = false;
   $('vFooter').innerHTML = `<span>${t('v.showing', { d: dayLabelFor(cols[cols.length - 1]?.dateIdx), time: cols[cols.length - 1]?.label })}</span>

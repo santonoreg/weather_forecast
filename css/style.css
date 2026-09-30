@@ -128,6 +128,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
    the AI headline models, .model for the rest, behind "Show all N models"). */
 .grid.vert thead th { position: static; text-align: center; font-size: 12px; }
 .grid.vert thead th.prob, .grid.vert thead th.summary { color: var(--accent-2); }
+/* Non-weather tabs: "Model agreement"/"Average" etc are short pill values, so let the header text wrap
+   and the column shrink to whatever that wrapped header needs, instead of forcing a wide single line. */
+.grid.vert:not(.weather-cols) th.prob, .grid.vert:not(.weather-cols) th.summary { width: 1px; white-space: normal; line-height: 1.2; padding-left: 4px; padding-right: 4px; }
 .grid.vert .rowh { min-width: 0; width: 56px; font-size: 13px; white-space: nowrap; }
 .grid.vert th.model, .grid.vert th.ai, .grid.vert td.model, .grid.vert td.ai { width: 64px; font-size: 12px; }
 .grid.vert th.model, .grid.vert th.ai { white-space: normal; line-height: 1.2; padding-left: 3px; padding-right: 3px; vertical-align: bottom; }
