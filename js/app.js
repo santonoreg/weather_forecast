@@ -441,43 +441,49 @@ function dayLabelFor(dateIdx) {
 
 /* "Time down": one row per hour, starting from *now* and scrolling across day boundaries (see
    verticalColumns) — the consensus columns for the current tab, plus one column per provider (AI
-   headline models always, the rest behind "Show all N models") — matches Glett. */
-/* Weather tab, "Time down": one row per hour with the top categories (icon + name + share, the
-   leader tagged "agree"), a colour-coded segmented bar (same colours as the legend above the table),
-   and a combined temperature / wind / rain column — matches Glett's per-hour row layout. */
+   headline models always, the rest behind "Show all N models") — matches Glett. Ported directly from
+   his renderGridVertical/buildRows (class names, structure and sizes) instead of a fresh design, so
+   the two stay pixel-comparable: a "big" icon (.wi.big, 44px) leads the category list (.wlist/.wline,
+   the same classes the old horizontal "prob" cell already used), only the top 2 categories show, and
+   the segmented bar is .segbar (an <i> per category, same c-<key> colours as the legend). */
 const weatherAgreeCell = (c) => {
   const shares = weatherShares(c);
   if (!shares) return cell('–');
-  const lines = shares.slice(0, 2).map(([k, sh], i) => `<div class="wa-line${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(sh * 100)}%</b>${i === 0 ? `<i class="agree">${t('g.agree_word')}</i>` : ''}</div>`).join('');
-  const bar = `<div class="wbar">${shares.map(([k, sh]) => `<span class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></span>`).join('')}</div>`;
-  return cell(`<div class="wa">${lines}${bar}</div>`);
+  const top = shares[0][0];
+  const lines = shares.slice(0, 2).map(([k, sh], i) => `<div class="wline${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(sh * 100)}%${i === 0 ? ` <em>${t('g.agree_word')}</em>` : ''}</b></div>`).join('');
+  const bar = `<div class="segbar">${shares.map(([k, sh]) => `<i class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></i>`).join('')}</div>`;
+  return cell(`${WI.svg(WI.CAT_CODE[top], c.night, 'big')}<div class="wlist">${lines}${bar}</div>`, '', 'prob');
 };
 const tempWindRainCell = (c) => {
   const m = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
   const ws = wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)));
   const g = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
   const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
+  const wind = ws != null ? `<small class="wnd">${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(ws)}${g != null ? ` (${fmt(g)})` : ''} km/h</small>` : '';
   const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
-  return cell(`<div class="twr">${m != null ? `<b>${fmt(m)}°</b>` : ''}${ws != null ? `<span>${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(ws)}${g != null ? `<small>(${fmt(g)})</small>` : ''} km/h</span>` : ''}${pr != null ? `<span class="pct">${Math.round(pr * 100)}%</span>` : ''}</div>`, bgTemp(m));
+  const mm = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
+  const rain = pr != null ? `<small class="rn${Math.round(pr * 100) === 0 ? ' dim' : ''}">${Math.round(pr * 100)}%${mm != null && mm >= 0.05 ? ` · ${fmt(mm, 1)} mm` : ''}</small>` : '';
+  return cell(`${m != null ? `<b>${fmt(m)}°</b>` : ''}${wind}${rain}`, '', 'summary');
 };
 
 function renderGridVertical(cols, built) {
   const { summary, prob, summaryLabel, probLabel, rows, extraRows } = built;
   const weather = state.param === 'weather';
   const cls = (c) => (c.now ? ' now' : '');
-  const providerCols = [...(extraRows || []), ...(state.modelsOpen ? rows : [])];
+  const providerCols = [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...(state.modelsOpen ? rows.map((r) => ({ ...r, cls: 'model' })) : [])];
   const colspan = 3 + providerCols.length;
-  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th>${weather ? probLabel : summaryLabel}${weather ? `<small class="sub">${t('g.prob_weather.sub')}</small>` : ''}</th><th>${weather ? t('g.twr') : probLabel}</th>${providerCols.map((r) => `<th class="prov">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${weather ? probLabel : summaryLabel}${weather ? `<small class="hint2">${t('g.prob_weather.sub')}</small>` : ''}</th><th class="summary">${weather ? t('g.twr') : probLabel}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
   let prevDate = -1;
   cols.forEach((c, i) => {
-    if (c.dateIdx !== prevDate) { html += `<tr class="daysep"><td colspan="${colspan}">${dayLabelFor(c.dateIdx)}</td></tr>`; prevDate = c.dateIdx; }
+    if (c.dateIdx !== prevDate) { html += `<tr class="dayrow"><th class="dh" colspan="${colspan}"><span>${dayLabelFor(c.dateIdx)}</span></th></tr>`; prevDate = c.dateIdx; }
     const left = weather ? weatherAgreeCell(c) : summary[i];
     const right = weather ? tempWindRainCell(c) : prob[i];
-    const provCells = providerCols.map((r) => `<td class="cell prov">${r.cells[i] ? r.cells[i].html : ''}</td>`).join('');
-    html += `<tr class="${cls(c)}"><th class="rowh">${c.label}</th><td style="background:${left.bg || ''}">${left.html}</td><td style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
+    const provCells = providerCols.map((r) => `<td class="${r.cls}">${r.cells[i] ? r.cells[i].html : ''}</td>`).join('');
+    html += `<tr class="hr${cls(c)}"><th class="rowh">${c.label}</th><td class="${left.cls || ''}" style="background:${left.bg || ''}">${left.html}</td><td class="${right.cls || ''}" style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
   });
   html += '</tbody>';
   $('grid').innerHTML = html;
+  $('grid').classList.add('vert');
   const more = hasMoreVerticalHours(state.vHours);
   $('vFooter').hidden = false;
   $('vFooter').innerHTML = `<span>${t('v.showing', { d: dayLabelFor(cols[cols.length - 1]?.dateIdx), time: cols[cols.length - 1]?.label })}</span>
@@ -566,7 +572,7 @@ function buildWeatherLanes(cols) {
     const shares = weatherShares(c);
     if (!shares) return cell('–');
     const pct = Math.round(shares[0][1] * 100);
-    const bar = `<div class="wbar mini">${shares.map(([k, sh]) => `<span class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></span>`).join('')}</div>`;
+    const bar = `<div class="segbar">${shares.map(([k, sh]) => `<i class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></i>`).join('')}</div>`;
     return cell(`<div class="pct ${pct >= 75 ? '' : pct >= 50 ? 'dim' : 'dim'}">${pct}%</div>${bar}`);
   });
   const temp = cols.map((c) => {
@@ -598,9 +604,10 @@ function renderGrid() {
   $('relNote').hidden = param !== 'reliability';
   $('orientSeg').hidden = !notReliability;
   renderSegKey();
-  if (param === 'reliability') { $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
+  if (param === 'reliability') { $('grid').classList.remove('vert'); $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
 
   if (state.orient === 'm') {
+    $('grid').classList.remove('vert');
     $('modelsToggle').hidden = true; $('vFooter').hidden = true;
     $('grid').hidden = true; $('meteo').hidden = false;
     renderMeteogram();
@@ -617,6 +624,7 @@ function renderGrid() {
     $('modelsToggle').hidden = false;
     $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
   } else {
+    $('grid').classList.remove('vert');
     $('vFooter').hidden = true;
     $('grid').hidden = false; $('meteo').hidden = true;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
