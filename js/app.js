@@ -91,15 +91,16 @@ function agg(p, param, a, b) {
 }
 
 /* ================= Χρωματισμός =================
-   No heatmap cell backgrounds (matches Glett's plain-white table with coloured text/icons only) —
-   these all return '' now; the functions stay so call sites don't need to change. */
-const heat = () => '';
-const bgTemp = () => '';
-const bgWind = () => '';
-const bgCloud = () => '';
-const bgHum = () => '';
-const bgPress = () => '';
-const bgRain = () => '';
+   Heatmap cell backgrounds for the Time across tabs other than Weather (Temperature, Rain, Wind,
+   Thunderstorm, Cloud cover, Humidity, Pressure) — the Weather tab itself stays plain/coloured-text
+   only (matches Glett there; buildWeatherLanes doesn't pass a bg for temp/wind). */
+const heat = (t, h1, h2, alpha = 0.3) => `hsla(${h1 + (h2 - h1) * clamp(t)},78%,52%,${alpha})`;
+const bgTemp = (v) => (v == null ? '' : heat((v + 5) / 45, 220, 0));
+const bgWind = (v) => (v == null ? '' : heat(v / 60, 170, 10));
+const bgCloud = (v) => (v == null ? '' : `hsla(215,18%,55%,${0.04 + clamp(v / 100) * 0.34})`);
+const bgHum = (v) => (v == null ? '' : `hsla(200,80%,50%,${0.03 + clamp(v / 100) * 0.3})`);
+const bgPress = (v) => (v == null ? '' : heat((v - 990) / 50, 260, 120, 0.2));
+const bgRain = (v, step) => (v == null || v < 0.05 ? '' : `hsla(215,85%,50%,${0.12 + clamp(v / (step * 2.5)) * 0.5})`);
 
 /* ================= Παράμετροι ================= */
 // Τυπική απόκλιση μεταξύ παρόχων στην οποία η συμφωνία μηδενίζεται
@@ -248,7 +249,7 @@ function buildRows(param, cols) {
       const v = nn(P.map((p) => agg(p, 'precip', c.a, c.b)));
       if (!v.length) return cell('–');
       const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
-      return cell(`<div class="pct">${Math.round(pr * 100)}%</div>`);
+      return cell(`<div class="pct">${Math.round(pr * 100)}%</div>`, `hsla(215,85%,50%,${pr * 0.55})`);
     });
   } else if (param === 'wind') {
     rows.push(...perProvider((p, c) => {
@@ -270,7 +271,7 @@ function buildRows(param, cols) {
       const pr = wshare(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)), (x) => x >= WIND_THR);
       const g = nn(P.map((p) => agg(p, 'gust', c.a, c.b)));
       const gp = g.length ? `<small>${t('g.gusts', { v: Math.round(g.filter((x) => x >= 60).length / g.length * 100) })}</small>` : '';
-      return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${gp}`);
+      return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${gp}`, `hsla(170,70%,40%,${pr * 0.5})`);
     });
   } else if (param === 'storm') {
     const signal = (p, c) => {
@@ -283,7 +284,7 @@ function buildRows(param, cols) {
     rows.push(...perProvider((p, c) => {
       const { s, cape } = signal(p, c);
       const html = s == null ? '<span class="na">–</span>' : `${s === 1 ? WI.bolt24 + ' ' : ''}${cape != null ? fmt(cape) : ''}<small>${s === 1 ? t('g.storm_yes') : s === 0.5 ? t('g.storm_maybe') : cape != null ? 'J/kg' : t('g.storm_no')}</small>`;
-      return { has: s != null, html, cls: 'cell' };
+      return { has: s != null, html, bg: s ? `hsla(35,95%,50%,${0.15 + s * 0.4})` : '', cls: 'cell' };
     }));
     summaryLabel = t('g.cape_avg');
     summary = cols.map((c) => {
@@ -295,7 +296,7 @@ function buildRows(param, cols) {
       const pw = wpairs('storm', (p) => signal(p, c).s);
       if (!pw.length) return cell('–');
       const pr = wmean(pw);
-      return cell(`${pr >= 0.5 ? WI.bolt24 + ' ' : ''}<div class="pct" style="display:inline">${Math.round(pr * 100)}%</div>`);
+      return cell(`${pr >= 0.5 ? WI.bolt24 + ' ' : ''}<div class="pct" style="display:inline">${Math.round(pr * 100)}%</div>`, `hsla(35,95%,50%,${pr * 0.6})`);
     });
   } else {
     const def = PARAMS[param];
@@ -577,7 +578,7 @@ function buildWeatherLanes(cols) {
   });
   const temp = cols.map((c) => {
     const m = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
-    return cell(`<b>${fmt(m)}°</b>`, bgTemp(m));
+    return cell(`<b>${fmt(m)}°</b>`);   // no heat tint here: the Weather tab stays plain, like Glett
   });
   const rain = cols.map((c) => {
     const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
@@ -590,7 +591,7 @@ function buildWeatherLanes(cols) {
     if (m == null) return cell('–');
     const g = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
     const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
-    return cell(`${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`, bgWind(m));
+    return cell(`${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`);
   });
   return [
     lane(t('lane.weather'), wx, 'wx'), lane(t('lane.agree'), agree, 'agree'), lane(t('lane.temp'), temp, 'temp'),

@@ -162,6 +162,13 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .table-wrap { overflow-x: auto; overflow-y: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); -webkit-overflow-scrolling: touch; }
 .grid { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; }
 .grid th, .grid td { padding: 9px 8px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--line); min-width: 78px; vertical-align: top; }
+/* Time across, tabs other than Weather (Temperature/Rain/Wind/...): a touch more compact than the
+   plain default, on top of the heatmap tint restored below. */
+.grid:not(.vert):not(.lanes) { font-size: 13px; }
+.grid:not(.vert):not(.lanes) th, .grid:not(.vert):not(.lanes) td { padding: 7px 6px; }
+.grid:not(.vert):not(.lanes) .rowh { min-width: 150px; max-width: 180px; }
+.grid:not(.vert):not(.lanes) thead th { font-size: 11.5px; }
+.grid:not(.vert):not(.lanes) td small { font-size: 11px; }
 .grid tbody tr:not(.summary):not(.prob):nth-child(even) .rowh { background-color: color-mix(in srgb, var(--summary) 60%, var(--panel)); }
 .grid tbody tr:not(.summary):not(.prob):hover td { filter: brightness(.96); }
 .grid thead th { position: sticky; top: 0; background: var(--panel); z-index: 3; font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--muted); border-bottom: 2px solid var(--line); }
@@ -194,7 +201,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .pill.hi { background: rgba(22, 163, 74, .18); color: var(--good); }
 .pill.mid { background: rgba(217, 119, 6, .18); color: var(--mid); }
 .pill.lo { background: rgba(220, 38, 38, .16); color: var(--bad); }
-.pct { font-size: 16px; font-weight: 700; color: var(--accent-2); }
+.pct { font-size: 15px; font-weight: 700; color: var(--accent-2); }
 .pct.dim { color: var(--muted); }
 .legend { color: var(--muted); font-size: 12.5px; margin-top: 12px; line-height: 1.55; }
 
