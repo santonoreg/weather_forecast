@@ -111,7 +111,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .segkey b { font-weight: 600; color: var(--text); }
 .segkey span { display: inline-flex; align-items: center; gap: 6px; }
 .segkey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
-.segkey i.c-clear, .wbar .c-clear { background: var(--sun); } .segkey i.c-partly, .wbar .c-partly { background: color-mix(in srgb, var(--sun) 55%, var(--cloud)); }
+.segkey i.c-clear, .segbar .c-clear { background: var(--sun); } .segkey i.c-partly, .segbar .c-partly { background: color-mix(in srgb, var(--sun) 55%, var(--cloud)); }
 .segkey i.c-cloudy, .segbar .c-cloudy { background: var(--cloud); } .segkey i.c-fog, .segbar .c-fog { background: color-mix(in srgb, var(--cloud) 60%, var(--panel)); }
 .segkey i.c-drizzle, .segbar .c-drizzle { background: color-mix(in srgb, var(--rain) 45%, var(--panel)); } .segkey i.c-rain, .segbar .c-rain { background: var(--rain); }
 .segkey i.c-snow, .segbar .c-snow { background: var(--snow); } .segkey i.c-thunder, .segbar .c-thunder { background: var(--bolt); }
