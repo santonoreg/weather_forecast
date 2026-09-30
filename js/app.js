@@ -418,6 +418,7 @@ function renderHero() {
     const level = top[1] >= 0.8 ? 'hi' : top[1] >= 0.5 ? 'mid' : 'lo';
     const dots = Math.max(1, Math.round(top[1] * 5));
     const tv = nn(activeProviders().map((p) => agg(p, 'temperature_2m', c.a, c.b)));
+    $('heroVerdict').className = `verdict ${level}`;
     $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
     $('heroVerdict').hidden = false;
   } else { $('heroVerdict').hidden = true; }

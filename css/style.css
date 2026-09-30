@@ -75,7 +75,17 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hero .verdict .dots i.on { background: var(--accent); }
 .hero .verdict b { font-weight: 600; font-size: 15px; line-height: 1.35; display: block; }
 .hero .verdict small { display: block; color: var(--muted); font-size: 13.5px; margin-top: 2px; }
-.hero .obsline { margin: 10px 0 0; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 10px; font-size: 12.5px; color: var(--text); line-height: 1.5; }
+/* Colour the whole box by how much the models agree, same scale as the reliability score pills */
+.hero .verdict.hi { background: color-mix(in srgb, var(--good) 14%, var(--panel)); }
+.hero .verdict.hi .dots i.on { background: var(--good); }
+.hero .verdict.hi b { color: var(--good); }
+.hero .verdict.mid { background: color-mix(in srgb, var(--mid) 14%, var(--panel)); }
+.hero .verdict.mid .dots i.on { background: var(--mid); }
+.hero .verdict.mid b { color: var(--mid); }
+.hero .verdict.lo { background: color-mix(in srgb, var(--bad) 14%, var(--panel)); }
+.hero .verdict.lo .dots i.on { background: var(--bad); }
+.hero .verdict.lo b { color: var(--bad); }
+.hero .obsline { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line)); font-size: 12.5px; color: var(--text); line-height: 1.5; }
 .hero .obsline b { color: var(--accent-2); font-weight: 600; }
 .hero .obsline small { display: block; color: var(--muted); font-size: 11.5px; }
 .hero .rainline { display: flex; align-items: center; gap: 8px; margin: 10px 2px 0; font-size: 13.5px; color: var(--text); }
