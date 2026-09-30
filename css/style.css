@@ -69,7 +69,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hero .now .desc > span { color: var(--muted); font-size: 13.5px; display: block; margin-top: 2px; }
 .hero .now .desc .wind { color: var(--text); font-size: 14px; margin-top: 4px; white-space: nowrap; font-weight: 500; }
 .hero .now .desc .wind .arrow { width: 14px; height: 14px; }
-.hero .verdict { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--summary); display: flex; gap: 12px; align-items: flex-start; }
+.hero .verdict { margin: 15px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--summary); display: flex; gap: 12px; align-items: flex-start; }
 .hero .verdict .dots { display: inline-flex; gap: 5px; margin-top: 6px; flex: none; }
 .hero .verdict .dots i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 20%, var(--panel)); }
 .hero .verdict .dots i.on { background: var(--accent); }
@@ -85,12 +85,12 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hero .verdict.lo { background: color-mix(in srgb, var(--bad) 14%, var(--panel)); }
 .hero .verdict.lo .dots i.on { background: var(--bad); }
 .hero .verdict.lo b { color: var(--bad); }
-.hero .obsline { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line)); font-size: 12.5px; color: var(--text); line-height: 1.5; }
+.hero .obsline { margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line)); font-size: 12.5px; color: var(--text); line-height: 1.5; }
 .hero .obsline b { color: var(--accent-2); font-weight: 600; }
 .hero .obsline small { display: block; color: var(--muted); font-size: 11.5px; }
-.hero .rainline { display: flex; align-items: center; gap: 8px; margin: 10px 2px 0; font-size: 13.5px; color: var(--text); }
+.hero .rainline { display: flex; align-items: center; gap: 8px; margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--rain) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--rain) 25%, var(--line)); font-size: 13.5px; color: var(--text); }
 .hero .rainline .rdot { width: 14px; height: 14px; flex: none; }
-.hero .hero-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.hero .hero-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .hero .hist { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 14px; padding: 4px 0; cursor: pointer; font-family: inherit; }
 .hero .hist svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .hero .hist:hover { text-decoration: underline; }

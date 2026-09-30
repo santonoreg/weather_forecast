@@ -943,13 +943,45 @@ function setCurrent(loc, go = false) {
   if (go) showView('forecast');
   loadForecast();
 }
-$('locSelect').addEventListener('change', (e) => setCurrent(state.locations.find((l) => l.id == e.target.value)));
+$('locSelect').addEventListener('change', (e) => {
+  if (e.target.value === '__geo__') { useMyLocation(); return; }
+  setCurrent(state.locations.find((l) => l.id == e.target.value));
+});
 $('refreshBtn').addEventListener('click', () => loadForecast(true));
+
+/* "My location" in the toolbar's Location select: geolocate, reuse a saved location already very
+   close by (avoids piling up near-duplicate "My location" entries on repeat use), otherwise
+   reverse-geocode a name and save a new one — same as the Places tab's pin-and-save flow, just in
+   one step, so "View full history" (which needs a real saved location) still works for it. */
+const toolbarErr = (text) => { $('error').textContent = text; $('error').hidden = false; };
+function useMyLocation() {
+  $('locSelect').value = state.current ? state.current.id : '';
+  if (!navigator.geolocation) { toolbarErr(t('err.geo.unsupported')); return; }
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      const near = state.locations.find((l) => haversineKm(lat, lon, l.lat, l.lon) < 1);
+      if (near) { setCurrent(near); return; }
+      let name = null;
+      try { const r = await api(`api/geocode.php?lat=${lat}&lon=${lon}&lang=${LANG}`); name = r.name || null; } catch (e) { /* ignore */ }
+      try {
+        const loc = await api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name || t('pl.geo'), lat, lon }) });
+        await loadLocations(loc.id);
+      } catch (e) { toolbarErr(e.message); }
+    },
+    () => toolbarErr(t('err.geo.fail')),
+  );
+}
+const haversineKm = (la1, lo1, la2, lo2) => {
+  const r = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
+  const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+  return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 /* ================= Τοποθεσίες ================= */
 async function loadLocations(selectId) {
   state.locations = await api('api/locations.php');
-  $('locSelect').innerHTML = state.locations.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
+  $('locSelect').innerHTML = `<option value="__geo__">📍 ${esc(t('pl.geo'))}</option>` + state.locations.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
   renderSaved();
   let saved = null;
   try { saved = localStorage.getItem('wefo.loc'); } catch (e) { /* ignore */ }
