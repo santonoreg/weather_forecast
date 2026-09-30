@@ -90,6 +90,7 @@ const I18N = {
     'g.cape_avg': 'CAPE average (J/kg)', 'g.prob_storm': 'Chance of thunderstorm',
     'g.avg_pct': 'Average (%)', 'g.avg_c': 'Average (°C)', 'g.avg_hpa': 'Average (hPa)', 'g.avg': 'Average', 'g.agree': 'Model agreement',
     'g.twr': 'Temp. · wind · rain', 'g.agree_word': 'agree', 'g.prob_weather.sub': 'share of models that agree',
+    'v.showing': 'Showing until {d} {time}', 'v.more': 'Show {n} more hours', 'v.top': 'Back to top',
 
     'r.model': 'Model', 'r.score': 'Score', 'r.temp': 'Temperature<br>error °C', 'r.wind': 'Wind<br>error km/h', 'r.cloud': 'Cloud<br>error %',
     'r.hum': 'Humidity<br>error %', 'r.press': 'Pressure<br>error hPa', 'r.rain': 'Rain<br>detection', 'r.code': 'Correct<br>weather',
@@ -232,6 +233,7 @@ const I18N = {
     'g.cape_avg': 'CAPE μέσος όρος (J/kg)', 'g.prob_storm': 'Πιθανότητα καταιγίδας',
     'g.avg_pct': 'Μέσος όρος (%)', 'g.avg_c': 'Μέσος όρος (°C)', 'g.avg_hpa': 'Μέσος όρος (hPa)', 'g.avg': 'Μέσος όρος', 'g.agree': 'Συμφωνία μοντέλων',
     'g.twr': 'Θερμ. · άνεμος · βροχή', 'g.agree_word': 'συμφωνούν', 'g.prob_weather.sub': 'ποσοστό μοντέλων που συμφωνούν',
+    'v.showing': 'Εμφάνιση έως {d} {time}', 'v.more': 'Εμφάνιση {n} ακόμη ωρών', 'v.top': 'Επιστροφή στην κορυφή',
 
     'r.model': 'Μοντέλο', 'r.score': 'Βαθμός', 'r.temp': 'Θερμοκρασία<br>σφάλμα °C', 'r.wind': 'Άνεμος<br>σφάλμα km/h', 'r.cloud': 'Νέφωση<br>σφάλμα %',
     'r.hum': 'Υγρασία<br>σφάλμα %', 'r.press': 'Πίεση<br>σφάλμα hPa', 'r.rain': 'Εντοπισμός<br>βροχής', 'r.code': 'Σωστός<br>καιρός',

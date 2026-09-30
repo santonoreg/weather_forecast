@@ -132,6 +132,12 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .twr .pct { font-size: 13px; font-weight: 700; color: var(--accent-2); }
 #grid thead th .sub { display: block; font-size: 10.5px; font-weight: 400; color: var(--muted); text-transform: none; }
 .hours .table-wrap { box-shadow: none; }
+
+/* "Time down": day-separator rows, and the per-provider columns shown alongside the consensus ones */
+.grid tr.daysep td { background: var(--summary); color: var(--accent-2); font-weight: 600; font-size: 12.5px; padding: 6px 10px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.grid th.prov, .grid td.prov { font-size: 12px; white-space: nowrap; }
+.grid th.prov { font-weight: 600; }
+.vfooter { display: flex; align-items: center; justify-content: center; gap: 10px 14px; flex-wrap: wrap; margin: 12px 0 4px; font-size: 12.5px; color: var(--muted); }
 .meteo { display: flex; flex-direction: column; gap: 14px; padding: 4px 4px 8px; }
 .mg-lane b { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px 4px; }
 .hours .tabs { margin-top: 0; }

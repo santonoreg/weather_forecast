@@ -15,7 +15,7 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false };
+const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
@@ -145,6 +145,39 @@ function columns() {
   }
   return cols;
 }
+
+/* "Time down" ignores the Day selector and always starts from *now*, scrolling forward across day
+   boundaries — a rolling window that grows via "Show N more hours" (see renderGridVertical), matching
+   Glett. `hours` is how many real hours ahead to include (translated to step-blocks). */
+function verticalColumns(hours) {
+  const { data, step } = state;
+  const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
+  let start = data.time.findIndex((x) => x.slice(0, 13) >= nowStr);
+  if (start < 0) start = 0;
+  start -= start % step;
+  const count = Math.max(1, Math.ceil(hours / step));
+  const cols = [];
+  for (let a = start; cols.length < count && a < data.time.length; a += step) {
+    const b = Math.min(a + step, data.time.length);
+    const last = data.time[b - 1].slice(0, 13);
+    cols.push({
+      a, b, dateIdx: Math.floor(a / 24),
+      label: step > 1 ? `${data.time[a].slice(11, 13)}–${String((+data.time[a].slice(11, 13) + step) % 24).padStart(2, '0')}` : data.time[a].slice(11, 16),
+      past: false,
+      now: data.time[a].slice(0, 13) <= nowStr && nowStr <= last,
+      night: data.isDay[Math.min(a + Math.floor(step / 2), b - 1)] === 0,
+    });
+  }
+  return cols;
+}
+const hasMoreVerticalHours = (hours) => {
+  const { data, step } = state;
+  const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
+  let start = data.time.findIndex((x) => x.slice(0, 13) >= nowStr);
+  if (start < 0) start = 0;
+  start -= start % step;
+  return start + Math.ceil(hours / step) * step < data.time.length;
+};
 
 const cell = (html, bg = '', cls = '') => ({ html, bg, cls });
 
@@ -398,10 +431,17 @@ function renderSegKey() {
   $('segKey').innerHTML = `<b>${t('lg.colours')}</b>` + cats.map((k) => `<span><i class="c-${k}"></i>${t('cat.' + k)}</span>`).join('');
 }
 
-/* "Time down": one row per hour, showing just the consensus (average + probability) for the current
-   tab — transposed from the usual "time across" table. Individual providers don't fit as columns here,
-   so this view is always the compact, consensus-only one (see "Show all N models" for the per-provider
-   breakdown, which stays in "time across" mode). */
+function dayLabelFor(dateIdx) {
+  const { data } = state;
+  if (dateIdx < 0 || dateIdx >= data.dates.length) return '';
+  const dt = new Date(data.dates[dateIdx] + 'T12:00:00');
+  const label = dateIdx === 0 ? t('today') : dateIdx === 1 ? t('tomorrow') : dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
+  return `${label} ${dt.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}`;
+}
+
+/* "Time down": one row per hour, starting from *now* and scrolling across day boundaries (see
+   verticalColumns) — the consensus columns for the current tab, plus one column per provider (AI
+   headline models always, the rest behind "Show all N models") — matches Glett. */
 /* Weather tab, "Time down": one row per hour with the top categories (icon + name + share, the
    leader tagged "agree"), a colour-coded segmented bar (same colours as the legend above the table),
    and a combined temperature / wind / rain column — matches Glett's per-hour row layout. */
@@ -422,20 +462,34 @@ const tempWindRainCell = (c) => {
 };
 
 function renderGridVertical(cols, built) {
-  const { summary, prob, summaryLabel, probLabel } = built;
+  const { summary, prob, summaryLabel, probLabel, rows, extraRows } = built;
   const weather = state.param === 'weather';
-  const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
-  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th>${weather ? probLabel : summaryLabel}${weather ? `<small class="sub">${t('g.prob_weather.sub')}</small>` : ''}</th><th>${weather ? t('g.twr') : probLabel}</th></tr></thead><tbody>`;
+  const cls = (c) => (c.now ? ' now' : '');
+  const providerCols = [...(extraRows || []), ...(state.modelsOpen ? rows : [])];
+  const colspan = 3 + providerCols.length;
+  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th>${weather ? probLabel : summaryLabel}${weather ? `<small class="sub">${t('g.prob_weather.sub')}</small>` : ''}</th><th>${weather ? t('g.twr') : probLabel}</th>${providerCols.map((r) => `<th class="prov">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
+  let prevDate = -1;
   cols.forEach((c, i) => {
+    if (c.dateIdx !== prevDate) { html += `<tr class="daysep"><td colspan="${colspan}">${dayLabelFor(c.dateIdx)}</td></tr>`; prevDate = c.dateIdx; }
     const left = weather ? weatherAgreeCell(c) : summary[i];
     const right = weather ? tempWindRainCell(c) : prob[i];
-    html += `<tr class="${cls(c)}"><th class="rowh">${c.label}</th><td style="background:${left.bg || ''}">${left.html}</td><td style="background:${right.bg || ''}">${right.html}</td></tr>`;
+    const provCells = providerCols.map((r) => `<td class="cell prov">${r.cells[i] ? r.cells[i].html : ''}</td>`).join('');
+    html += `<tr class="${cls(c)}"><th class="rowh">${c.label}</th><td style="background:${left.bg || ''}">${left.html}</td><td style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
   });
   html += '</tbody>';
   $('grid').innerHTML = html;
+  const more = hasMoreVerticalHours(state.vHours);
+  $('vFooter').hidden = false;
+  $('vFooter').innerHTML = `<span>${t('v.showing', { d: dayLabelFor(cols[cols.length - 1]?.dateIdx), time: cols[cols.length - 1]?.label })}</span>
+    ${more ? `<button type="button" class="btn ghost small" id="vMore">${t('v.more', { n: 6 })}</button>` : ''}
+    <button type="button" class="btn ghost small" id="vTop">${t('v.top')}</button>`;
   const nowRow = document.querySelector('#grid tbody tr.now');
   if (nowRow) nowRow.scrollIntoView({ block: 'center' });
 }
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'vMore') { state.vHours += 6; renderGrid(); }
+  else if (e.target.id === 'vTop') { document.querySelector('.hours-h')?.scrollIntoView({ block: 'start' }); }
+});
 
 /* A small hourly line/bar chart for the meteogram: x = hour of the selected day. `band` (optional) shades
    the min–max spread between providers behind the average line; `nowI` (optional) draws a dashed marker
@@ -540,20 +594,26 @@ function renderGrid() {
   $('relNote').hidden = param !== 'reliability';
   $('orientSeg').hidden = !notReliability;
   renderSegKey();
-  if (param === 'reliability') { $('modelsToggle').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
-  const cols = columns();
+  if (param === 'reliability') { $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
+
+  if (state.orient === 'm') {
+    $('modelsToggle').hidden = true; $('vFooter').hidden = true;
+    $('grid').hidden = true; $('meteo').hidden = false;
+    renderMeteogram();
+    return;
+  }
+
+  const cols = state.orient === 'v' ? verticalColumns(state.vHours) : columns();
   const built = buildRows(param, cols);
   const { rows, summary, prob, summaryLabel, probLabel, extraRows } = built;
 
-  if (state.orient === 'm') {
-    $('modelsToggle').hidden = true;
-    $('grid').hidden = true; $('meteo').hidden = false;
-    renderMeteogram();
-  } else if (state.orient === 'v') {
-    $('modelsToggle').hidden = true;
+  if (state.orient === 'v') {
     $('grid').hidden = false; $('meteo').hidden = true;
     renderGridVertical(cols, built);
+    $('modelsToggle').hidden = false;
+    $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
   } else {
+    $('vFooter').hidden = true;
     $('grid').hidden = false; $('meteo').hidden = true;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
     const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
@@ -779,7 +839,7 @@ async function loadForecast(refresh = false) {
     const data = await api(`api/forecast.php?lat=${loc.lat}&lon=${loc.lon}${refresh ? '&refresh=1' : ''}`);
     if (token !== state.token) return;
     state.data = prepare(data);
-    state.day = 0;
+    state.day = 0; state.vHours = 24;
     state.verify = null; state.verifyErr = null;
     $('loading').hidden = true; $('forecastBody').hidden = false;
     renderAll();
