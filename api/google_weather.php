@@ -5,6 +5,10 @@
 // the first 10,000 calls/month are free (https://developers.google.com/maps/documentation/weather).
 declare(strict_types=1);
 
+// Temporary kill switch: flip to true to resume. Doesn't touch the configured key or any of the cost
+// caps below — just short-circuits before any Google call is made, so it costs nothing while off.
+const GOOGLE_WEATHER_ENABLED = false;
+
 const GOOGLE_CACHE_TTL = 3 * 3600;    // reuse a fetch for this many seconds before asking Google again
 const GOOGLE_HOURS = 72;              // how many hours of hourly forecast to request (3 days = 3 API calls,
                                        // Google caps pageSize at 24h/call); increase for a longer comparison
@@ -60,6 +64,7 @@ function google_wmo_code(string $type, int $cloudCover): int
  */
 function fetch_google_weathernext(PDO $pdo, float $lat, float $lon, string $key, array $time, int $offsetSeconds): ?array
 {
+    if (!GOOGLE_WEATHER_ENABLED) return null;
     $cacheKey = "goo:$lat:$lon";
     $cached = cache_read($pdo, $cacheKey);
     if ($cached && time() - (int)$cached['fetched_at'] < GOOGLE_CACHE_TTL) {
