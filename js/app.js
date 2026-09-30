@@ -448,7 +448,7 @@ function dayLabelFor(dateIdx) {
 const weatherAgreeCell = (c) => {
   const shares = weatherShares(c);
   if (!shares) return cell('–');
-  const lines = shares.slice(0, 3).map(([k, sh], i) => `<div class="wa-line${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(sh * 100)}%</b>${i === 0 ? `<i class="agree">${t('g.agree_word')}</i>` : ''}</div>`).join('');
+  const lines = shares.slice(0, 2).map(([k, sh], i) => `<div class="wa-line${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(sh * 100)}%</b>${i === 0 ? `<i class="agree">${t('g.agree_word')}</i>` : ''}</div>`).join('');
   const bar = `<div class="wbar">${shares.map(([k, sh]) => `<span class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></span>`).join('')}</div>`;
   return cell(`<div class="wa">${lines}${bar}</div>`);
 };
@@ -481,13 +481,17 @@ function renderGridVertical(cols, built) {
   const more = hasMoreVerticalHours(state.vHours);
   $('vFooter').hidden = false;
   $('vFooter').innerHTML = `<span>${t('v.showing', { d: dayLabelFor(cols[cols.length - 1]?.dateIdx), time: cols[cols.length - 1]?.label })}</span>
-    ${more ? `<button type="button" class="btn ghost small" id="vMore">${t('v.more', { n: 6 })}</button>` : ''}
+    ${more ? `<button type="button" class="btn primary small" id="vMore">${t('v.more', { n: 6 })}</button>` : ''}
     <button type="button" class="btn ghost small" id="vTop">${t('v.top')}</button>`;
-  const nowRow = document.querySelector('#grid tbody tr.now');
-  if (nowRow) nowRow.scrollIntoView({ block: 'center' });
+  // Re-centering on the current hour makes sense the first time this view opens, but not after "Show N
+  // more hours" — the reader is scrolled down reading new rows and a jump back to "now" would be jarring
+  // (matches Glett, which appends rows in place without ever re-scrolling).
+  if (vAutoCenter) { const nowRow = document.querySelector('#grid tbody tr.now'); if (nowRow) nowRow.scrollIntoView({ block: 'center' }); }
+  vAutoCenter = true;
 }
+let vAutoCenter = true;
 document.addEventListener('click', (e) => {
-  if (e.target.id === 'vMore') { state.vHours += 6; renderGrid(); }
+  if (e.target.id === 'vMore') { vAutoCenter = false; state.vHours += 6; renderGrid(); }
   else if (e.target.id === 'vTop') { document.querySelector('.hours-h')?.scrollIntoView({ block: 'start' }); }
 });
 
