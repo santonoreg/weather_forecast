@@ -49,12 +49,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Ημέρες */
-/* Cards + the two-column "hero / week" left, "hour by hour" right layout */
+/* Cards: hero + days-ahead side by side on top, the hour-by-hour table full width below (matches Glett's layout) */
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px 12px; }
 .topgrid { display: flex; flex-direction: column; gap: 16px; }
-.topleft { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-@media (min-width: 1000px) { .topgrid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 20px; align-items: start; } }
-@media (min-width: 1300px) { .topgrid { grid-template-columns: 420px minmax(0, 1fr); } }
+.toprow { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (min-width: 860px) { .toprow { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; } }
 
 /* Hero: the answer first — current conditions and how much the models agree */
 .hero.card { padding: 16px 16px 12px; }
@@ -170,7 +169,8 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .pill.hi { background: rgba(22, 163, 74, .18); color: var(--good); }
 .pill.mid { background: rgba(217, 119, 6, .18); color: var(--mid); }
 .pill.lo { background: rgba(220, 38, 38, .16); color: var(--bad); }
-.pct { font-size: 16px; font-weight: 700; }
+.pct { font-size: 16px; font-weight: 700; color: var(--accent-2); }
+.pct.dim { color: var(--muted); }
 .legend { color: var(--muted); font-size: 12.5px; margin-top: 12px; line-height: 1.55; }
 
 /* "See what the models say": per-provider spaghetti chart + precipitation bars */
