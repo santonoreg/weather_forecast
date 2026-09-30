@@ -152,6 +152,16 @@ const wsum = (pr) => pr.reduce((a, x) => a + x.w, 0);
 const wmean = (pr) => (pr.length ? pr.reduce((a, x) => a + x.v * x.w, 0) / wsum(pr) : null);
 const wshare = (pr, f) => (pr.length ? pr.filter((x) => f(x.v)).reduce((a, x) => a + x.w, 0) / wsum(pr) : null);
 
+/* Weighted share of each weather category for one column, sorted highest first — used by both the
+   "Most likely weather" table row and the hero card so they always agree with each other. */
+function weatherShares(c) {
+  const pr = wpairs('weather', (p) => { const code = agg(p, 'code', c.a, c.b); return code == null ? null : WI.category(code); });
+  if (!pr.length) return null;
+  const tot = wsum(pr), cnt = {};
+  pr.forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
+  return Object.entries(cnt).map(([k, w]) => [k, w / tot]).sort((a, b) => b[1] - a[1]);
+}
+
 function buildRows(param, cols) {
   const { data, step } = state;
   const P = activeProviders();
@@ -177,13 +187,11 @@ function buildRows(param, cols) {
     });
     probLabel = t('g.prob_weather');
     prob = cols.map((c) => {
-      const pr = wpairs('weather', (p) => { const code = agg(p, 'code', c.a, c.b); return code == null ? null : WI.category(code); });
-      if (!pr.length) return cell('–');
-      const tot = wsum(pr), cnt = {}; pr.forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
-      const sorted = Object.entries(cnt).sort((x, y) => y[1] - x[1]);
-      const top = sorted[0][0];
+      const shares = weatherShares(c);
+      if (!shares) return cell('–');
+      const top = shares[0][0];
       // Όλες οι κατηγορίες που προβλέπουν τα μοντέλα, με το ποσοστό τους
-      const lines = sorted.slice(0, 4).map(([k, w], i) => `<div class="wline${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(w / tot * 100)}%</b></div>`).join('');
+      const lines = shares.slice(0, 4).map(([k, sh], i) => `<div class="wline${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(sh * 100)}%</b></div>`).join('');
       return cell(`${WI.svg(WI.CAT_CODE[top], c.night, 'big')}<div class="wlist">${lines}</div>`);
     });
     extraRows = perProvider(weatherCell, HEADLINE_MODEL_IDS.map((id) => P.find((p) => p.id === id)).filter(Boolean));
@@ -321,9 +329,55 @@ function renderReliability() {
 
 const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''; };
 
+/* The single current hour, independent of whatever day/step is selected in the table below */
+function nowColumn() {
+  const { data } = state;
+  const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
+  let a = data.time.findIndex((x) => x.startsWith(nowStr));
+  if (a < 0) a = data.time.findIndex((x) => x.slice(0, 13) >= nowStr);
+  if (a < 0) a = 0;
+  return { a, b: Math.min(a + 1, data.time.length), night: data.isDay[a] === 0 };
+}
+
+/* Hero card: the answer first — current conditions and how much the models agree on them */
+function renderHero() {
+  if (!state.data || !state.current) return;
+  const c = nowColumn();
+  const shares = weatherShares(c);
+  const temp = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
+  const feels = wmean(wpairs('temperature_2m', (p) => agg(p, 'apparent_temperature', c.a, c.b)));
+  const ws = wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)));
+  const gust = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
+  const dirs = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
+  const top = shares ? shares[0] : null;
+  const nAll = activeProviders().length, kTop = top ? Math.round(top[1] * nAll) : 0;
+  $('heroNow').innerHTML = `${top ? WI.svg(WI.CAT_CODE[top[0]], c.night, 'xl') : ''}
+    <div class="big"><div class="big-temp">${fmt(temp)}°</div>${feels != null && temp != null && Math.abs(feels - temp) >= 1 ? `<span class="feels">${t('hero.feels', { v: fmt(feels) })}</span>` : ''}</div>
+    <div class="desc"><b>${top ? t('cat.' + top[0]) : ''}</b><span>${top ? t('hero.nmodels', { k: kTop, n: nAll }) : ''}</span>
+      <div class="wind">${ws != null ? `${dirs.length ? WI.arrow(circMean(dirs, dirs.map(() => 1))) : ''}${fmt(ws)}${gust != null ? ` (${fmt(gust)})` : ''} km/h` : ''}</div>
+    </div>`;
+  if (top) {
+    const level = top[1] >= 0.8 ? 'hi' : top[1] >= 0.5 ? 'mid' : 'lo';
+    const dots = Math.max(1, Math.round(top[1] * 5));
+    const tv = nn(activeProviders().map((p) => agg(p, 'temperature_2m', c.a, c.b)));
+    $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
+    $('heroVerdict').hidden = false;
+  } else { $('heroVerdict').hidden = true; }
+}
+
+/* Colour legend for the weather-category icons, shown above the table only on the Weather tab */
+function renderSegKey() {
+  const show = state.param === 'weather';
+  $('segKey').hidden = !show;
+  if (!show) return;
+  const cats = ['clear', 'partly', 'cloudy', 'fog', 'drizzle', 'rain', 'snow', 'thunder'];
+  $('segKey').innerHTML = `<b>${t('lg.colours')}</b>` + cats.map((k) => `<span><i class="c-${k}"></i>${t('cat.' + k)}</span>`).join('');
+}
+
 function renderGrid() {
   const { data, param } = state;
   $('relNote').hidden = param !== 'reliability';
+  renderSegKey();
   if (param === 'reliability') return renderReliability();
   const cols = columns();
   const { rows, summary, prob, summaryLabel, probLabel, extraRows } = buildRows(param, cols);
@@ -343,8 +397,6 @@ function renderGrid() {
 }
 
 /* ================= Ημέρες & καρτέλες ================= */
-const DROP = '<svg class="arrow" viewBox="0 0 24 24" style="transform:none;fill:var(--rain)"><path d="M12 2c4 5 7 8.5 7 12a7 7 0 0 1-14 0c0-3.500 3-7 7-12z"/></svg>';
-
 function dayCategory(codes) {
   const cats = nn(codes).map(WI.category), c = {};
   cats.forEach((k) => (c[k] = (c[k] || 0) + 1));
@@ -368,13 +420,15 @@ function renderDays() {
     const rain = rp == null ? null : Math.round(rp * 100);
     const sp = wshare(wpairs('storm', (p) => { const v = nn(p.hourly.weather_code.slice(a, b)); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
     const storm = sp == null ? 0 : Math.round(sp * 100);
+    const gm = wmean(wpairs('wind', (p) => { const v = nn(p.hourly.wind_gusts_10m.slice(a, b)); return v.length ? Math.max(...v) : null; }));
     const dt = new Date(date + 'T12:00:00');
     const name = d === 0 ? t('today') : dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
-    return `<button class="day ${d === state.day ? 'active' : ''}" data-day="${d}">
-      <b>${name}</b><small>${dt.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}</small><br>
-      ${top ? WI.svg(WI.CAT_CODE[top[0]]) : ''}
-      <div class="hilo">${fmt(hi)}° <span>${fmt(lo)}°</span></div>
-      <div class="chips">${rain != null ? `<i>${DROP}${rain}%</i>` : ''}${storm >= 20 ? `<i>${WI.bolt24}${storm}%</i>` : ''}</div>
+    return `<button class="d ${d === state.day ? 'sel' : ''}" data-day="${d}">
+      <span class="lab">${name}<small>${dt.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}</small></span>
+      ${top ? WI.svg(WI.CAT_CODE[top[0]]) : '<span></span>'}
+      <span class="hl">${fmt(hi)}°<span>/${fmt(lo)}°</span></span>
+      <span class="pr">${rain != null ? `<b>${rain}%</b>` : '–'}${storm >= 20 ? `<small class="storm">${WI.bolt24}${storm}%</small>` : ''}</span>
+      <span class="gu">${gm != null ? fmt(gm) : '–'}</span>
     </button>`;
   }).join('');
 }
@@ -427,7 +481,7 @@ $('mdlList').addEventListener('click', (e) => {
 document.addEventListener('click', (e) => { if (!e.target.closest('.models')) $('models').open = false; });
 
 function renderAll() {
-  renderModels(); renderDays(); renderTabs(); renderGrid();
+  renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid();
   const d = state.data, loc = state.current;
   $('meta').textContent = t('meta', { name: loc.name, lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
 }

@@ -49,16 +49,69 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Ημέρες */
-.days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
-.day { flex: 0 0 auto; min-width: 104px; background: var(--panel); border: 2px solid transparent; border-radius: 12px; padding: 8px 10px; text-align: center; cursor: pointer; box-shadow: var(--shadow); font: inherit; color: var(--text); }
-.day.active { border-color: var(--accent); }
-.day b { display: block; font-size: 13px; }
-.day small { color: var(--muted); font-size: 11.5px; }
-.day .wi { width: 46px; height: 46px; }
-.day .hilo { font-size: 13px; }
-.day .hilo span { color: var(--muted); }
-.day .chips { display: flex; justify-content: center; gap: 6px; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-.day .chips i { font-style: normal; }
+/* Cards + the two-column "hero / week" left, "hour by hour" right layout */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px 12px; }
+.topgrid { display: flex; flex-direction: column; gap: 16px; }
+.topleft { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (min-width: 1000px) { .topgrid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 20px; align-items: start; } }
+@media (min-width: 1300px) { .topgrid { grid-template-columns: 420px minmax(0, 1fr); } }
+
+/* Hero: the answer first — current conditions and how much the models agree */
+.hero.card { padding: 16px 16px 12px; }
+.hero .now { display: flex; align-items: center; gap: 14px; }
+.hero .wi.xl { width: 62px; height: 62px; flex: none; }
+@media (min-width: 1000px) { .hero .wi.xl { width: 68px; height: 68px; } }
+.hero .now .big { min-width: 0; }
+.hero .now .big-temp { font-size: 46px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+@media (min-width: 1000px) { .hero .now .big-temp { font-size: 52px; } }
+.hero .now .feels { display: block; color: var(--muted); font-size: 13.5px; margin-top: 3px; white-space: nowrap; }
+.hero .now .desc { flex: none; margin-left: auto; text-align: right; min-width: 0; }
+.hero .now .desc b { font-size: 17px; font-weight: 600; display: block; }
+.hero .now .desc > span { color: var(--muted); font-size: 13.5px; display: block; margin-top: 2px; }
+.hero .now .desc .wind { color: var(--text); font-size: 14px; margin-top: 4px; white-space: nowrap; font-weight: 500; }
+.hero .now .desc .wind .arrow { width: 14px; height: 14px; }
+.hero .verdict { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--summary); display: flex; gap: 12px; align-items: flex-start; }
+.hero .verdict .dots { display: inline-flex; gap: 5px; margin-top: 6px; flex: none; }
+.hero .verdict .dots i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 20%, var(--panel)); }
+.hero .verdict .dots i.on { background: var(--accent); }
+.hero .verdict b { font-weight: 600; font-size: 15px; line-height: 1.35; display: block; }
+.hero .verdict small { display: block; color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+
+/* The week: aligned columns with a header row */
+.sec-h h2 { font-size: 17px; margin: 0 0 8px; font-weight: 600; }
+.week { --wk: minmax(56px, 1fr) 30px auto auto auto; --wkgap: 10px; }
+.week .days { display: block; overflow: visible; padding: 0; }
+.week .wk-h, .week .d { display: grid; grid-template-columns: var(--wk); gap: var(--wkgap); align-items: center; }
+.week .wk-h { font-size: 12px; color: var(--muted); font-weight: 500; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.week .wk-h span:nth-child(3), .week .wk-h span:nth-child(4), .week .wk-h span:nth-child(5), .week .d .hl, .week .d .pr, .week .d .gu { text-align: right; }
+.week .d { width: 100%; padding: 7px 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; font: inherit; color: var(--text); cursor: pointer; border-radius: 0; box-shadow: none; }
+.week .d:last-child { border-bottom: 0; }
+.week .d:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.week .d .lab { font-size: 15px; color: var(--muted); font-weight: 500; line-height: 1.2; }
+.week .d .lab small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+.week .d.sel .lab { color: var(--accent); font-weight: 600; }
+.week .d .wi { width: 30px; height: 30px; }
+.week .d .hl { font-size: 16px; font-weight: 600; white-space: nowrap; }
+.week .d .hl span { color: var(--muted); font-weight: 400; }
+.week .d .pr { font-size: 13px; color: var(--muted); white-space: nowrap; line-height: 1.25; }
+.week .d .pr b { display: block; color: var(--accent); font-weight: 600; }
+.week .d .pr small.storm { display: block; font-size: 11.5px; }
+.week .d .pr small.storm svg { width: 11px; height: 11px; vertical-align: -1px; }
+.week .d .gu { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.week .note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
+@media (max-width: 360px) { .week { --wk: minmax(44px, 1fr) 24px auto auto auto; --wkgap: 6px; } .week .d .wi { width: 24px; height: 24px; } .week .d .lab { font-size: 13.5px; } .week .d .hl { font-size: 14px; } .week .d .pr, .week .d .gu { font-size: 12.5px; } }
+
+/* Colour legend for weather-category icons, above the table (Weather tab only) */
+.segkey { display: flex; flex-wrap: wrap; gap: 5px 16px; align-items: center; font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
+.segkey b { font-weight: 600; color: var(--text); }
+.segkey span { display: inline-flex; align-items: center; gap: 6px; }
+.segkey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.segkey i.c-clear { background: var(--sun); } .segkey i.c-partly { background: color-mix(in srgb, var(--sun) 55%, var(--cloud)); }
+.segkey i.c-cloudy { background: var(--cloud); } .segkey i.c-fog { background: color-mix(in srgb, var(--cloud) 60%, var(--panel)); }
+.segkey i.c-drizzle { background: color-mix(in srgb, var(--rain) 45%, var(--panel)); } .segkey i.c-rain { background: var(--rain); }
+.segkey i.c-snow { background: var(--snow); } .segkey i.c-thunder { background: var(--bolt); }
+.hours .table-wrap { box-shadow: none; }
+.hours .tabs { margin-top: 0; }
 
 /* Καρτέλες παραμέτρων */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 10px; }

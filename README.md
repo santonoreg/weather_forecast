@@ -99,10 +99,11 @@ The first time you open it, the app downloads the complete daily series (about 1
 
 ### Forecast
 
-Choose a saved location and you get:
+Choose a saved location and you get a two-column layout: a **hero card** and the **days-ahead** list on the left, the hour-by-hour table on the right (stacked on narrow screens).
 
-1. **Day cards** (7 days): most likely weather icon, expected high / low, chance of rain (≥ 1 mm) and, when relevant, chance of thunderstorm.
-2. **Parameter tabs**, each showing one table – one row per provider/model, one column per time step:
+1. **Hero card**: current conditions right now (icon, temperature, feels-like, wind) and a **verdict** strip — a 1–5 dot scale plus a sentence saying how much the models agree (*"The models mostly/partly agree" / "are split"*), with the temperature range behind it.
+2. **Days ahead** (7 days): one row per day with icon, high/low, chance of rain (≥ 1 mm) and peak gust; click a day to jump the table below to it.
+3. **Parameter tabs**, each showing one table – one row per provider/model, one column per time step (the Weather tab also shows a colour legend for the category icons above the table):
 
    | Tab | Provider cells | Second-to-last row | **Last row (probability)** |
    |---|---|---|---|
@@ -114,11 +115,11 @@ Choose a saved location and you get:
    | **Cloud cover / Humidity / Pressure** | value, colour-coded | average, min–max | agreement % |
    | **Reliability** | see [Model verification](#model-verification-reliability-tab) | | |
 
-3. **Step**: 1, 3, 6 or 12 hours. Values are aggregated per step (rain = sum, gust/CAPE = max, weather code = most severe, wind direction = speed-weighted circular mean, others = mean).
-4. The **current time interval is highlighted** (whole column) and, when the table needs horizontal scrolling, it is **automatically centred**. Past intervals are slightly dimmed.
-5. **Models** drop-down: enable/disable individual models (see below).
-6. **Weight by reliability** checkbox: turn reliability weighting on/off.
-7. **Refresh** forces a fresh download (otherwise data is cached for 30 minutes).
+4. **Step**: 1, 3, 6 or 12 hours. Values are aggregated per step (rain = sum, gust/CAPE = max, weather code = most severe, wind direction = speed-weighted circular mean, others = mean).
+5. The **current time interval is highlighted** (whole column) and, when the table needs horizontal scrolling, it is **automatically centred**. Past intervals are slightly dimmed.
+6. **Models** drop-down: enable/disable individual models (see below).
+7. **Weight by reliability** checkbox: turn reliability weighting on/off.
+8. **Refresh** forces a fresh download (otherwise data is cached for 30 minutes).
 
 ### Models drop-down
 
