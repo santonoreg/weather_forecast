@@ -400,12 +400,34 @@ function renderSegKey() {
    tab — transposed from the usual "time across" table. Individual providers don't fit as columns here,
    so this view is always the compact, consensus-only one (see "Show all N models" for the per-provider
    breakdown, which stays in "time across" mode). */
+/* Weather tab, "Time down": one row per hour with the top categories (icon + name + share, the
+   leader tagged "agree"), a colour-coded segmented bar (same colours as the legend above the table),
+   and a combined temperature / wind / rain column — matches Glett's per-hour row layout. */
+const weatherAgreeCell = (c) => {
+  const shares = weatherShares(c);
+  if (!shares) return cell('–');
+  const lines = shares.slice(0, 3).map(([k, sh], i) => `<div class="wa-line${i === 0 ? ' top' : ''}">${WI.svg(WI.CAT_CODE[k], c.night, 'mini')}<span>${t('cat.' + k)}</span><b>${Math.round(sh * 100)}%</b>${i === 0 ? `<i class="agree">${t('g.agree_word')}</i>` : ''}</div>`).join('');
+  const bar = `<div class="wbar">${shares.map(([k, sh]) => `<span class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></span>`).join('')}</div>`;
+  return cell(`<div class="wa">${lines}${bar}</div>`);
+};
+const tempWindRainCell = (c) => {
+  const m = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
+  const ws = wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)));
+  const g = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
+  const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
+  const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
+  return cell(`<div class="twr">${m != null ? `<b>${fmt(m)}°</b>` : ''}${ws != null ? `<span>${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(ws)}${g != null ? `<small>(${fmt(g)})</small>` : ''} km/h</span>` : ''}${pr != null ? `<span class="pct">${Math.round(pr * 100)}%</span>` : ''}</div>`, bgTemp(m));
+};
+
 function renderGridVertical(cols, built) {
   const { summary, prob, summaryLabel, probLabel } = built;
+  const weather = state.param === 'weather';
   const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
-  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th>${summaryLabel}</th><th>${probLabel}</th></tr></thead><tbody>`;
+  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th>${weather ? probLabel : summaryLabel}${weather ? `<small class="sub">${t('g.prob_weather.sub')}</small>` : ''}</th><th>${weather ? t('g.twr') : probLabel}</th></tr></thead><tbody>`;
   cols.forEach((c, i) => {
-    html += `<tr class="${cls(c)}"><th class="rowh">${c.label}</th><td style="background:${summary[i].bg || ''}">${summary[i].html}</td><td style="background:${prob[i].bg || ''}">${prob[i].html}</td></tr>`;
+    const left = weather ? weatherAgreeCell(c) : summary[i];
+    const right = weather ? tempWindRainCell(c) : prob[i];
+    html += `<tr class="${cls(c)}"><th class="rowh">${c.label}</th><td style="background:${left.bg || ''}">${left.html}</td><td style="background:${right.bg || ''}">${right.html}</td></tr>`;
   });
   html += '</tbody>';
   $('grid').innerHTML = html;
