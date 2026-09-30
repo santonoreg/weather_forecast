@@ -502,13 +502,14 @@ function buildWeatherLanes(cols) {
   const lane = (name, cells) => ({ name, cells });
   const wx = cols.map((c) => {
     const shares = weatherShares(c);
-    return shares ? cell(`${WI.svg(WI.CAT_CODE[shares[0][0]], c.night, 'big')}<small>${t('cat.' + shares[0][0])}</small>`) : cell('–');
+    return shares ? cell(WI.svg(WI.CAT_CODE[shares[0][0]], c.night, 'big')) : cell('–');
   });
   const agree = cols.map((c) => {
     const shares = weatherShares(c);
     if (!shares) return cell('–');
     const pct = Math.round(shares[0][1] * 100);
-    return cell(`<div class="pct ${pct >= 75 ? '' : pct >= 50 ? 'dim' : 'dim'}">${pct}%</div>`);
+    const bar = `<div class="wbar mini">${shares.map(([k, sh]) => `<span class="c-${k}" style="width:${Math.max(sh * 100, 0)}%"></span>`).join('')}</div>`;
+    return cell(`<div class="pct ${pct >= 75 ? '' : pct >= 50 ? 'dim' : 'dim'}">${pct}%</div>${bar}`);
   });
   const temp = cols.map((c) => {
     const m = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
@@ -557,8 +558,8 @@ function renderGrid() {
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
     const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
-    // Consensus-first: the individual provider rows are collapsed by default, behind "Show all N models"
-    if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
+    // Consensus-first, matching Glett: the weighted answer (lanes / summary+prob) comes first, then the
+    // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
     if (param === 'weather') {
       buildWeatherLanes(cols).forEach((l, li) => {
         html += `<tr class="lane${li === 0 ? ' first' : ''}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
@@ -568,6 +569,7 @@ function renderGrid() {
       html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     }
     if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
+    if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
     html += '</tbody>';
     $('grid').innerHTML = html;
     centerNow();
