@@ -479,7 +479,7 @@ function renderGridVertical(cols, built) {
     if (c.dateIdx !== prevDate) { html += `<tr class="dayrow"><th class="dh" colspan="${colspan}"><span>${dayLabelFor(c.dateIdx)}</span></th></tr>`; prevDate = c.dateIdx; }
     const left = weather ? weatherAgreeCell(c) : summary[i];
     const right = weather ? tempWindRainCell(c) : prob[i];
-    const provCells = providerCols.map((r) => `<td class="${r.cls}">${r.cells[i] ? r.cells[i].html : ''}</td>`).join('');
+    const provCells = providerCols.map((r) => { const pc = r.cells[i]; return `<td class="${r.cls}" style="background:${pc && pc.bg || ''}">${pc ? pc.html : ''}</td>`; }).join('');
     html += `<tr class="hr${cls(c)}"><th class="rowh">${c.label}</th><td class="${left.cls || ''}" style="background:${left.bg || ''}">${left.html}</td><td class="${right.cls || ''}" style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
   });
   html += '</tbody>';
