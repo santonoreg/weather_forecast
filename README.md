@@ -171,23 +171,24 @@ The thresholds are constants at the top of `js/app.js` (`RAIN_THR`, `WIND_THR`, 
 
 ### Model verification (Reliability tab)
 
-To find out which models have recently been closest to reality **for your location**, `api/verify.php` compares every model's *archived forecasts* (Open-Meteo **Historical Forecast API**) with two references:
+`api/verify.php` compares every model's *archived forecasts* (Open-Meteo **Historical Forecast API**) with two references: the **ERA5 reanalysis** (Open-Meteo **Archive API**, last 28 days, ending 6 days ago since ERA5 is published with a delay — available everywhere, but a model product of ECMWF's own system, so it slightly favours ECMWF) and **real METAR observations** (hourly reports from [aviationweather.gov](https://aviationweather.gov/data/api/), no key needed — measured temperature, dew point → relative humidity, wind, pressure, cloud cover and present weather).
 
-1. **ERA5 reanalysis** (Open-Meteo **Archive API**) – a gridded "what actually happened" for the last **28 days** (ending 6 days ago, because ERA5 is published with a delay). Available everywhere, but it is a model product, produced with ECMWF's system, so it slightly favours ECMWF.
-2. **Real METAR observations** – the hourly weather reports of the **nearest airport station** within 60 km (from [aviationweather.gov](https://aviationweather.gov/data/api/), no key needed). Roughly the last 1–2 weeks (the API returns up to ~400 reports). METAR gives measured temperature, dew point (→ relative humidity), wind, pressure, cloud cover and present weather (rain, snow, thunderstorm, fog).
+**For a location in Greece**, both references are pooled **nationwide** rather than computed per visited place: every Greek METAR-reporting airport is discovered (an ICAO `LG*` bounding-box query, not a fixed list — currently ~23 stations), and for *each station* a separate archived forecast is fetched **at that station's own coordinates** and compared with its METAR reports, plus ERA5 at that same point. All stations' comparisons are pooled into one score per model, computed once and cached for **every** Greek location (24 hours), rather than redone per place. This matters because comparing a forecast computed for the *visitor's* point against a station tens of km away would partly measure real local weather differences (coastal effects, elevation), not model skill — fetching the forecast at each station's own point instead removes that bias, and pooling many stations gives a far more stable score than any single nearest station would. Fetching dozens of stations' archived forecasts concurrently runs into Open-Meteo's burst rate limit (HTTP 429 past roughly 5 simultaneous requests), so they're fetched in small chunks with automatic retry rather than all at once — the first request after the daily cache expires takes signficantly longer (tens of seconds) than a normal cached response.
+
+**For a location outside Greece**, the original per-location approach is used instead: the archived forecast at that point vs. ERA5 there, and, if a METAR station is within 60 km, a *separate* archived forecast fetched at the station's own coordinates (same point-matching principle, just for one station) vs. its reports.
 
 For each model and reference it computes: mean absolute error and bias for temperature, wind, cloud cover, humidity and pressure; the *critical success index* for detecting wet hours; and the share of hours with the correct weather category (drizzle and rain are treated as one category for this comparison).
 
-**Combining the two:** per parameter, `skill = 0.6 × METAR skill + 0.4 × ERA5 skill` when at least 48 matched hourly observations exist; otherwise ERA5 alone is used. Observations get the larger share because ERA5 is not independent of the models being judged. The **score (0–100)** is the mean skill across parameters, and the skills are turned into **weights between 0.5 and 1.8** (average = 1) per parameter. With *Weight by reliability* enabled, the averages, chances and weather-category shares use these weights, so better models count more. Results are cached for 24 hours per location.
+**Combining the two:** per parameter, `skill = 0.6 × METAR skill + 0.4 × ERA5 skill` when at least 48 matched hourly observations exist; otherwise ERA5 alone is used. Observations get the larger share because ERA5 is not independent of the models being judged. The **score (0–100)** is the mean skill across parameters, and the skills are turned into **weights between 0.5 and 1.8** (average = 1) per parameter. With *Weight by reliability* enabled, the averages, chances and weather-category shares use these weights, so better models count more.
 
-In the Reliability table every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table names the station, its distance and the number of reports used.
+In the Reliability table every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table explains which method was used — the list of pooled stations for Greece, or the single nearest station (name, distance, report count) elsewhere.
 
 Notes and caveats:
 
-- An airport is a point measurement. Distance, elevation and local effects (sea breeze, urban heat) add errors that affect all models similarly; the station is shown so you can judge how representative it is.
+- An airport is a point measurement. Distance, elevation and local effects (sea breeze, urban heat) add errors that affect all models similarly.
 - Pressure comes from the METAR sea-level pressure (or altimeter setting), and rain/weather from the *present-weather* code at report time – rain detection against METAR is therefore approximate.
 - Models without archived data for the area (regional models outside their domain) and Yr are not scored and count with weight 1. Rain weights are only used when the period contains enough rain events to be meaningful.
-- If no METAR station with enough reports is near the location, ERA5 alone is used and the note says so.
+- Outside Greece, if no METAR station with enough reports is near the location, ERA5 alone is used and the note says so.
 
 ### Optional: Google WeatherNext 3, and the "WeFo vs AI" comparison
 
@@ -319,7 +320,8 @@ Most settings are constants in the PHP files below. One optional file, `api/conf
 | `api/forecast.php` | `CACHE_TTL` (1800) | forecast cache in seconds |
 | `api/forecast.php` | `$MODELS` | Open-Meteo model ids and display names |
 | `api/verify.php` | `WINDOW_DAYS` (28), `LAG_DAYS` (6), `VERIFY_TTL` (86400) | ERA5 window, ERA5 delay, cache |
-| `api/verify.php` | `MAX_STATION_KM` (60), `MIN_OBS` (48), `OBS_WEIGHT` (0.6), `METAR_HOURS` (360) | METAR station distance limit, minimum matched observations, METAR share of the blended skill, how far back to ask for reports |
+| `api/verify.php` | `MAX_STATION_KM` (60), `MIN_OBS` (48), `OBS_WEIGHT` (0.6), `METAR_HOURS` (360) | METAR station distance limit (non-Greek fallback), minimum matched observations, METAR share of the blended skill, how far back to ask for reports |
+| `api/verify.php` | `GREECE_STATIONS_TTL` (7 days), `GREECE_MAX_STATIONS` (40), `MIN_GREECE_STATIONS` (3) | how long the discovered Greek station list is cached, safety cap on stations fetched, minimum stations found before falling back to the single-point method |
 | `api/verify.php` | `$TOL` | error at which a parameter's skill reaches 0 |
 | `api/db.php` | `http_get()` | User-Agent and cURL options |
 | `api/google_weather.php` | `GOOGLE_CACHE_TTL`, `GOOGLE_HOURS`, `GOOGLE_PAGE_SIZE`, `GOOGLE_DAILY_CALL_CAP`, `GOOGLE_FAIL_COOLDOWN` | Google WeatherNext 3 cache lifetime, hours requested per fetch, Google's page size cap, hard daily call cap, retry backoff after a failure |

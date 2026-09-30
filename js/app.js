@@ -363,10 +363,16 @@ function renderReliability() {
   });
   $('grid').innerHTML = html + '</tbody>';
   $('relNote').innerHTML = t('r.howto'); $('relNote').hidden = false;
-  const st = v.station
-    ? t('r.station', { id: v.station.id, name: esc(v.station.name), km: v.station.km, n: v.station.reports, start: v.station.start, end: v.station.end })
-    : t('r.nostation', { km: 60 });
-  $('legend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(state.current.name), w: Math.round((v.obs_weight || 0) * 100) })}<br>${t('r.limits')}`;
+  const w = Math.round((v.obs_weight || 0) * 100);
+  if (v.greece) {
+    const st = t('r.greece', { n: v.greece.stations, names: esc(v.greece.names.join(', ')) });
+    $('legend').innerHTML = `${st}<br>${t('r.legend.greece', { start: v.start, end: v.end, hours: v.hours, w })}<br>${t('r.limits')}`;
+  } else {
+    const st = v.station
+      ? t('r.station', { id: v.station.id, name: esc(v.station.name), km: v.station.km, n: v.station.reports, start: v.station.start, end: v.station.end })
+      : t('r.nostation', { km: 60 });
+    $('legend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(state.current.name), w })}<br>${t('r.limits')}`;
+  }
 }
 
 const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''; };
