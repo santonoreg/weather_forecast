@@ -1,7 +1,7 @@
 :root {
   --bg: #f3f6fb; --panel: #ffffff; --text: #16202e; --muted: #64748b; --line: #dde4ee;
   --accent: #2563eb; --accent-2: #1d4ed8; --good: #16a34a; --mid: #d97706; --bad: #dc2626;
-  --sun: #f5b301; --moon: #c7d2e4; --cloud: #94a3b8; --rain: #3b82f6; --snow: #7dd3fc; --bolt: #f59e0b;
+  --sun: #f5b301; --moon: #c7d2e4; --cloud: #94a3b8; --rain: #3b82f6; --snow: #7dd3fc; --bolt: #f59e0b; --outlook: #7c3aed;
   --cloud-top: #eef3fb; --cloud-bot: #8fa2c0; --moon-mid: #dbe3f2; --moon-dark: #98a6c2; --summary: #eef4ff; --prob: #e3edff; --shadow: 0 1px 3px rgba(15, 30, 60, .08), 0 4px 14px rgba(15, 30, 60, .06);
 }
 /* Theme: follows the system unless the user picks one (html[data-theme]) */
@@ -53,10 +53,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px 12px; }
 .topgrid { display: flex; flex-direction: column; gap: 16px; }
 .toprow { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-@media (min-width: 860px) { .toprow { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; } }
+@media (min-width: 860px) { .toprow { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: stretch; } }
 
 /* Hero: the answer first — current conditions and how much the models agree */
-.hero.card { padding: 16px 16px 12px; }
+.hero.card { padding: 16px 16px 12px; display: flex; flex-direction: column; }
 .hero .now { display: flex; align-items: center; gap: 14px; }
 .hero .wi.xl { width: 62px; height: 62px; flex: none; }
 @media (min-width: 1000px) { .hero .wi.xl { width: 68px; height: 68px; } }
@@ -96,9 +96,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hero .obsline { margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line)); font-size: 12.5px; color: var(--text); line-height: 1.5; }
 .hero .obsline b { color: var(--accent-2); font-weight: 600; }
 .hero .obsline small { display: block; color: var(--muted); font-size: 11.5px; }
-.hero .rainline { display: flex; align-items: center; gap: 8px; margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--rain) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--rain) 25%, var(--line)); font-size: 13.5px; color: var(--text); }
+.hero .rainline { display: flex; align-items: center; gap: 8px; margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--outlook) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--outlook) 25%, var(--line)); font-size: 13.5px; color: var(--text); }
+.hero .rainline .rdot path { fill: var(--outlook); }
 .hero .rainline .rdot { width: 14px; height: 14px; flex: none; }
-.hero .hero-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.hero .hero-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
 .hero .hist { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 14px; padding: 4px 0; cursor: pointer; font-family: inherit; }
 .hero .hist svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .hero .hist:hover { text-decoration: underline; }
