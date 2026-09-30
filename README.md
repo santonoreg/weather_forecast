@@ -16,9 +16,13 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ## Screenshots
 
-**Forecast – weather** (one row per model, last row = most likely weather with the share of every category; the current interval is highlighted)
+**Forecast – weather** (hero card and days-ahead on the left; per-provider table expanded via "Show all models" on the right, last row = most likely weather with the share of every category; the current interval is highlighted)
 
 ![Forecast – weather](docs/screenshots/forecast-weather.png)
+
+**Time down** – the same table transposed to one row per hour (Show all models collapsed to the consensus-only view)
+
+![Time down](docs/screenshots/forecast-timedown.png)
 
 **Rain** – per-model rainfall per step, average and chance of rain
 
@@ -103,7 +107,7 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
 
 1. **Hero card**: current conditions right now (icon, temperature, feels-like, wind) and a **verdict** strip — a 1–5 dot scale plus a sentence saying how much the models agree (*"The models mostly/partly agree" / "are split"*), with the temperature range behind it.
 2. **Days ahead** (7 days): one row per day with icon, high/low, chance of rain (≥ 1 mm) and peak gust; click a day to jump the table below to it.
-3. **Parameter tabs**, each showing one table – one row per provider/model, one column per time step (the Weather tab also shows a colour legend for the category icons above the table):
+3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: it shows only the average/agreement rows (plus, on the Weather tab, the named AI models) – a **"Show all N models"** button reveals every individual provider's row underneath. A **→ Time across / ↓ Time down** switch transposes the table: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda (average + probability only, better for narrow screens or scanning many hours at once).
 
    | Tab | Provider cells | Second-to-last row | **Last row (probability)** |
    |---|---|---|---|

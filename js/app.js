@@ -15,8 +15,10 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0 };
+const state = { locations: [], current: null, data: null, verify: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
+try { state.orient = localStorage.getItem('wefo.orient') === 'v' ? 'v' : 'h'; } catch (e) { /* ignore */ }
+try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* ignore */ }
@@ -374,27 +376,70 @@ function renderSegKey() {
   $('segKey').innerHTML = `<b>${t('lg.colours')}</b>` + cats.map((k) => `<span><i class="c-${k}"></i>${t('cat.' + k)}</span>`).join('');
 }
 
-function renderGrid() {
-  const { data, param } = state;
-  $('relNote').hidden = param !== 'reliability';
-  renderSegKey();
-  if (param === 'reliability') return renderReliability();
-  const cols = columns();
-  const { rows, summary, prob, summaryLabel, probLabel, extraRows } = buildRows(param, cols);
+/* "Time down": one row per hour, showing just the consensus (average + probability) for the current
+   tab — transposed from the usual "time across" table. Individual providers don't fit as columns here,
+   so this view is always the compact, consensus-only one (see "Show all N models" for the per-provider
+   breakdown, which stays in "time across" mode). */
+function renderGridVertical(cols, built) {
+  const { summary, prob, summaryLabel, probLabel } = built;
   const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
-  const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-  let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
-  rows.forEach((r) => { html += rowHtml(r); });
-  html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-  html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-  if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
+  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th>${summaryLabel}</th><th>${probLabel}</th></tr></thead><tbody>`;
+  cols.forEach((c, i) => {
+    html += `<tr class="${cls(c)}"><th class="rowh">${c.label}</th><td style="background:${summary[i].bg || ''}">${summary[i].html}</td><td style="background:${prob[i].bg || ''}">${prob[i].html}</td></tr>`;
+  });
   html += '</tbody>';
   $('grid').innerHTML = html;
-  centerNow();
-  requestAnimationFrame(() => requestAnimationFrame(centerNow));
+  const nowRow = document.querySelector('#grid tbody tr.now');
+  if (nowRow) nowRow.scrollIntoView({ block: 'center' });
+}
+
+function renderGrid() {
+  const { param } = state;
+  const notReliability = param !== 'reliability';
+  $('relNote').hidden = param !== 'reliability';
+  $('orientSeg').hidden = !notReliability;
+  renderSegKey();
+  if (param === 'reliability') { $('modelsToggle').hidden = true; return renderReliability(); }
+  const cols = columns();
+  const built = buildRows(param, cols);
+  const { rows, summary, prob, summaryLabel, probLabel, extraRows } = built;
+
+  if (state.orient === 'v') {
+    $('modelsToggle').hidden = true;
+    renderGridVertical(cols, built);
+  } else {
+    const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
+    const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
+    // Consensus-first: the individual provider rows are collapsed by default, behind "Show all N models"
+    if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
+    html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
+    html += '</tbody>';
+    $('grid').innerHTML = html;
+    centerNow();
+    requestAnimationFrame(() => requestAnimationFrame(centerNow));
+    $('modelsToggle').hidden = false;
+    $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
+  }
   const compareNote = extraRows && extraRows.length ? t('lg.compare') : '';
   $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? RAIN_THR : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote;
 }
+$('modelsToggle').addEventListener('click', () => {
+  state.modelsOpen = !state.modelsOpen;
+  try { localStorage.setItem('wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
+  renderGrid();
+});
+document.querySelectorAll('#orientSeg [data-orient]').forEach((b) => {
+  b.classList.toggle('active', b.dataset.orient === state.orient);
+  b.addEventListener('click', () => {
+    state.orient = b.dataset.orient;
+    try { localStorage.setItem('wefo.orient', state.orient); } catch (e) { /* ignore */ }
+    document.querySelectorAll('#orientSeg [data-orient]').forEach((x) => x.classList.toggle('active', x === b));
+    renderGrid();
+  });
+});
 
 /* ================= Ημέρες & καρτέλες ================= */
 function dayCategory(codes) {

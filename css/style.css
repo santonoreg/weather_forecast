@@ -112,6 +112,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .segkey i.c-snow { background: var(--snow); } .segkey i.c-thunder { background: var(--bolt); }
 .hours .table-wrap { box-shadow: none; }
 .hours .tabs { margin-top: 0; }
+.hours-h { display: flex; align-items: center; justify-content: space-between; gap: 10px 12px; flex-wrap: wrap; }
+.hours-h .tabs { flex: 1 1 auto; min-width: 0; margin: 0 0 10px; }
+.hours-h .seg { flex: none; margin-bottom: 10px; }
+.btn.toggle { display: block; margin: 10px auto 0; }
+@media (max-width: 700px) { .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } }
 
 /* Καρτέλες παραμέτρων */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 10px; }

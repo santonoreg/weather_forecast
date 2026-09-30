@@ -69,7 +69,8 @@ const I18N = {
     'lg.weighted': ' The last row is weighted by each model\'s reliability (see the Reliability tab).',
     'lg.compare': ' The rows right after it (marked AI) show the flagship single-model AI forecasts — ECMWF AIFS and, when configured, Google WeatherNext 3 — on their own, for direct comparison with the weighted result above.',
 
-    'g.provider': 'Provider / model', 'g.temp_avg': 'Temperature (avg)', 'g.prob_weather': 'Most likely weather',
+    'g.provider': 'Provider / model', 'g.time': 'Time', 'g.temp_avg': 'Temperature (avg)', 'g.prob_weather': 'Most likely weather',
+    'orient.h': '→ Time across', 'orient.v': '↓ Time down',
     'g.avg_mm': 'Average (mm)', 'g.upto': 'up to {v}', 'g.prob_rain': 'Chance of rain',
     'g.avg_kmh': 'Average (km/h)', 'g.prob_wind': 'Chance of strong wind (≥{v})', 'g.gusts': 'gusts ≥60: {v}%',
     'g.storm_yes': 'storm', 'g.storm_maybe': 'possible', 'g.storm_no': 'no',
@@ -89,6 +90,7 @@ const I18N = {
     'vf.loading': '· loading reliability…', 'vf.unavail': '· unavailable',
 
     'm.active': '{a}/{n} active', 'm.dup': 'Same data as {n} (outside its coverage) – not counted twice',
+    'm.showall': 'Show all {n} models', 'm.hideall': 'Hide individual models',
     'm.missing': 'No coverage for this location', 'm.all': 'Enable all',
     'mn.jma_seamless': 'JMA (Japan)', 'mn.cma_grapes_global': 'CMA GRAPES (China)', 'mn.bom_access_global': 'BOM ACCESS (Australia)',
     'mn.knmi_seamless': 'KNMI (Netherlands)', 'mn.dmi_seamless': 'DMI (Denmark)', 'mn.metno_seamless': 'MET Norway (Nordic)',
@@ -195,7 +197,8 @@ const I18N = {
     'lg.weighted': ' Η τελευταία γραμμή στηρίζεται σε στάθμιση με την αξιοπιστία κάθε μοντέλου (καρτέλα Αξιοπιστία).',
     'lg.compare': ' Οι γραμμές αμέσως μετά (με ένδειξη AI) δείχνουν τις κορυφαίες προβλέψεις μεμονωμένων μοντέλων AI — ECMWF AIFS και, όταν είναι ρυθμισμένο, Google WeatherNext 3 — ξεχωριστά, για άμεση σύγκριση με το παραπάνω σταθμισμένο αποτέλεσμα.',
 
-    'g.provider': 'Πάροχος / μοντέλο', 'g.temp_avg': 'Θερμοκρασία (μ.ο.)', 'g.prob_weather': 'Πιθανότερος καιρός',
+    'g.provider': 'Πάροχος / μοντέλο', 'g.time': 'Ώρα', 'g.temp_avg': 'Θερμοκρασία (μ.ο.)', 'g.prob_weather': 'Πιθανότερος καιρός',
+    'orient.h': '→ Ώρες σε στήλες', 'orient.v': '↓ Ώρες σε γραμμές',
     'g.avg_mm': 'Μέσος όρος (mm)', 'g.upto': 'έως {v}', 'g.prob_rain': 'Πιθανότητα βροχής',
     'g.avg_kmh': 'Μέσος όρος (km/h)', 'g.prob_wind': 'Πιθανότητα ισχυρού ανέμου (≥{v})', 'g.gusts': 'ριπές ≥60: {v}%',
     'g.storm_yes': 'καταιγίδα', 'g.storm_maybe': 'πιθανή', 'g.storm_no': 'όχι',
@@ -215,6 +218,7 @@ const I18N = {
     'vf.loading': '· φόρτωση αξιοπιστίας…', 'vf.unavail': '· μη διαθέσιμη',
 
     'm.active': '{a}/{n} ενεργά', 'm.dup': 'Ίδια δεδομένα με {n} (εκτός περιοχής κάλυψης) – δεν μετράει διπλά',
+    'm.showall': 'Εμφάνιση όλων ({n} μοντέλα)', 'm.hideall': 'Απόκρυψη μεμονωμένων μοντέλων',
     'm.missing': 'Χωρίς κάλυψη για αυτή την τοποθεσία', 'm.all': 'Ενεργοποίηση όλων',
     'mn.jma_seamless': 'JMA (Ιαπωνία)', 'mn.cma_grapes_global': 'CMA GRAPES (Κίνα)', 'mn.bom_access_global': 'BOM ACCESS (Αυστραλία)',
     'mn.knmi_seamless': 'KNMI (Ολλανδία)', 'mn.dmi_seamless': 'DMI (Δανία)', 'mn.metno_seamless': 'MET Norway (Nordic)',
