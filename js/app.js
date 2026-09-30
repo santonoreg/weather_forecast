@@ -882,7 +882,9 @@ async function loadForecast(refresh = false) {
     renderAll();
     loadVerify(loc, token);
     loadObserved(loc, token);
-    loadRadar(loc, token);
+    // Radar nowcast ("Next break") is built (see loadRadar/api/radar.php) but turned off for now: the
+    // hero card is meant to hold exactly three boxes — agreement, measured now, and the outlook —
+    // per request. Re-add a `loadRadar(loc, token);` call here to bring it back.
   } catch (err) {
     if (token !== state.token) return;
     $('loading').hidden = true;

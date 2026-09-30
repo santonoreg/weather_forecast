@@ -81,10 +81,18 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hero .verdict.hi b { color: var(--good); }
 .hero .verdict.mid { background: color-mix(in srgb, var(--mid) 14%, var(--panel)); }
 .hero .verdict.mid .dots i.on { background: var(--mid); }
-.hero .verdict.mid b { color: var(--mid); }
-.hero .verdict.lo { background: color-mix(in srgb, var(--bad) 14%, var(--panel)); }
+.hero .verdict.mid b { color: #92400e; }
+.hero .verdict.lo { background: color-mix(in srgb, var(--bad) 12%, var(--panel)); }
 .hero .verdict.lo .dots i.on { background: var(--bad); }
-.hero .verdict.lo b { color: var(--bad); }
+.hero .verdict.lo b { color: #991b1b; }
+/* The darker text above is tuned for the light tint on a white panel; in dark mode the tint is a dark
+   red/amber instead, where the brighter theme colour already reads clearly against it. */
+:root[data-theme="dark"] .hero .verdict.mid b { color: var(--mid); }
+:root[data-theme="dark"] .hero .verdict.lo b { color: var(--bad); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero .verdict.mid b { color: var(--mid); }
+  :root:not([data-theme="light"]) .hero .verdict.lo b { color: var(--bad); }
+}
 .hero .obsline { margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line)); font-size: 12.5px; color: var(--text); line-height: 1.5; }
 .hero .obsline b { color: var(--accent-2); font-weight: 600; }
 .hero .obsline small { display: block; color: var(--muted); font-size: 11.5px; }
