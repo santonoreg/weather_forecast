@@ -48,11 +48,17 @@ function db(): PDO
         lon REAL NOT NULL,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )');
+    // `kind`: 'saved' = added by the admin in Locations & Map (only listed to a logged-in admin),
+    // 'city' = the built-in Greek cities (api/cities.php), listed for everybody
+    $cols = array_column($pdo->query('PRAGMA table_info(locations)')->fetchAll(), 'name');
+    if (!in_array('kind', $cols, true)) $pdo->exec("ALTER TABLE locations ADD COLUMN kind TEXT NOT NULL DEFAULT 'saved'");
+    if (!in_array('name_el', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN name_el TEXT');
     $pdo->exec('CREATE TABLE IF NOT EXISTS cache (
         k TEXT PRIMARY KEY,
         body TEXT NOT NULL,
         fetched_at INTEGER NOT NULL
     )');
+    sync_cities($pdo);
     // Long-term daily history per saved location (downloaded once, then cached here)
     $pdo->exec('CREATE TABLE IF NOT EXISTS history_daily (
         loc_id INTEGER NOT NULL,
@@ -68,6 +74,38 @@ function db(): PDO
     return $pdo;
 }
 
+// Keeps the built-in Greek cities (api/cities.php) in the locations table. Cheap on every request (one
+// SELECT); the real work only happens on first run or after the list file changes. Upserts by English
+// name, so a city that is already there keeps its id (and with it its downloaded climate history).
+function sync_cities(PDO $pdo): void
+{
+    $file = __DIR__ . '/cities.php';
+    $ver = (string)md5_file($file);
+    $cur = $pdo->prepare('SELECT body FROM cache WHERE k = ?');
+    $cur->execute(['cities:seed']);
+    if ($cur->fetchColumn() === $ver) return;
+    $pdo->exec('BEGIN IMMEDIATE');   // two first requests at once must not both insert
+    try {
+        $cur->execute(['cities:seed']);
+        if ($cur->fetchColumn() !== $ver) {
+            $find = $pdo->prepare("SELECT id FROM locations WHERE kind = 'city' AND name = ?");
+            $upd = $pdo->prepare('UPDATE locations SET name_el = ?, lat = ?, lon = ? WHERE id = ?');
+            $ins = $pdo->prepare("INSERT INTO locations (name, name_el, lat, lon, kind) VALUES (?, ?, ?, ?, 'city')");
+            $cities = require $file;
+            foreach ($cities as [$en, $el, $lat, $lon]) {
+                $find->execute([$en]);
+                if (($id = $find->fetchColumn()) !== false) $upd->execute([$el, $lat, $lon, $id]);
+                else $ins->execute([$en, $el, $lat, $lon]);
+            }
+            $pdo->prepare('INSERT OR REPLACE INTO cache (k, body, fetched_at) VALUES (?, ?, ?)')->execute(['cities:seed', $ver, time()]);
+        }
+        $pdo->exec('COMMIT');
+    } catch (Throwable $e) {
+        $pdo->exec('ROLLBACK');
+        throw $e;
+    }
+}
+
 // Optional local config: api/config.php (git-ignored — see api/config.example.php) and/or environment
 // variables (see the "WEFO_" section of api/config.example.php for the exact names and how to set them
 // on Apache / Nginx+PHP-FPM / systemd). An env var always wins over the same key from config.php, so you
@@ -80,7 +118,7 @@ function app_config(): array
     $f = __DIR__ . '/config.php';
     $file = is_file($f) ? (require $f) : [];
     $cfg = is_array($file) ? $file : [];
-    foreach (['google_weather_api_key' => 'WEFO_GOOGLE_WEATHER_API_KEY'] as $key => $env) {
+    foreach (['google_weather_api_key' => 'WEFO_GOOGLE_WEATHER_API_KEY', 'admin_user' => 'WEFO_ADMIN_USER', 'admin_password_hash' => 'WEFO_ADMIN_PASSWORD_HASH'] as $key => $env) {
         $v = getenv($env);
         if ($v !== false && $v !== '') $cfg[$key] = $v;
     }

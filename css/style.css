@@ -29,6 +29,19 @@ a { color: var(--accent); }
 .brand .wi { width: 34px; height: 34px; }
 .nav-btn { background: none; border: 0; padding: 8px 14px; border-radius: 8px; font: inherit; color: var(--muted); cursor: pointer; }
 .nav-btn.active { background: var(--accent); color: #fff; }
+.auth-btn { background: none; border: 1px solid var(--line); padding: 7px 12px; border-radius: 8px; font: inherit; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.auth-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Dialogs (admin login, "choose on map") */
+.modal { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; background: rgba(8, 16, 30, .5); overflow: auto; }
+.modal-card { position: relative; width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .3); padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 12px; }
+.modal-card.wide { max-width: 760px; }
+.modal-card h2 { margin: 0 34px 2px 0; font-size: 18px; }
+.modal-x { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 16px; cursor: pointer; }
+.modal-x:hover { background: var(--summary); color: var(--text); }
+.modal-card input[type="text"], .modal-card input[type="password"], .modal-card input[type="search"] { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.map.pickmap { height: 380px; }
+@media (max-width: 700px) { .map.pickmap { height: 300px; } .topright { gap: 8px; } }
 main { padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
 footer { padding: 16px 20px 28px; color: var(--muted); font-size: 12.5px; max-width: 1500px; margin: 0 auto; }
 .view { display: none; } .view.active { display: block; }

@@ -28,4 +28,14 @@ return [
     //   app is affected.
     'google_weather_api_key' => '',
 
+    // Admin login for the "Locations & Map" screen (saving/deleting locations). Without it nobody can
+    // log in, so that screen stays locked and only the built-in Greek cities + the map picker are
+    // available to visitors. The password itself is never stored — only a hash of it:
+    //   1. php tools/hash-password.php        (type the password when asked; prints the hash)
+    //   2. paste the user name and that hash below, or set the env vars instead
+    //   Env vars: WEFO_ADMIN_USER, WEFO_ADMIN_PASSWORD_HASH (take priority over the lines below)
+    // Changing the hash logs every existing session out. Wrong guesses are throttled (5 per IP per 15 min).
+    'admin_user' => '',
+    'admin_password_hash' => '',
+
 ];

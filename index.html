@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261050">
+<link rel="stylesheet" href="css/style.css?v=20261051">
 </head>
 <body>
 <header class="topbar">
@@ -17,8 +17,10 @@
   <div class="topright">
     <nav>
       <button class="nav-btn active" data-view="forecast" data-i18n="nav.forecast">Forecast</button>
-      <button class="nav-btn" data-view="places" data-i18n="nav.places">Locations &amp; Map</button>
+      <button class="nav-btn" data-view="places" data-i18n="nav.places" hidden>Locations &amp; Map</button>
     </nav>
+    <button id="loginBtn" class="auth-btn" type="button" data-i18n="auth.login">Admin login</button>
+    <button id="logoutBtn" class="auth-btn" type="button" data-i18n="auth.logout" hidden>Log out</button>
     <div class="lang" role="group" aria-label="Language">
       <button data-lang="en" class="active">EN</button><button data-lang="el">ΕΛ</button>
     </div>
@@ -133,20 +135,48 @@
       </div>
       <div id="map" class="map"></div>
     </div>
+  </section>
 
-    <!-- History of the selected saved location (shown below the map only when chosen) -->
-    <section id="histSec" class="histsec" hidden>
-      <button id="histClose" class="h-close" type="button" data-i18n-title="h.close" title="Close">✕</button>
-      <div id="histBody"></div>
-    </section>
+  <!-- Climate history of the chosen location: lives outside the views so it opens under whichever one
+       is showing (the forecast's "View full history" link, or a saved location's History button) -->
+  <section id="histSec" class="histsec" hidden>
+    <button id="histClose" class="h-close" type="button" data-i18n-title="h.close" title="Close">✕</button>
+    <div id="histBody"></div>
   </section>
 </main>
+
+<!-- Admin login -->
+<div id="loginModal" class="modal" hidden>
+  <form class="modal-card" id="loginForm">
+    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
+    <h2 data-i18n="auth.title">Admin login</h2>
+    <label><span data-i18n="auth.user">User name</span><input id="loginUser" type="text" autocomplete="username" required></label>
+    <label><span data-i18n="auth.pass">Password</span><input id="loginPass" type="password" autocomplete="current-password" required></label>
+    <p id="loginMsg" class="hint err" role="alert"></p>
+    <button type="submit" class="btn primary" id="loginSubmit" data-i18n="auth.submit">Log in</button>
+  </form>
+</div>
+
+<!-- Choose a place on the map (no login needed) -->
+<div id="mapModal" class="modal" hidden>
+  <div class="modal-card wide">
+    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
+    <h2 data-i18n="pick.title">Choose a place on the map</h2>
+    <div class="search">
+      <input id="pickSearch" type="search" data-i18n-ph="pl.search" placeholder="Search for a city or area…" autocomplete="off">
+      <ul id="pickResults" class="results" hidden></ul>
+    </div>
+    <div id="pickMap" class="map pickmap"></div>
+    <p id="pickInfo" class="hint" data-i18n="pick.hint">Click the map to choose a point.</p>
+    <div class="row"><button type="button" class="btn primary" id="pickGo" disabled data-i18n="pick.go">Show forecast</button></div>
+  </div>
+</div>
 
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261050"></script>
-<script src="js/icons.js?v=20261050"></script>
-<script src="js/app.js?v=20261050"></script>
+<script src="js/i18n.js?v=20261051"></script>
+<script src="js/icons.js?v=20261051"></script>
+<script src="js/app.js?v=20261051"></script>
 </body>
 </html>

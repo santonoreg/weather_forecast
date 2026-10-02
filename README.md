@@ -89,7 +89,9 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ## What it shows
 
-### Locations & Map
+### Locations & Map (admin only)
+
+The *Locations & Map* page is only available after an **admin login** (see [Admin login](#admin-login)). Visitors who are not logged in get the full list of Greek cities in the *Location* drop-down, plus a **Choose on map…** entry that lets them pick any point (and **My location**) without saving anything. Logged-in admins additionally see their saved locations in the drop-down.
 
 - Pick a place by **clicking on the map**, typing **latitude/longitude**, **searching by name**, or using **My location**.
 - The name is filled in automatically (reverse geocoding) and you can edit it.
@@ -311,6 +313,27 @@ cd /var/www/wefo && git pull
 
 Then hard-refresh the browser (Ctrl+F5). The CSS/JS URLs carry a `?v=` version parameter in `index.html` to avoid stale caches; bump it when you change those files.
 
+## Admin login
+
+Only a logged-in admin can open *Locations & Map*, save/delete locations or force a history refresh. Everyone else gets the Greek cities (`api/cities.php`, 119 towns and islands, seeded into the database as `kind='city'` rows) and the map picker.
+
+1. Generate a password hash (the password is read from stdin and never stored):
+
+   ```bash
+   php tools/hash-password.php
+   ```
+
+2. Put it in `api/config.php` (git-ignored), or use environment variables:
+
+   ```php
+   'admin_user' => 'admin',
+   'admin_password_hash' => '$2y$...',
+   ```
+
+   Environment equivalents: `WEFO_ADMIN_USER`, `WEFO_ADMIN_PASSWORD_HASH`. With no hash configured, nobody can log in.
+
+The session is a signed, HttpOnly cookie (`wefo_auth`, 14 days) derived from the password hash, so changing the password logs everyone out. Failed logins are throttled (5 per IP / 40 total per 15 minutes, then HTTP 429).
+
 ## Configuration
 
 Most settings are constants in the PHP files below. One optional file, `api/config.php` (copy it from `api/config.example.php`, git-ignored) — or, if you'd rather not keep it in a file, the `WEFO_GOOGLE_WEATHER_API_KEY` environment variable — holds your own Google Maps Platform API key; see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison). Everything else needs no config file at all.
@@ -339,7 +362,10 @@ js/i18n.js          translations (en, el) and language switching
 js/icons.js         3D-style SVG weather icons, WMO code → category mapping
 js/app.js           UI logic: tables, consensus, weighting, map, preferences
 api/db.php          SQLite connection, JSON helpers, HTTP client, error handling
-api/locations.php   GET / POST / DELETE saved locations
+api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved locations (admin)
+api/auth.php        admin login / logout / status (api/auth_lib.php: cookie + throttle helpers)
+api/cities.php      list of Greek cities shown to everyone
+tools/hash-password.php   CLI helper that creates the admin password hash
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
@@ -356,9 +382,10 @@ Database tables (created automatically): `locations(id, name, lat, lon, created_
 
 | Endpoint | Description |
 |---|---|
-| `GET api/locations.php` | list saved locations |
-| `POST api/locations.php` | body `{"name","lat","lon"}` – save a location |
-| `DELETE api/locations.php?id=ID` | delete a location |
+| `GET api/locations.php` | `{cities, saved}`; `saved` only for a logged-in admin |
+| `GET/POST api/auth.php` | status; `{action:'login'\|'logout', user, password}` |
+| `POST api/locations.php` | admin only; body `{"name","lat","lon"}` – save a location |
+| `DELETE api/locations.php?id=ID` | admin only; delete a saved location |
 | `GET api/geocode.php?q=TEXT&lang=en\|el` | search places |
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
@@ -367,7 +394,7 @@ Database tables (created automatically): `locations(id, name, lat, lon, created_
 
 Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 
-> The saved-locations list is **shared by everyone who can open the site** (there are no user accounts). If you expose the app publicly, protect it with HTTP basic auth or your own login.
+> There is a single admin account (see [Admin login](#admin-login)); saved locations are visible only to it. The forecast/verify endpoints stay open so visitors can use cities and the map picker.
 
 ## Data, privacy and external services
 

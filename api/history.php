@@ -6,6 +6,7 @@
 // (at most one check per HIST_CHECK_SECONDS, or immediately with refresh=1).
 declare(strict_types=1);
 require __DIR__ . '/db.php';
+require __DIR__ . '/auth_lib.php';
 set_time_limit(240);
 
 const HIST_START = '1940-01-01';
@@ -24,7 +25,7 @@ $mt->execute([$id]);
 $meta = $mt->fetch() ?: null;
 
 $end = gmdate('Y-m-d', time() - HIST_LAG_DAYS * 86400);
-$refresh = !empty($_GET['refresh']);
+$refresh = !empty($_GET['refresh']) && auth_is_admin();   // a forced re-download is admin-only, so visitors can't hammer Open-Meteo
 $downloaded = false;
 $added = 0;
 

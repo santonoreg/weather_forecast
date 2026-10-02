@@ -8,6 +8,9 @@ const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
 const fmt = (v, d = 0) => (v == null ? '–' : Number(v).toFixed(d).replace(/^-0$/, '0'));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Built-in Greek cities carry a Greek name too; saved/ad-hoc locations only have the one name they were given
+const locName = (l) => ((LANG === 'el' && l.name_el) ? l.name_el : l.name);
+
 async function api(path, opts) {
   const res = await fetch(path, opts);
   const data = await res.json().catch(() => ({}));
@@ -15,7 +18,7 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
+const state = { locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
@@ -371,7 +374,7 @@ function renderReliability() {
     const st = v.station
       ? t('r.station', { id: v.station.id, name: esc(v.station.name), km: v.station.km, n: v.station.reports, start: v.station.start, end: v.station.end })
       : t('r.nostation', { km: 60 });
-    $('legend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(state.current.name), w })}<br>${t('r.limits')}`;
+    $('legend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(locName(state.current)), w })}<br>${t('r.limits')}`;
   }
 }
 
@@ -406,6 +409,7 @@ const RAIN_DOT = '<svg class="rdot" viewBox="0 0 24 24" aria-hidden="true"><path
 
 function renderHero() {
   if (!state.data || !state.current) return;
+  $('heroHist').closest('.hero-foot').hidden = state.current.id == null;   // climate history needs a stored location
   const c = nowColumn();
   const shares = weatherShares(c);
   const temp = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
@@ -431,7 +435,7 @@ function renderHero() {
   const obs = state.observed;
   $('heroObs').hidden = !obs;
   if (obs) {
-    $('heroObs').innerHTML = `<b>${t('hero.obs', { loc: esc(state.current.name) })}:</b> ${fmt(obs.temp)}°${obs.rain != null ? ` · ${obs.rain ? t('hero.obs.wet') : t('hero.obs.dry')}` : ''}${obs.wind_kmh != null ? ` · ${t('hero.obs.wind', { v: fmt(obs.wind_kmh) })}` : ''}${obs.humidity != null ? ` · ${t('hero.obs.hum', { v: obs.humidity })}` : ''}
+    $('heroObs').innerHTML = `<b>${t('hero.obs', { loc: esc(locName(state.current)) })}:</b> ${fmt(obs.temp)}°${obs.rain != null ? ` · ${obs.rain ? t('hero.obs.wet') : t('hero.obs.dry')}` : ''}${obs.wind_kmh != null ? ` · ${t('hero.obs.wind', { v: fmt(obs.wind_kmh) })}` : ''}${obs.humidity != null ? ` · ${t('hero.obs.hum', { v: obs.humidity })}` : ''}
       <small>${t('hero.obs.station', { name: esc(obs.station.name), km: obs.station.km })}</small>`;
   }
   const radar = state.radar;
@@ -447,7 +451,7 @@ function renderHero() {
   $('heroRain').hidden = !outlook;
   if (outlook) $('heroRain').innerHTML = `${RAIN_DOT}<span>${outlook}</span>`;
 }
-$('heroHist').addEventListener('click', () => { if (state.current) { showView('places'); openHistory(state.current); } });
+$('heroHist').addEventListener('click', () => { if (state.current && state.current.id != null) openHistory(state.current); });
 
 /* Colour legend for the weather-category icons, shown above the table only on the Weather tab */
 function renderSegKey() {
@@ -857,7 +861,7 @@ function renderExpert() {
 function renderAll() {
   renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid(); renderExpert();
   const d = state.data, loc = state.current;
-  $('meta').textContent = t('meta', { name: loc.name, lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
+  $('meta').textContent = t('meta', { name: locName(loc), lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
 }
 
 $('days').addEventListener('click', (e) => {
@@ -944,42 +948,157 @@ $('weightChk').addEventListener('change', (e) => {
   if (state.data) renderAll();
 });
 
+/* A location is { id, name, name_el?, lat, lon }. Saved locations and the built-in Greek cities have a
+   database id; a point picked on the map (or "My location" for a visitor) is ad-hoc: id = null, kept only
+   in this browser, and without the climate history, which needs a stored location. */
+const allLocations = () => [...state.locations, ...state.cities];
+const ADHOC = '__adhoc__';
+
+function renderLocSelect() {
+  const opt = (l) => `<option value="${l.id}">${esc(locName(l))}</option>`;
+  const cities = [...state.cities].sort((a, b) => locName(a).localeCompare(locName(b), dateLocale()));
+  const adhoc = state.current && state.current.id == null ? `<option value="${ADHOC}">📌 ${esc(state.current.name)}</option>` : '';
+  $('locSelect').innerHTML = `<option value="__geo__">📍 ${esc(t('pl.geo'))}</option><option value="__map__">🗺️ ${esc(t('loc.map'))}</option>${adhoc}`
+    + (state.admin && state.locations.length ? `<optgroup label="${esc(t('loc.saved'))}">${state.locations.map(opt).join('')}</optgroup>` : '')
+    + `<optgroup label="${esc(t('loc.cities'))}">${cities.map(opt).join('')}</optgroup>`;
+  $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : '';
+}
+
 function setCurrent(loc, go = false) {
   state.current = loc || null;
-  try { loc ? localStorage.setItem('wefo.loc', loc.id) : localStorage.removeItem('wefo.loc'); } catch (e) { /* ignore */ }
-  $('locSelect').value = loc ? loc.id : '';
+  try {
+    if (!loc) { localStorage.removeItem('wefo.loc'); localStorage.removeItem('wefo.adhoc'); }
+    else if (loc.id != null) { localStorage.setItem('wefo.loc', loc.id); localStorage.removeItem('wefo.adhoc'); }
+    else { localStorage.setItem('wefo.loc', ADHOC); localStorage.setItem('wefo.adhoc', JSON.stringify({ name: loc.name, lat: loc.lat, lon: loc.lon })); }
+  } catch (e) { /* ignore */ }
+  renderLocSelect();
   if (go) showView('forecast');
   loadForecast();
 }
 $('locSelect').addEventListener('change', (e) => {
-  if (e.target.value === '__geo__') { useMyLocation(); return; }
-  setCurrent(state.locations.find((l) => l.id == e.target.value));
+  const v = e.target.value;
+  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; };
+  if (v === '__geo__') { back(); useMyLocation(); return; }
+  if (v === '__map__') { back(); openMapPicker(); return; }
+  if (v === ADHOC) return;
+  const loc = allLocations().find((l) => l.id == v);
+  if (loc) setCurrent(loc); else back();
 });
 $('refreshBtn').addEventListener('click', () => loadForecast(true));
 
-/* "My location" in the toolbar's Location select: geolocate, reuse a saved location already very
-   close by (avoids piling up near-duplicate "My location" entries on repeat use), otherwise
-   reverse-geocode a name and save a new one — same as the Places tab's pin-and-save flow, just in
-   one step, so "View full history" (which needs a real saved location) still works for it. */
 const toolbarErr = (text) => { $('error').textContent = text; $('error').hidden = false; };
+const adhocName = async (lat, lon) => {
+  try { const r = await api(`api/geocode.php?lat=${lat}&lon=${lon}&lang=${LANG}`); if (r.name) return r.name; } catch (e) { /* ignore */ }
+  return `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+};
+
+/* "My location" in the toolbar's Location select. A logged-in admin gets it saved (reusing a saved location
+   already within 1 km, so repeat use doesn't pile up near-duplicates — same as the Places tab's pin-and-save,
+   in one step); a visitor just gets the forecast for the spot, nothing is stored on the server. */
 function useMyLocation() {
-  $('locSelect').value = state.current ? state.current.id : '';
   if (!navigator.geolocation) { toolbarErr(t('err.geo.unsupported')); return; }
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
       const lat = pos.coords.latitude, lon = pos.coords.longitude;
-      const near = state.locations.find((l) => haversineKm(lat, lon, l.lat, l.lon) < 1);
+      const near = allLocations().find((l) => haversineKm(lat, lon, l.lat, l.lon) < 1);
       if (near) { setCurrent(near); return; }
-      let name = null;
-      try { const r = await api(`api/geocode.php?lat=${lat}&lon=${lon}&lang=${LANG}`); name = r.name || null; } catch (e) { /* ignore */ }
+      const name = await adhocName(lat, lon);
+      if (!state.admin) { setCurrent({ id: null, name, lat, lon }); return; }
       try {
-        const loc = await api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name || t('pl.geo'), lat, lon }) });
+        const loc = await api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, lat, lon }) });
         await loadLocations(loc.id);
       } catch (e) { toolbarErr(e.message); }
     },
     () => toolbarErr(t('err.geo.fail')),
   );
 }
+
+/* ================= Choose a place on the map (everybody) ================= */
+let pickMap, pickMarker, pickChoice = null, pickTimer;
+function openMapPicker() {
+  $('mapModal').hidden = false;
+  if (!pickMap) {
+    pickMap = L.map('pickMap').setView([38.4, 24.0], 6);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(pickMap);
+    pickMap.on('click', (e) => choosePoint(e.latlng.lat, e.latlng.lng));
+  }
+  setTimeout(() => pickMap.invalidateSize(), 50);
+}
+async function choosePoint(lat, lon, name) {
+  lat = +lat.toFixed(4); lon = +(((lon + 540) % 360) - 180).toFixed(4);
+  if (pickMarker) pickMarker.setLatLng([lat, lon]); else pickMarker = L.marker([lat, lon]).addTo(pickMap);
+  pickChoice = { id: null, name: name || `${lat.toFixed(3)}, ${lon.toFixed(3)}`, lat, lon };
+  $('pickGo').disabled = false;
+  $('pickInfo').textContent = t('pick.picked', { name: pickChoice.name });
+  if (!name) {
+    const n = await adhocName(lat, lon);
+    if (pickChoice && pickChoice.lat === lat && pickChoice.lon === lon) { pickChoice.name = n; $('pickInfo').textContent = t('pick.picked', { name: n }); }
+  }
+}
+$('pickGo').addEventListener('click', () => { if (pickChoice) { closeModals(); setCurrent(pickChoice, true); } });
+$('pickSearch').addEventListener('input', (e) => {
+  clearTimeout(pickTimer);
+  const q = e.target.value.trim(), box = $('pickResults');
+  if (q.length < 2) { box.hidden = true; return; }
+  pickTimer = setTimeout(async () => {
+    try {
+      const res = await api(`api/geocode.php?lang=${LANG}&q=` + encodeURIComponent(q));
+      box.innerHTML = res.length ? res.map((r, i) => `<li data-i="${i}">${esc(r.name)}</li>`).join('') : `<li>${t('search.none')}</li>`;
+      box._res = res; box.hidden = false;
+    } catch (err) { box.hidden = true; }
+  }, 350);
+});
+$('pickResults').addEventListener('click', (e) => {
+  const li = e.target.closest('li[data-i]'); if (!li) return;
+  const r = $('pickResults')._res[+li.dataset.i];
+  $('pickResults').hidden = true; $('pickSearch').value = '';
+  choosePoint(r.lat, r.lon, r.name.split(',')[0]); pickMap.setView([r.lat, r.lon], 11);
+});
+
+/* ================= Admin login ================= */
+function updateAuthUI() {
+  $('loginBtn').hidden = state.admin;
+  $('logoutBtn').hidden = !state.admin;
+  document.querySelector('.nav-btn[data-view="places"]').hidden = !state.admin;
+}
+async function loadAuth() {
+  try { state.admin = !!(await api('api/auth.php')).admin; } catch (e) { state.admin = false; }
+  updateAuthUI();
+}
+function closeModals() { document.querySelectorAll('.modal').forEach((m) => { m.hidden = true; }); }
+function openLogin() {
+  $('loginMsg').textContent = ''; $('loginPass').value = '';
+  $('loginModal').hidden = false;
+  setTimeout(() => $('loginUser').focus(), 30);
+}
+$('loginBtn').addEventListener('click', openLogin);
+document.querySelectorAll('.modal').forEach((m) => m.addEventListener('mousedown', (e) => { if (e.target === m || e.target.closest('[data-close]')) closeModals(); }));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModals(); });
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('loginSubmit').disabled = true; $('loginMsg').textContent = '';
+  try {
+    const res = await fetch('api/auth.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', user: $('loginUser').value, password: $('loginPass').value }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      $('loginMsg').textContent = t({ locked: 'auth.err.locked', not_configured: 'auth.err.notconfigured' }[j.code] || 'auth.err.bad');
+      return;
+    }
+    $('loginPass').value = '';
+    closeModals();
+    state.admin = true; updateAuthUI();
+    await loadLocations(state.current && state.current.id != null ? state.current.id : undefined);
+    showView('places');
+  } catch (err) { $('loginMsg').textContent = t('auth.err.net'); }
+  finally { $('loginSubmit').disabled = false; }
+});
+$('logoutBtn').addEventListener('click', async () => {
+  try { await api('api/auth.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }); } catch (e) { /* the cookie is only a convenience; clear the UI regardless */ }
+  state.admin = false; updateAuthUI();
+  closeHistory();
+  showView('forecast');
+  await loadLocations(state.current && state.current.id != null ? state.current.id : undefined);
+});
 const haversineKm = (la1, lo1, la2, lo2) => {
   const r = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
   const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
@@ -988,13 +1107,17 @@ const haversineKm = (la1, lo1, la2, lo2) => {
 
 /* ================= Τοποθεσίες ================= */
 async function loadLocations(selectId) {
-  state.locations = await api('api/locations.php');
-  $('locSelect').innerHTML = `<option value="__geo__">📍 ${esc(t('pl.geo'))}</option>` + state.locations.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
+  const r = await api('api/locations.php');
+  state.locations = r.saved || [];   // only filled for a logged-in admin
+  state.cities = r.cities || [];
   renderSaved();
   let saved = null;
   try { saved = localStorage.getItem('wefo.loc'); } catch (e) { /* ignore */ }
-  const pick = state.locations.find((l) => l.id == (selectId ?? saved)) || state.locations[0] || null;
-  setCurrent(pick);
+  let pick = allLocations().find((l) => l.id == (selectId ?? saved)) || null;
+  if (!pick && saved === ADHOC) {
+    try { const a = JSON.parse(localStorage.getItem('wefo.adhoc')); if (a && Number.isFinite(a.lat) && Number.isFinite(a.lon)) pick = { id: null, name: String(a.name || ''), lat: a.lat, lon: a.lon }; } catch (e) { /* ignore */ }
+  }
+  setCurrent(pick || state.cities.find((c) => c.name === 'Athens') || state.cities[0] || state.locations[0] || null);
 }
 
 let map, marker, savedLayer, nameAuto = true;
@@ -1100,6 +1223,7 @@ $('savedList').addEventListener('click', async (e) => {
 
 /* ================= Πλοήγηση ================= */
 function showView(name) {
+  if (name === 'places' && !state.admin) { openLogin(); return; }   // the locations manager is for the logged-in admin only
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   if (name === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
@@ -1207,12 +1331,12 @@ function renderHistory() {
   const years = h.annual.slice().reverse().map((a) => `<tr><th>${a.y}${a.n < 350 ? '*' : ''}</th><td>${niceNum(a.tmean)}</td><td>${niceNum(a.tmax)}</td><td>${niceNum(a.tmin)}</td>
       <td><div class="pbar"><i style="width:${Math.round(((a.prcp || 0) / maxP) * 100)}%"></i><span>${niceNum(a.prcp, 0)}</span></div></td><td>${a.rainy}</td><td>${niceNum(a.gust, 0)}</td><td>${niceNum(a.snow)}</td></tr>`).join('');
   $('histBody').innerHTML = `
-    <h2>${t('h.title')} – ${esc(loc.name)}</h2>
+    <h2>${t('h.title')} – ${esc(locName(loc))}</h2>
     <div class="h-info">
       <div>📍 ${t('h.grid', { lat: m.grid_lat.toFixed(4), lon: m.grid_lon.toFixed(4), km: m.distance_km, el: Math.round(m.elevation ?? 0) })}</div>
       <div>📅 ${t('h.period', { first: m.first, last: m.last, days: m.days.toLocaleString(dateLocale()) })}</div>
       <div class="muted">${t('h.source', { date: new Date(m.fetched_at * 1000).toLocaleDateString(dateLocale()) })}</div>
-      <div class="h-status">${fresh ? t('h.status.new') : added > 0 ? t('h.status.added', { n: added }) : t('h.status.cached')} <button type="button" class="btn ghost small" id="histUpdate">${t('h.update')}</button></div>
+      <div class="h-status">${fresh ? t('h.status.new') : added > 0 ? t('h.status.added', { n: added }) : t('h.status.cached')}${state.admin ? ` <button type="button" class="btn ghost small" id="histUpdate">${t('h.update')}</button>` : ''}</div>
     </div>
     <h3>${t('h.rec.title')}</h3>
     <div class="rcards">${rec('hottest', '°C')}${rec('coldest', '°C')}${rec('wettest', 'mm')}${rec('windiest', 'km/h', 0)}${(h.records.snowiest && h.records.snowiest.v > 0) ? rec('snowiest', 'cm') : ''}</div>
@@ -1232,7 +1356,7 @@ function renderHistory() {
     <h3>${t('h.annual')}</h3>
     <div class="h-tablewrap tall"><table class="htable"><thead><tr><th>${t('h.col.year')}</th><th>${t('h.col.mean')}</th><th>${t('h.col.max')}</th><th>${t('h.col.min')}</th><th>${t('h.col.prcp')}</th><th>${t('h.col.rainy')}</th><th>${t('h.col.gust')}</th><th>${t('h.col.snow')}</th></tr></thead><tbody>${years}</tbody></table></div>
     <p class="hint">${t('h.partial')}</p>`;
-  $('histUpdate').addEventListener('click', () => openHistory(loc, true));
+  const upd = $('histUpdate'); if (upd) upd.addEventListener('click', () => openHistory(loc, true));
   document.querySelectorAll('[data-heat]').forEach((b) => b.addEventListener('click', () => { histState.heat = b.dataset.heat; renderHistory(); }));
   $('histPeriodT').addEventListener('change', (e) => { histState.periodT = e.target.value; renderHistory(); });
   $('histPeriodP').addEventListener('change', (e) => { histState.periodP = e.target.value; renderHistory(); });
@@ -1243,14 +1367,14 @@ async function openHistory(loc, refresh = false) {
   const wasHidden = histSec.hidden;
   histSec.hidden = false;
   if (wasHidden || !refresh) histSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="loading"><div class="spinner"></div> <span>${t('h.loading.first')}</span></div>`;
+  $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(locName(loc))}</h2><div class="loading"><div class="spinner"></div> <span>${t('h.loading.first')}</span></div>`;
   try {
     const h = await api(`api/history.php?id=${loc.id}${refresh ? '&refresh=1' : ''}`);
     if (!histState || histState.loc.id !== loc.id) return;
     histState.data = h; histState.fresh = h.downloaded; histState.added = h.added || 0;
     renderHistory();
   } catch (err) {
-    $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(loc.name)}</h2><div class="notice error">${esc(err.message)}</div>`;
+    $('histBody').innerHTML = `<h2>${t('h.title')} – ${esc(locName(loc))}</h2><div class="notice error">${esc(err.message)}</div>`;
   }
 }
 function closeHistory() { histSec.hidden = true; histState = null; $('histBody').innerHTML = ''; }
@@ -1259,6 +1383,7 @@ $('histClose').addEventListener('click', closeHistory);
 /* ================= Language ================= */
 function onLangChange() {
   renderSaved();
+  renderLocSelect();
   if (!histSec.hidden && histState && histState.data) renderHistory();
   if (state.data) renderAll();
 }
@@ -1279,7 +1404,7 @@ if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', sync
 syncThemeBtn();
 
 $('brandIcon').innerHTML = WI.svg(2, false);
-loadLocations().catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
+loadAuth().then(() => loadLocations()).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
 
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(centerNow, 50));
 window.addEventListener('load', () => setTimeout(centerNow, 100));
