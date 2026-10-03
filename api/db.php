@@ -41,6 +41,10 @@ function db(): PDO
     }
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    // Concurrency: wait for a competing writer instead of failing with "database is locked", and
+    // use WAL so readers never block the (single) writer and vice versa
+    $pdo->exec('PRAGMA busy_timeout = 15000');
+    try { $pdo->exec('PRAGMA journal_mode = WAL'); $pdo->exec('PRAGMA synchronous = NORMAL'); } catch (PDOException $e) { /* e.g. read-only/odd filesystem: keep the default mode */ }
     $pdo->exec('CREATE TABLE IF NOT EXISTS locations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
