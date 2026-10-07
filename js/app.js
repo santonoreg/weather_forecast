@@ -518,6 +518,7 @@ function renderGridVertical(cols, built) {
   $('grid').innerHTML = html;
   $('grid').classList.add('vert');
   $('grid').classList.toggle('weather-cols', weather);
+  $('grid').classList.toggle('solo', !providerCols.length);   // only the weighted columns: let their bars use the free width
   const more = hasMoreVerticalHours(state.vHours);
   $('vFooter').hidden = false;
   $('vFooter').innerHTML = `<span>${t('v.showing', { d: dayLabelFor(cols[cols.length - 1]?.dateIdx), time: cols[cols.length - 1]?.label })}</span>
