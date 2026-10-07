@@ -501,7 +501,8 @@ function renderGridVertical(cols, built) {
   const { summary, prob, summaryLabel, probLabel, rows, extraRows } = built;
   const weather = state.param === 'weather';
   const cls = (c) => (c.now ? ' now' : '');
-  const providerCols = [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...(state.modelsOpen ? rows.map((r) => ({ ...r, cls: 'model' })) : [])];
+  // the AI columns are individual models too: shown only with "Show all N models"
+  const providerCols = state.modelsOpen ? [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...rows.map((r) => ({ ...r, cls: 'model' }))] : [];
   const colspan = 3 + providerCols.length;
   let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${probLabel}${weather ? `<small class="hint2">${t('g.prob_weather.sub')}</small>` : ''}</th><th class="summary">${weather ? t('g.twr') : summaryLabel}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
   let prevDate = -1;
