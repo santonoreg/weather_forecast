@@ -480,3 +480,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid:not(.vert) tr.lane td, .grid:not(.vert) tr.lane .rowh,
 .grid:not(.vert) tr.summary td, .grid:not(.vert) tr.summary .rowh,
 .grid:not(.vert) tr.prob td, .grid:not(.vert) tr.prob .rowh { background-color: var(--top-tint); }
+/* close the "now" column where the weighted block ends (just above the gap) */
+.grid tr.lane.wind td.now::after, .grid tr.prob td.now::after { border-bottom: 1px solid rgba(37, 99, 235, .25); }
+:root[data-theme="dark"] .grid tr.lane.wind td.now::after, :root[data-theme="dark"] .grid tr.prob td.now::after { border-bottom-color: rgba(91, 155, 255, .3); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grid tr.lane.wind td.now::after, :root:not([data-theme="light"]) .grid tr.prob td.now::after { border-bottom-color: rgba(91, 155, 255, .3); } }
