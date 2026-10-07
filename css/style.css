@@ -190,12 +190,12 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hours-h h2 { font-size: 17px; margin: 0; font-weight: 600; }
 .hours-h h2 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 4px; }
 .hours-h .seg { flex: none; }
-.hours-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.hours-ctl .btn { padding: 7px 12px; font-size: 12.5px; white-space: nowrap; }
+.hours-ctl { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.hours-ctl .btn { padding: 6px 12px; font-size: 12.5px; white-space: nowrap; }
 .tabsrow { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 4px 0 10px; }
 .tabsrow .tabs { margin: 0; flex: 1 1 auto; min-width: 0; }
 .btn.toggle { display: block; margin: 10px auto 0; }
-@media (max-width: 700px) { .hours-ctl { width: 100%; } .hours-ctl .btn { width: 100%; } .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } .hours-h h2 { font-size: 16px; } }
+@media (max-width: 700px) { .hours-ctl { width: 100%; align-items: stretch; } .hours-ctl .btn { width: 100%; } .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } .hours-h h2 { font-size: 16px; } }
 
 /* Καρτέλες παραμέτρων */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 10px; }
