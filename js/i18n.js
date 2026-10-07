@@ -117,7 +117,7 @@ const I18N = {
     'vf.loading': '· loading reliability…', 'vf.unavail': '· unavailable',
 
     'm.active': '{a}/{n} active', 'm.dup': 'Same data as {n} (outside its coverage) – not counted twice',
-    'g.permodel': 'Individual model forecasts (not weighted)',
+    'g.weighted': 'Weighted',
     'm.showall': 'Show all {n} models', 'm.hideall': 'Hide individual models',
     'm.missing': 'No coverage for this location', 'm.all': 'Enable all',
     'mn.jma_seamless': 'JMA (Japan)', 'mn.cma_grapes_global': 'CMA GRAPES (China)', 'mn.bom_access_global': 'BOM ACCESS (Australia)',
@@ -273,7 +273,7 @@ const I18N = {
     'vf.loading': '· φόρτωση αξιοπιστίας…', 'vf.unavail': '· μη διαθέσιμη',
 
     'm.active': '{a}/{n} ενεργά', 'm.dup': 'Ίδια δεδομένα με {n} (εκτός περιοχής κάλυψης) – δεν μετράει διπλά',
-    'g.permodel': 'Μεμονωμένα μοντέλα (χωρίς στάθμιση)',
+    'g.weighted': 'Στάθμιση',
     'm.showall': 'Εμφάνιση όλων ({n} μοντέλα)', 'm.hideall': 'Απόκρυψη μεμονωμένων μοντέλων',
     'm.missing': 'Χωρίς κάλυψη για αυτή την τοποθεσία', 'm.all': 'Ενεργοποίηση όλων',
     'mn.jma_seamless': 'JMA (Ιαπωνία)', 'mn.cma_grapes_global': 'CMA GRAPES (Κίνα)', 'mn.bom_access_global': 'BOM ACCESS (Αυστραλία)',
