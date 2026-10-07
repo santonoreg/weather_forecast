@@ -664,8 +664,7 @@ function renderGrid() {
     $('grid').hidden = false; $('meteo').hidden = true;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
     const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-    const headCells = cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('');
-    let html = `<thead><tr><th class="rowh">${t('g.weighted')}</th>${headCells}</tr></thead><tbody>`;
+    let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
     // Consensus-first, matching Glett: the weighted answer (lanes / summary+prob) comes first, then the
     // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
     if (param === 'weather') {
@@ -676,8 +675,6 @@ function renderGrid() {
       html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
       html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     }
-    // blank line + a repeated header row (now "Provider / model") before the individual models
-    if ((extraRows && extraRows.length) || state.modelsOpen) html += `<tr class="gap"><td colspan="${cols.length + 1}"></td></tr><tr class="subhead"><th class="rowh">${t('g.provider')}</th>${headCells}</tr>`;
     if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
     if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
     html += '</tbody>';

@@ -348,10 +348,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* Head-to-head: named single-model AI forecasts (ECMWF AIFS, Google WeatherNext), shown as their own
    rows right after "Most likely weather" for direct comparison with the weighted result above them */
-.grid tr.gap td { height: 14px; padding: 0; background: transparent; border: 0; }
-.grid tr.subhead th { background: var(--panel); color: var(--muted); font-weight: 700; font-size: 12.5px; letter-spacing: .02em; line-height: 1.25; border-bottom: 2px solid var(--line); }
-.grid:not(.vert):not(.lanes) tr.subhead th { font-size: 11.5px; }
-.grid tr.subhead th.now { color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
 .grid tr.ai .rowh::after { content: "AI"; margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .03em; background: var(--accent); color: #fff; vertical-align: 2px; }
 
 /* Επιλογή μοντέλων */
@@ -473,14 +469,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .h-charthead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .h-charthead h3 { margin: 6px 0 !important; }
 
-/* Time across: the weighted/consensus block (header + lanes or summary/probability rows) gets a faint blue
-   fill so it reads apart from the individual models below (the header repeated above them stays plain) */
+/* Time across: the weighted/consensus rows (lanes, or summary/probability) get a faint blue
+   fill so they read apart from the individual models below, inside one continuous table */
 .grid:not(.vert) { --top-tint: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
-.grid:not(.vert) thead th,
 .grid:not(.vert) tr.lane td, .grid:not(.vert) tr.lane .rowh,
 .grid:not(.vert) tr.summary td, .grid:not(.vert) tr.summary .rowh,
 .grid:not(.vert) tr.prob td, .grid:not(.vert) tr.prob .rowh { background-color: var(--top-tint); }
-/* close the "now" column where the weighted block ends (just above the gap) */
-.grid tr.lane.wind td.now::after, .grid tr.prob td.now::after { border-bottom: 1px solid rgba(37, 99, 235, .25); }
-:root[data-theme="dark"] .grid tr.lane.wind td.now::after, :root[data-theme="dark"] .grid tr.prob td.now::after { border-bottom-color: rgba(91, 155, 255, .3); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grid tr.lane.wind td.now::after, :root:not([data-theme="light"]) .grid tr.prob td.now::after { border-bottom-color: rgba(91, 155, 255, .3); } }
