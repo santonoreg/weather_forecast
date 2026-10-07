@@ -675,7 +675,8 @@ function renderGrid() {
       html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
       html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     }
-    if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
+    // the AI rows are individual models too: shown only together with the rest ("Show all N models")
+    if (state.modelsOpen && extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
     if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
     html += '</tbody>';
     $('grid').innerHTML = html;
@@ -684,7 +685,7 @@ function renderGrid() {
     $('modelsToggle').hidden = false;
     $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
   }
-  const compareNote = extraRows && extraRows.length ? t('lg.compare') : '';
+  const compareNote = state.modelsOpen && extraRows && extraRows.length ? t('lg.compare') : '';
   $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? RAIN_THR : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote;
 }
 $('modelsToggle').addEventListener('click', () => {
