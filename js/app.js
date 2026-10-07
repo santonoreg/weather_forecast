@@ -675,6 +675,8 @@ function renderGrid() {
       html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
       html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     }
+    // blank line + caption: tells the weighted forecast above apart from the individual models below
+    if ((extraRows && extraRows.length) || state.modelsOpen) html += `<tr class="gap"><td colspan="${cols.length + 1}"></td></tr><tr class="modhead"><th colspan="${cols.length + 1}"><span>${t('g.permodel')}</span></th></tr>`;
     if (extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
     if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
     html += '</tbody>';

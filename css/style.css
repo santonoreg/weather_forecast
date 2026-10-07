@@ -348,8 +348,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* Head-to-head: named single-model AI forecasts (ECMWF AIFS, Google WeatherNext), shown as their own
    rows right after "Most likely weather" for direct comparison with the weighted result above them */
-.grid tr.ai { border-top: 2px solid var(--accent); }
-.grid tr.ai td, .grid tr.ai .rowh { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+.grid tr.gap td { height: 14px; padding: 0; background: transparent; border: 0; }
+.grid tr.modhead th { text-align: left; padding: 6px 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); }
+.grid tr.modhead th span { position: sticky; left: 8px; }
 .grid tr.ai .rowh::after { content: "AI"; margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .03em; background: var(--accent); color: #fff; vertical-align: 2px; }
 
 /* Επιλογή μοντέλων */
