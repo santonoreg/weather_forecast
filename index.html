@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261062">
+<link rel="stylesheet" href="css/style.css?v=20261063">
 </head>
 <body>
 <header class="topbar">
@@ -88,12 +88,18 @@
           <div class="hours-h">
             <h2 id="hoursTitle"><span data-i18n="hrs.title">Hour by hour</span> <small data-i18n="hrs.sub">from now</small></h2>
             <div class="hours-ctl">
-              <div class="seg" id="orientSeg" role="group" aria-label="Table orientation">
-                <button type="button" data-orient="h" data-i18n="orient.h">→ Time across</button>
-                <button type="button" data-orient="v" data-i18n="orient.v">↓ Time down</button>
-                <button type="button" data-orient="m" data-i18n="orient.m">〰 Meteogram</button>
+              <button id="modelsToggle" class="btn ghost small" type="button" hidden data-i18n-title="m.tip" title="Show or hide the individual model forecasts"></button>
+              <div class="seg iconseg" id="orientSeg" role="group" aria-label="Table orientation">
+                <button type="button" data-orient="h" data-i18n-title="orient.h.tip" title="Time across">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16M3 10h18"/></svg>
+                </button>
+                <button type="button" data-orient="v" data-i18n-title="orient.v.tip" title="Time down">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.3h18M3 14.7h18M10 4v16"/></svg>
+                </button>
+                <button type="button" data-orient="m" data-i18n-title="orient.m.tip" title="Meteogram">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 5-7 4 4"/><path d="M3 21h18"/></svg>
+                </button>
               </div>
-              <button id="modelsToggle" class="btn ghost small" type="button" hidden></button>
             </div>
           </div>
           <div class="tabsrow">
@@ -177,8 +183,8 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261062"></script>
-<script src="js/icons.js?v=20261062"></script>
-<script src="js/app.js?v=20261062"></script>
+<script src="js/i18n.js?v=20261063"></script>
+<script src="js/icons.js?v=20261063"></script>
+<script src="js/app.js?v=20261063"></script>
 </body>
 </html>

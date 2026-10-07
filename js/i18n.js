@@ -79,6 +79,7 @@ const I18N = {
     'lg.compare': ' The rows right after it (marked AI) show the flagship single-model AI forecasts — ECMWF AIFS and, when configured, Google WeatherNext 3 — on their own, for direct comparison with the weighted result above.',
 
     'g.provider': 'Provider / model', 'g.time': 'Time', 'g.temp_avg': 'Temperature (avg)', 'g.prob_weather': 'Most likely weather',
+    'orient.h.tip': 'Time across: hours as columns, one row per model', 'orient.v.tip': 'Time down: one row per hour, one column per model', 'orient.m.tip': 'Meteogram: charts of the forecast', 'm.tip': 'Show or hide the individual model forecasts (incl. ECMWF AIFS)',
     'orient.h': '→ Time across', 'orient.v': '↓ Time down', 'orient.m': '〰 Meteogram',
     'hrs.title': 'Hour by hour', 'hrs.sub': 'from now',
     'auth.login': 'Admin login', 'auth.logout': 'Log out', 'auth.title': 'Admin login', 'auth.user': 'User name', 'auth.pass': 'Password', 'auth.submit': 'Log in',
@@ -234,6 +235,7 @@ const I18N = {
     'lg.compare': ' Οι γραμμές αμέσως μετά (με ένδειξη AI) δείχνουν τις κορυφαίες προβλέψεις μεμονωμένων μοντέλων AI — ECMWF AIFS και, όταν είναι ρυθμισμένο, Google WeatherNext 3 — ξεχωριστά, για άμεση σύγκριση με το παραπάνω σταθμισμένο αποτέλεσμα.',
 
     'g.provider': 'Πάροχος / μοντέλο', 'g.time': 'Ώρα', 'g.temp_avg': 'Θερμοκρασία (μ.ο.)', 'g.prob_weather': 'Πιθανότερος καιρός',
+    'orient.h.tip': 'Ώρες σε στήλες: οι ώρες οριζόντια, μία γραμμή ανά μοντέλο', 'orient.v.tip': 'Ώρες σε γραμμές: μία γραμμή ανά ώρα, μία στήλη ανά μοντέλο', 'orient.m.tip': 'Μετεωρόγραμμα: γραφήματα της πρόγνωσης', 'm.tip': 'Εμφάνιση ή απόκρυψη των μεμονωμένων προβλέψεων μοντέλων (και του ECMWF AIFS)',
     'orient.h': '→ Ώρες σε στήλες', 'orient.v': '↓ Ώρες σε γραμμές', 'orient.m': '〰 Μετεωρόγραμμα',
     'hrs.title': 'Ώρα με την ώρα', 'hrs.sub': 'από τώρα',
     'auth.login': 'Σύνδεση διαχειριστή', 'auth.logout': 'Αποσύνδεση', 'auth.title': 'Σύνδεση διαχειριστή', 'auth.user': 'Όνομα χρήστη', 'auth.pass': 'Κωδικός', 'auth.submit': 'Σύνδεση',
@@ -341,7 +343,7 @@ function applyStaticI18n() {
   document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
   document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
-  document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); if (!el.textContent.trim()) el.setAttribute('aria-label', el.title); });
   document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('active', b.dataset.lang === LANG));
 }
 
