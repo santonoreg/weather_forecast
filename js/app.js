@@ -658,7 +658,7 @@ function renderGrid() {
     $('grid').hidden = false; $('meteo').hidden = true;
     renderGridVertical(cols, built);
     $('modelsToggle').hidden = false;
-    $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
+    $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length + (extraRows || []).length });
   } else {
     $('grid').classList.remove('vert');
     $('grid').classList.toggle('lanes', param === 'weather');
@@ -685,7 +685,7 @@ function renderGrid() {
     centerNow();
     requestAnimationFrame(() => requestAnimationFrame(centerNow));
     $('modelsToggle').hidden = false;
-    $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length });
+    $('modelsToggle').textContent = state.modelsOpen ? t('m.hideall') : t('m.showall', { n: rows.length + (extraRows || []).length });
   }
   const compareNote = state.modelsOpen && extraRows && extraRows.length ? t('lg.compare') : '';
   $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? RAIN_THR : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote;
