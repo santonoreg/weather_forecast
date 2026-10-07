@@ -193,12 +193,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hours-ctl { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .iconseg button { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; min-width: 46px; }
 .iconseg svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.hours-ctl .btn { padding: 0 14px; height: 36px; font-size: 12.5px; white-space: nowrap; }
 .hours-ctl .iconseg { height: 36px; }
 .tabsrow { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 4px 0 10px; }
 .tabsrow .tabs { margin: 0; flex: 1 1 auto; min-width: 0; }
 .btn.toggle { display: block; margin: 10px auto 0; }
-@media (max-width: 700px) { .hours-ctl { width: 100%; flex-wrap: nowrap; } .hours-ctl .btn { flex: 1; min-width: 0; white-space: normal; line-height: 1.2; } .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } .hours-h .iconseg { width: auto; flex: none; } .hours-h .iconseg button { flex: none; } .hours-h h2 { font-size: 16px; } }
+@media (max-width: 700px) { .hours-ctl { width: 100%; flex-wrap: nowrap; }  .hours-h .seg { width: 100%; } .hours-h .seg button { flex: 1; } .hours-h .iconseg { width: auto; flex: none; } .hours-h .iconseg button { flex: none; } .hours-h h2 { font-size: 16px; } }
 
 /* Καρτέλες παραμέτρων */
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 10px; }
@@ -482,3 +481,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid:not(.vert) tr.lane td, .grid:not(.vert) tr.lane .rowh,
 .grid:not(.vert) tr.summary td, .grid:not(.vert) tr.summary .rowh,
 .grid:not(.vert) tr.prob td, .grid:not(.vert) tr.prob .rowh { background-color: var(--top-tint); }
+/* "show all models" toggle inside the view switch: tinted (not solid) when on, so it is not mistaken for the selected view */
+.iconseg #modelsToggle { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.iconseg #modelsToggle.active { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); color: var(--accent); }
+:root[data-theme="dark"] .iconseg #modelsToggle.active { color: var(--accent); }
