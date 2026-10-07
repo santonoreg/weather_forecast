@@ -472,3 +472,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .h-chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px 12px; margin-top: 14px; }
 .h-charthead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .h-charthead h3 { margin: 6px 0 !important; }
+
+/* Time across: the weighted/consensus block (header + lanes or summary/probability rows) gets a faint blue
+   fill so it reads apart from the individual models below (the header repeated above them stays plain) */
+.grid:not(.vert) { --top-tint: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+.grid:not(.vert) thead th,
+.grid:not(.vert) tr.lane td, .grid:not(.vert) tr.lane .rowh,
+.grid:not(.vert) tr.summary td, .grid:not(.vert) tr.summary .rowh,
+.grid:not(.vert) tr.prob td, .grid:not(.vert) tr.prob .rowh { background-color: var(--top-tint); }
