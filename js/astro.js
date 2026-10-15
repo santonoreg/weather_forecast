@@ -315,9 +315,39 @@ const Astro = (() => {
     S.bortle = bortleOf(loc); done();
   }
 
+  /* ---- light-pollution map: NASA VIIRS "Black Marble" night lights (free, no key) with an OpenStreetMap alternative ---- */
+  let lpMap = null, lpMarker = null, lpControl = null, lpLayers = null;
+  function renderMap() {
+    const loc = state.current;
+    if (!loc || typeof L === 'undefined') return;
+    if (!lpMap) {
+      lpMap = L.map('astroMap', { worldCopyJump: true, minZoom: 3 }).setView([loc.lat, loc.lon], 7);
+      lpLayers = {
+        night: L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+          { maxNativeZoom: 8, maxZoom: 12, attribution: 'Night lights © NASA GIBS / VIIRS Black Marble' }),
+        osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }),
+      };
+      lpLayers.night.addTo(lpMap);
+      lpMap.on('click', async (e) => {                       // click = look at that spot instead (same as the location map picker)
+        const lat = +e.latlng.lat.toFixed(4), lon = +(((e.latlng.lng + 540) % 360) - 180).toFixed(4);
+        setCurrent({ id: null, name: await adhocName(lat, lon), lat, lon });
+      });
+    }
+    if (lpControl) lpMap.removeControl(lpControl);
+    lpControl = L.control.layers({ [t('as.lp.night')]: lpLayers.night, 'OpenStreetMap': lpLayers.osm }, null, { collapsed: false }).addTo(lpMap);
+    const pos = [loc.lat, loc.lon], b = S.bortle && S.bortle.v;
+    const label = `<b>${esc(locName(loc))}</b>${b ? `<br>Bortle ${b}` : ''}`;
+    if (lpMarker) lpMarker.setLatLng(pos).setPopupContent(label); else lpMarker = L.marker(pos).addTo(lpMap).bindPopup(label);
+    const key = pos.join(',');
+    if (lpMap._wefoKey !== key) { lpMap._wefoKey = key; lpMap.setView(pos, Math.max(lpMap.getZoom(), 7)); }   // only when the place changes, so panning survives a re-render
+    setTimeout(() => lpMap.invalidateSize(), 60);
+    $('astroLpLink').href = `https://www.lightpollutionmap.info/#zoom=8&lat=${loc.lat}&lon=${loc.lon}`;
+  }
+
   function render() {
     if (!model) return;
     renderBortle();
+    renderMap();
     renderNights();
     renderTable();
     $('astroNote').innerHTML = t('as.note', { models: model.h ? esc(Astro.models.join(', ')) : '', aer: Astro.aerosols ? t('as.note.aer') : t('as.note.noaer'), lp: t('as.note.lp') });

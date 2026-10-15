@@ -546,3 +546,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 /* label sits above-right of the icon (so the first column never hides it; below it when the icon is near the top of the chart) */
 .grid.astro td.achart .nowicon .nl { left: 4px; top: auto; bottom: 12px; }
 .grid.astro td.achart .nowicon.lbl-below .nl { bottom: auto; top: 14px; }
+
+/* Astronomy: light-pollution map */
+.lpcard { margin-top: 14px; }
+.lpcard .legend { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 6px 0 10px; }
+.map.lpm { height: 420px; border-radius: 12px; }
+.lpkey { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; font-size: 12px; color: var(--muted); }
+.lpkey i { flex: 1; max-width: 320px; height: 10px; border-radius: 999px; border: 1px solid var(--line); background: linear-gradient(90deg, #000, #1b1f4d 25%, #6b3fa0 50%, #f08a24 75%, #fff3a8); }
+@media (max-width: 700px) { .map.lpm { height: 320px; } }

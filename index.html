@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261080">
+<link rel="stylesheet" href="css/style.css?v=20261081">
 </head>
 <body>
 <header class="topbar">
@@ -143,6 +143,13 @@
         <div class="phasekey" id="astroPhaseKey"></div>
         <div class="legend" id="astroNote"></div>
       </section>
+      <section class="card lpcard">
+        <div class="sec-h"><h2 data-i18n="as.lp.title">Light pollution map</h2></div>
+        <p class="legend" data-i18n="as.lp.hint">Night lights seen from space.</p>
+        <div id="astroMap" class="map lpm"></div>
+        <div class="lpkey"><span data-i18n="as.lp.dark">dark</span><i></i><span data-i18n="as.lp.bright">bright</span></div>
+        <p class="legend"><span data-i18n="as.lp.note"></span> <a id="astroLpLink" href="https://www.lightpollutionmap.info/" target="_blank" rel="noopener" data-i18n="as.lp.open">Open the full light pollution atlas</a></p>
+      </section>
     </div>
   </section>
 
@@ -213,9 +220,9 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261080"></script>
-<script src="js/icons.js?v=20261080"></script>
-<script src="js/app.js?v=20261080"></script>
-<script src="js/astro.js?v=20261080"></script>
+<script src="js/i18n.js?v=20261081"></script>
+<script src="js/icons.js?v=20261081"></script>
+<script src="js/app.js?v=20261081"></script>
+<script src="js/astro.js?v=20261081"></script>
 </body>
 </html>

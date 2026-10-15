@@ -145,6 +145,7 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 - **From the weather models** (`api/astro.php`, mean of ECMWF IFS, NOAA GFS and DWD ICON via Open-Meteo): low/mid/high cloud, humidity, dew point, wind at the ground and at 850/700/500/300/250 hPa (jet stream), CAPE, visibility; plus aerosols and dust from CAMS (Open-Meteo air-quality API).
 - **Estimated** (no free source measures them): *seeing* (from the jet stream, upper-air wind shear, ground wind and convection) and *transparency* (from aerosols/dust, humidity, thin high cloud, visibility, rain). They rank hours against each other well, but the absolute values are approximate, and the tab says so.
 - Two 0–100 scores per hour — *deep sky* (cloud, darkness, Moon, transparency, seeing) and *planets & Moon* — and one card per night with sunset/sunrise, astronomical darkness, Moon, and the best three hours.
+- A **light pollution map** below the table: NASA VIIRS "Black Marble" night lights (free, no key, loaded by the browser from NASA GIBS) with your location marked, an OpenStreetMap alternative, and a click-to-look-there option. It shows upward light seen from the satellite (a 2016 composite), not sky brightness itself — use it with the Bortle setting; a link opens the full lightpollutionmap.info atlas.
 - **Light pollution (Bortle class 1–9)** per location, chosen in the tab's *Dark sky* drop-down. It scales the deep-sky score (class 8 keeps about a third of it) and shows the naked-eye limiting magnitude. The Greek towns are seeded with a rough class from the size of the town — the sky at its centre, so your observing site is probably darker. A visitor's choice is remembered in their browser; an admin's choice is stored in the database with the location and becomes the default for everybody. A point picked on the map starts at class 5 until set.
 
 ### Models drop-down
@@ -415,7 +416,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 - **Server side:** saved locations, cached API responses and the downloaded weather history in `data/wefo.sqlite`. No personal data or cookies.
 - **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
 - **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station), (reverse geocoding) Nominatim, and — only if you configured a key — Google (`weather.googleapis.com`).
-- **Requests made by the browser:** map tiles (OpenStreetMap), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
+- **Requests made by the browser:** map tiles (OpenStreetMap; NASA GIBS night lights in the Astronomy tab), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
 - **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment. The optional Google Weather API is **not free beyond its monthly quota** and is entirely opt-in — see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison).
 
 ## Limitations
