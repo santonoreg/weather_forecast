@@ -1235,6 +1235,7 @@ $('savedList').addEventListener('click', async (e) => {
 function showView(name) {
   if (name === 'places' && !state.admin) { openLogin(); return; }   // the locations manager is for the logged-in admin only
   state.view = name;
+  try { history.replaceState(null, '', name === 'forecast' ? location.pathname + location.search : '#' + name); } catch (e) { /* ignore */ }   // a refresh stays on this tab
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   if (name === 'astro') Astro.load();
@@ -1417,7 +1418,7 @@ if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', sync
 syncThemeBtn();
 
 $('brandIcon').innerHTML = WI.svg(2, false);
-loadAuth().then(() => loadLocations()).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
+loadAuth().then(() => loadLocations()).then(() => { const v = location.hash.slice(1); if (v === 'astro' || v === 'places') showView(v); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
 
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(centerNow, 50));
 window.addEventListener('load', () => setTimeout(centerNow, 100));

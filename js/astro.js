@@ -186,7 +186,8 @@ const Astro = (() => {
     const a = k[key];
     const svg = key === 'sunAlt' ? sunIcon() : moonIcon(k.phase, m.lat);
     const az = key === 'sunAlt' ? k.sunAz : k.moonAz;
-    return `<span class="nowicon${a > 0 ? '' : ' below'}" style="left:${(f * 100).toFixed(1)}%;top:${((altY(a) / CH_H) * 100).toFixed(1)}%">${svg}<b class="nl">${a.toFixed(0)}° · ${az.toFixed(0)}° ${compass(az)}</b></span>`;
+    const y = (altY(a) / CH_H) * 100;
+    return `<span class="nowicon${a > 0 ? '' : ' below'}${y < 38 ? ' lbl-below' : ''}" style="left:${(f * 100).toFixed(1)}%;top:${((altY(a) / CH_H) * 100).toFixed(1)}%">${svg}<b class="nl">${a.toFixed(0)}° · ${az.toFixed(0)}° ${compass(az)}</b></span>`;
   }
 
   function altChart(m, e, key, stroke, fill) {
