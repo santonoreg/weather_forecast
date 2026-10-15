@@ -554,3 +554,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .lpkey { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; font-size: 12px; color: var(--muted); }
 .lpkey i { flex: 1; max-width: 320px; height: 10px; border-radius: 999px; border: 1px solid var(--line); background: linear-gradient(90deg, #000, #1b1f4d 25%, #6b3fa0 50%, #f08a24 75%, #fff3a8); }
 @media (max-width: 700px) { .map.lpm { height: 320px; } }
+
+.lp-dark { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.5); }
+.lp-night { mix-blend-mode: screen; }
+.lp-lightbase .lp-night { mix-blend-mode: normal; }
+.leaflet-container.lp-lightbase { background: #ddd; }
+.lp-op { background: var(--panel); padding: 6px 10px; border-radius: 8px; box-shadow: 0 1px 5px rgba(0, 0, 0, .35); }
+.lp-op label { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; color: var(--text); white-space: nowrap; }
+.lp-op input { width: 110px; margin: 0; }

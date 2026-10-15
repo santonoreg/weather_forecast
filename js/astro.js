@@ -315,26 +315,45 @@ const Astro = (() => {
     S.bortle = bortleOf(loc); done();
   }
 
-  /* ---- light-pollution map: NASA VIIRS "Black Marble" night lights (free, no key) with an OpenStreetMap alternative ---- */
-  let lpMap = null, lpMarker = null, lpControl = null, lpLayers = null;
+  /* ---- light-pollution map: NASA VIIRS "Black Marble" night lights as an OVERLAY (with an opacity slider) on a
+     base map, so towns, roads and coastlines stay readable under the glow ---- */
+  let lpMap = null, lpMarker = null, lpControl = null, lpLayers = null, lpOpCtl = null;
+  let lpOpacity = 0.85;
+  try { const v = +localStorage.getItem('wefo.lpop'); if (v >= 0.1 && v <= 1) lpOpacity = v; } catch (e) { /* ignore */ }
   function renderMap() {
     const loc = state.current;
     if (!loc || typeof L === 'undefined') return;
     if (!lpMap) {
       lpMap = L.map('astroMap', { worldCopyJump: true, minZoom: 3 }).setView([loc.lat, loc.lon], 7);
+      const osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
       lpLayers = {
+        dark: L.tileLayer(osmUrl, { maxZoom: 18, className: 'lp-dark', attribution: '© OpenStreetMap' }),   // OSM, darkened with a CSS filter
+        osm: L.tileLayer(osmUrl, { maxZoom: 18, attribution: '© OpenStreetMap' }),
         night: L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
-          { maxNativeZoom: 8, maxZoom: 12, attribution: 'Night lights © NASA GIBS / VIIRS Black Marble' }),
-        osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }),
+          { maxNativeZoom: 8, maxZoom: 18, opacity: lpOpacity, className: 'lp-night', attribution: 'Night lights © NASA GIBS / VIIRS Black Marble' }),
       };
-      lpLayers.night.addTo(lpMap);
+      lpLayers.dark.addTo(lpMap); lpLayers.night.addTo(lpMap);
+      // glow-on-dark blends the lights additively ("screen"); on the light base map they simply sit on top
+      lpMap.on('baselayerchange', (e) => lpMap.getContainer().classList.toggle('lp-lightbase', e.layer === lpLayers.osm));
       lpMap.on('click', async (e) => {                       // click = look at that spot instead (same as the location map picker)
         const lat = +e.latlng.lat.toFixed(4), lon = +(((e.latlng.lng + 540) % 360) - 180).toFixed(4);
         setCurrent({ id: null, name: await adhocName(lat, lon), lat, lon });
       });
+      const Op = L.Control.extend({
+        onAdd() {
+          const d = L.DomUtil.create('div', 'leaflet-bar lp-op');
+          d.innerHTML = '<label><span id="astroLpOpLabel"></span><input type="range" min="10" max="100" step="5"></label>';
+          const r = d.querySelector('input'); r.value = Math.round(lpOpacity * 100);
+          r.addEventListener('input', () => { lpOpacity = r.value / 100; lpLayers.night.setOpacity(lpOpacity); try { localStorage.setItem('wefo.lpop', lpOpacity); } catch (e) { /* ignore */ } });
+          L.DomEvent.disableClickPropagation(d);
+          return d;
+        },
+      });
+      lpOpCtl = new Op({ position: 'bottomleft' }).addTo(lpMap);
     }
     if (lpControl) lpMap.removeControl(lpControl);
-    lpControl = L.control.layers({ [t('as.lp.night')]: lpLayers.night, 'OpenStreetMap': lpLayers.osm }, null, { collapsed: false }).addTo(lpMap);
+    lpControl = L.control.layers({ [t('as.lp.base.dark')]: lpLayers.dark, 'OpenStreetMap': lpLayers.osm }, { [t('as.lp.night')]: lpLayers.night }, { collapsed: false }).addTo(lpMap);
+    $('astroLpOpLabel').textContent = t('as.lp.opacity');
     const pos = [loc.lat, loc.lon], b = S.bortle && S.bortle.v;
     const label = `<b>${esc(locName(loc))}</b>${b ? `<br>Bortle ${b}` : ''}`;
     if (lpMarker) lpMarker.setLatLng(pos).setPopupContent(label); else lpMarker = L.marker(pos).addTo(lpMap).bindPopup(label);
