@@ -18,7 +18,7 @@ async function api(path, opts) {
   return data;
 }
 
-const state = { locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
+const state = { view: 'forecast', locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
@@ -970,6 +970,7 @@ function renderLocSelect() {
     + (state.admin && state.locations.length ? `<optgroup label="${esc(t('loc.saved'))}">${state.locations.map(opt).join('')}</optgroup>` : '')
     + `<optgroup label="${esc(t('loc.cities'))}">${cities.map(opt).join('')}</optgroup>`;
   $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : '';
+  $('astroLoc').innerHTML = $('locSelect').innerHTML; $('astroLoc').value = $('locSelect').value;   // the Astronomy tab shares the location
 }
 
 function setCurrent(loc, go = false) {
@@ -980,12 +981,13 @@ function setCurrent(loc, go = false) {
     else { localStorage.setItem('wefo.loc', ADHOC); localStorage.setItem('wefo.adhoc', JSON.stringify({ name: loc.name, lat: loc.lat, lon: loc.lon })); }
   } catch (e) { /* ignore */ }
   renderLocSelect();
-  if (go) showView('forecast');
+  if (go && state.view !== 'astro') showView('forecast');
   loadForecast();
+  if (state.view === 'astro') Astro.load();
 }
 $('locSelect').addEventListener('change', (e) => {
   const v = e.target.value;
-  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; };
+  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; $('astroLoc').value = $('locSelect').value; };
   if (v === '__geo__') { back(); useMyLocation(); return; }
   if (v === '__map__') { back(); openMapPicker(); return; }
   if (v === ADHOC) return;
@@ -1232,8 +1234,10 @@ $('savedList').addEventListener('click', async (e) => {
 /* ================= Πλοήγηση ================= */
 function showView(name) {
   if (name === 'places' && !state.admin) { openLogin(); return; }   // the locations manager is for the logged-in admin only
+  state.view = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+  if (name === 'astro') Astro.load();
   if (name === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
 }
 document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -1394,6 +1398,7 @@ function onLangChange() {
   renderLocSelect();
   if (!histSec.hidden && histState && histState.data) renderHistory();
   if (state.data) renderAll();
+  Astro.render();
 }
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
 applyStaticI18n();

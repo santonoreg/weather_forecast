@@ -137,6 +137,16 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
 7. **Weight by reliability** checkbox: turn reliability weighting on/off.
 8. **Refresh** forces a fresh download (otherwise data is cached for 30 minutes).
 
+### Astronomy (open to everyone)
+
+A separate tab next to *Forecast* with the observing conditions for the selected location, hour by hour:
+
+- **Computed in the browser** (`js/astro.js`): Sun altitude and the twilight stages (down to astronomical darkness), Moon altitude, lit fraction, phase, moonrise/moonset.
+- **From the weather models** (`api/astro.php`, mean of ECMWF IFS, NOAA GFS and DWD ICON via Open-Meteo): low/mid/high cloud, humidity, dew point, wind at the ground and at 850/700/500/300/250 hPa (jet stream), CAPE, visibility; plus aerosols and dust from CAMS (Open-Meteo air-quality API).
+- **Estimated** (no free source measures them): *seeing* (from the jet stream, upper-air wind shear, ground wind and convection) and *transparency* (from aerosols/dust, humidity, thin high cloud, visibility, rain). They rank hours against each other well, but the absolute values are approximate, and the tab says so.
+- Two 0–100 scores per hour — *deep sky* (cloud, darkness, Moon, transparency, seeing) and *planets & Moon* — and one card per night with sunset/sunrise, astronomical darkness, Moon, and the best three hours.
+- Not included: light pollution (Bortle) of the site.
+
 ### Models drop-down
 
 - Each model has a checkbox, a short note about **which regions it is best for**, and its reliability score (0–100) once verification has loaded.
@@ -369,6 +379,8 @@ tools/hash-password.php   CLI helper that creates the admin password hash
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
+api/astro.php       atmosphere inputs for the Astronomy tab (multi-model mean + aerosols), 30 min cache
+js/astro.js         Astronomy tab: Sun/Moon maths, seeing/transparency estimates, scores, rendering
 api/history.php     long-term daily history per saved location (download once, cached in SQLite)
 api/google_weather.php   optional Google WeatherNext 3 integration (used by forecast.php)
 api/config.example.php   template for api/config.php (your own API keys — copy it, don't edit this one)
@@ -390,6 +402,7 @@ Database tables (created automatically): `locations(id, name, lat, lon, created_
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
 | `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
+| `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Astronomy tab |
 | `GET api/history.php?id=ID[&refresh=1]` | history summary (records, monthly, annual) for a saved location; downloads and stores the data on first use |
 
 Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261064">
+<link rel="stylesheet" href="css/style.css?v=20261068">
 </head>
 <body>
 <header class="topbar">
@@ -17,6 +17,7 @@
   <div class="topright">
     <nav>
       <button class="nav-btn active" data-view="forecast" data-i18n="nav.forecast">Forecast</button>
+      <button class="nav-btn" data-view="astro" data-i18n="nav.astro">Astronomy</button>
       <button class="nav-btn" data-view="places" data-i18n="nav.places" hidden>Locations &amp; Map</button>
     </nav>
     <button id="loginBtn" class="auth-btn" type="button" data-i18n="auth.login">Admin login</button>
@@ -118,6 +119,28 @@
     </div>
   </section>
 
+  <!-- ============ ASTRONOMY ============ -->
+  <section id="view-astro" class="view">
+    <div class="toolbar">
+      <label><span data-i18n="tb.location">Location</span>
+        <select id="astroLoc"></select>
+      </label>
+      <label class="chk"><input type="checkbox" id="astroAll"> <span data-i18n="as.all">Show daytime hours</span></label>
+      <button id="astroRefresh" class="btn ghost" data-i18n="tb.refresh" data-i18n-title="tb.refresh.title" title="Fetch fresh data">↻ Refresh</button>
+      <span id="astroMeta" class="meta"></span>
+    </div>
+    <div id="astroEmpty" class="notice" data-i18n="as.empty" hidden></div>
+    <div id="astroErr" class="notice error" hidden></div>
+    <div id="astroLoading" class="loading" hidden><div class="spinner"></div> <span data-i18n="as.loading">Computing observing conditions…</span></div>
+    <div id="astroBody" hidden>
+      <div id="astroNights" class="nights"></div>
+      <section class="card astro-tab">
+        <div class="table-wrap"><table id="astroTable" class="grid astro"></table></div>
+        <div class="legend" id="astroNote"></div>
+      </section>
+    </div>
+  </section>
+
   <!-- ============ LOCATIONS ============ -->
   <section id="view-places" class="view">
     <div class="places-layout">
@@ -185,8 +208,9 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261064"></script>
-<script src="js/icons.js?v=20261064"></script>
-<script src="js/app.js?v=20261064"></script>
+<script src="js/i18n.js?v=20261068"></script>
+<script src="js/icons.js?v=20261068"></script>
+<script src="js/app.js?v=20261068"></script>
+<script src="js/astro.js?v=20261068"></script>
 </body>
 </html>
