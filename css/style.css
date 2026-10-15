@@ -529,8 +529,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid.astro td.achart .dot.up { background: var(--c); }
 .grid.astro td.aband { height: 26px; font-size: 11px; font-weight: 700; color: var(--text); }
 .grid.astro td.aband.dk { color: #e6ecff; }
-.grid.astro td.alit { font-weight: 600; background-color: transparent; }
-.grid.astro td.alit.below { color: var(--muted); font-weight: 400; }
 .grid.astro tr.chart th.rowh, .grid.astro tr.band th.rowh { padding-top: 4px; padding-bottom: 4px; }
 .phasekey { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
 .phasekey span { display: inline-flex; align-items: center; gap: 6px; }
