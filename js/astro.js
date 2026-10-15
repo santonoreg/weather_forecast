@@ -22,6 +22,10 @@ const Astro = (() => {
     const l = L + RAD * 6.289 * Math.sin(M), b = RAD * 5.128 * Math.sin(F);
     return { ra: ra(l, b), dec: dec(l, b), dist: 385001 - 20905 * Math.cos(M) };
   }
+  /* azimuth in degrees clockwise from north */
+  const azimuth = (H, phi, de) => ((Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(de) * Math.cos(phi)) / RAD + 180) % 360 + 360) % 360;
+  const COMPASS = { en: ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'], el: ['Β', 'ΒΒΑ', 'ΒΑ', 'ΑΒΑ', 'Α', 'ΑΝΑ', 'ΝΑ', 'ΝΝΑ', 'Ν', 'ΝΝΔ', 'ΝΔ', 'ΔΝΔ', 'Δ', 'ΔΒΔ', 'ΒΔ', 'ΒΒΔ'] };
+  const compass = (az) => (COMPASS[LANG] || COMPASS.en)[Math.round(az / 22.5) % 16];
   const altitude = (H, phi, de) => Math.asin(Math.sin(phi) * Math.sin(de) + Math.cos(phi) * Math.cos(de) * Math.cos(H));
   const sidereal = (d, lw) => RAD * (280.16 + 360.9856235 * d) - lw;
 
@@ -29,14 +33,15 @@ const Astro = (() => {
   function sky(ms, lat, lon) {
     const d = toDays(ms), lw = RAD * -lon, phi = RAD * lat;
     const s = sunCoords(d), m = moonCoords(d);
-    const sunAlt = altitude(sidereal(d, lw) - s.ra, phi, s.dec) / RAD;
+    const sunAlt = altitude(sidereal(d, lw) - s.ra, phi, s.dec) / RAD, sunAz = azimuth(sidereal(d, lw) - s.ra, phi, s.dec);
+    const moonAz = azimuth(sidereal(d, lw) - m.ra, phi, m.dec);
     let h = altitude(sidereal(d, lw) - m.ra, phi, m.dec);
     h -= Math.asin(6378 / m.dist) * Math.cos(h);          // parallax: the Moon is close
     const dRa = s.ra - m.ra;
     const ph = Math.acos(Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(dRa));
     const inc = Math.atan2(s.dist * Math.sin(ph), m.dist - s.dist * Math.cos(ph));
     const ang = Math.atan2(Math.cos(s.dec) * Math.sin(dRa), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(dRa));
-    return { sunAlt, moonAlt: h / RAD, lit: (1 + Math.cos(inc)) / 2, phase: 0.5 + (0.5 * inc * (ang < 0 ? -1 : 1)) / Math.PI };
+    return { sunAlt, sunAz, moonAz, moonAlt: h / RAD, lit: (1 + Math.cos(inc)) / 2, phase: 0.5 + (0.5 * inc * (ang < 0 ? -1 : 1)) / Math.PI };
   }
   const PHASE_ICON = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
   const phaseIdx = (p) => Math.floor(((p % 1) * 8 + 0.5) % 8);
@@ -180,7 +185,8 @@ const Astro = (() => {
     const k = sky(now, m.lat, m.lon);
     const a = k[key];
     const svg = key === 'sunAlt' ? sunIcon() : moonIcon(k.phase, m.lat);
-    return `<span class="nowicon${a > 0 ? '' : ' below'}" style="left:${(f * 100).toFixed(1)}%;top:${((altY(a) / CH_H) * 100).toFixed(1)}%">${svg}</span>`;
+    const az = key === 'sunAlt' ? k.sunAz : k.moonAz;
+    return `<span class="nowicon${a > 0 ? '' : ' below'}" style="left:${(f * 100).toFixed(1)}%;top:${((altY(a) / CH_H) * 100).toFixed(1)}%">${svg}<b class="nl">${a.toFixed(0)}° · ${az.toFixed(0)}° ${compass(az)}</b></span>`;
   }
 
   function altChart(m, e, key, stroke, fill) {
@@ -249,9 +255,10 @@ const Astro = (() => {
       <tr>${vis.map((r) => `<th class="hr${r.sunAlt >= -0.833 ? ' dayt' : ''}">${localHM(r.e, off).slice(0, 2)}</th>`).join('')}</tr></thead><tbody>`;
     html += mk(t('as.row.deep'), t('as.row.deep.h'), (r) => cell(qScore(r.deep), `<b>${sd(r.deep)}</b>`), 'ascore');
     html += mk(t('as.row.planets'), t('as.row.planets.h'), (r) => cell(qScore(r.planets), `<b>${sd(r.planets)}</b>`), 'ascore');
+    const posTitle = (e, who) => { const k = sky(e, model.lat, model.lon), a = k[who + 'Alt'], z = k[who + 'Az']; return `${t('as.alt')} ${a.toFixed(0)}° · ${t('as.az')} ${z.toFixed(0)}° ${compass(z)}`; };
     const ab = { civ: t('as.ab.civ'), naut: t('as.ab.naut'), astro: t('as.ab.astro') };
     const phaseName = (k) => t('as.ph2.' + k);
-    html += mk(t('as.row.sun'), t('as.row.sun.h'), (r) => `<td class="achart" title="${esc(sd(r.sunAlt) + '°')}">${altChart(model, r.e, 'sunAlt', '#f59e0b', 'rgba(245,158,11,.28)')}</td>`, 'chart');
+    html += mk(t('as.row.sun'), t('as.row.sun.h'), (r) => `<td class="achart" title="${esc(posTitle(r.e, 'sun'))}">${altChart(model, r.e, 'sunAlt', '#f59e0b', 'rgba(245,158,11,.28)')}</td>`, 'chart');
     html += mk(t('as.row.phase'), t('as.row.phase.h'), (r) => {
       const keys = subTimes(r.e).map((e) => phaseAt(model, e)), c = keys[2];
       const base = c.split('.')[0], txt = c === 'day' ? '' : c === 'night' ? '●' : ab[base] + (c.endsWith('.d') ? '↓' : '↑');
@@ -261,11 +268,11 @@ const Astro = (() => {
       const keys = subTimes(r.e).map((e) => gbAt(model, e)), c = keys[2] || keys.find(Boolean);
       return `<td class="aband" style="background:${bandBg(keys)}" title="${c ? esc(phaseName(c)) : ''}"></td>`;
     }, 'band');
-    html += mk(t('as.row.moonalt'), t('as.row.moonalt.h'), (r) => `<td class="achart" title="${esc(sd(r.moonAlt) + '°')}">${altChart(model, r.e, 'moonAlt', '#7c8fc9', 'rgba(124,143,201,.30)')}</td>`, 'chart');
+    html += mk(t('as.row.moonalt'), t('as.row.moonalt.h'), (r) => `<td class="achart" title="${esc(posTitle(r.e, 'moon'))}">${altChart(model, r.e, 'moonAlt', '#7c8fc9', 'rgba(124,143,201,.30)')}</td>`, 'chart');
     // moonlight as a grey level: black = no light (Moon down or new), white = full Moon high in the sky
     html += mk(t('as.row.moonlit'), t('as.row.moonlit.h'), (r) => {
       const p = Math.round(r.lit * 100), lvl = r.moonAlt > 0 ? r.lit * clamp(Math.sin(r.moonAlt * RAD) / 0.87, 0, 1) : 0, g = Math.round(255 * lvl);
-      return `<td class="amoon${lvl > 0.5 ? ' lt' : ''}" style="background:rgb(${g},${g},${g})" title="${esc(sd(r.moonAlt) + '°')}">${p}%</td>`;
+      return `<td class="amoon${lvl > 0.5 ? ' lt' : ''}" style="background:rgb(${g},${g},${g})" title="${esc(posTitle(r.e, 'moon'))}">${p}%</td>`;
     });
     html += mk(t('as.row.cloud'), t('as.row.cloud.h'), (r) => cell(qCloud(r.eff * 100), `<b>${sd(r.eff * 100)}%</b>${h.cloud_cover_min[r.i] != null && h.cloud_cover_max[r.i] - h.cloud_cover_min[r.i] >= 30 ? `<small>${h.cloud_cover_min[r.i]}–${h.cloud_cover_max[r.i]}</small>` : ''}`));
     [['low', 'cloud_cover_low'], ['mid', 'cloud_cover_mid'], ['high', 'cloud_cover_high']].forEach(([k, v]) => {
