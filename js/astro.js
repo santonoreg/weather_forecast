@@ -165,17 +165,35 @@ const Astro = (() => {
      continuous trajectory / band even when the daytime hours in between are hidden ---- */
   const CH_H = 44, CH_W = 46, ALT_MIN = -40, ALT_MAX = 90;
   const altY = (a) => (CH_H * (ALT_MAX - clamp(a, ALT_MIN, ALT_MAX))) / (ALT_MAX - ALT_MIN);
+  /* ---- icons drawn at the position of "now" ---- */
+  const sunIcon = () => `<svg viewBox="-12 -12 24 24" width="22" height="22"><g stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<line x1="0" y1="-7.6" x2="0" y2="-10.6" transform="rotate(${a})"/>`).join('')}</g><circle r="5.6" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.2"/></svg>`;
+  /* the Moon as it is lit: phase 0 = new, .25 = first quarter, .5 = full, .75 = last quarter (mirrored in the southern hemisphere) */
+  function moonIcon(phase, lat, size = 24) {
+    const r = 9, k = Math.cos(2 * Math.PI * phase), rx = Math.abs(k) * r;
+    const waxing = phase < 0.5, flip = waxing === (lat >= 0);                 // northern sky: waxing is lit on the right
+    const lit = `M0,${-r} A${r},${r} 0 0 1 0,${r} A${rx.toFixed(2)},${r} 0 0 ${k > 0 ? 0 : 1} 0,${-r}Z`;
+    return `<svg viewBox="-12 -12 24 24" width="${size}" height="${size}"><circle r="${r}" fill="#2a3352" stroke="#98a6c2" stroke-width="1"/><path d="${lit}" fill="#f4ead0" transform="${flip ? '' : 'scale(-1,1)'}"/><circle r="${r}" fill="none" stroke="#98a6c2" stroke-width="1"/></svg>`;
+  }
+  function nowIcon(m, e, key) {
+    const now = Date.now(), f = (now - (e - 1800e3)) / 3600e3;
+    if (f < 0 || f >= 1) return '';
+    const k = sky(now, m.lat, m.lon);
+    const a = k[key];
+    const svg = key === 'sunAlt' ? sunIcon() : moonIcon(k.phase, m.lat);
+    return `<span class="nowicon${a > 0 ? '' : ' below'}" style="left:${(f * 100).toFixed(1)}%;top:${((altY(a) / CH_H) * 100).toFixed(1)}%">${svg}</span>`;
+  }
+
   function altChart(m, e, key, stroke, fill) {
     const pts = [];
     for (let j = 0; j <= 6; j++) pts.push(sky(e - 1800e3 + j * 600e3, m.lat, m.lon)[key]);
     const y0 = altY(0), x = (j) => ((j / 6) * CH_W).toFixed(1);
     const line = pts.map((a, j) => `${x(j)},${altY(a).toFixed(1)}`).join(' ');
     const area = `0,${y0.toFixed(1)} ` + pts.map((a, j) => `${x(j)},${Math.min(altY(a), y0).toFixed(1)}`).join(' ') + ` ${CH_W},${y0.toFixed(1)}`;
-    const cur = pts[3];
+    const cur = pts[3], ni = nowIcon(m, e, key);
     return `<svg viewBox="0 0 ${CH_W} ${CH_H}" preserveAspectRatio="none" class="alt" aria-hidden="true">
       <polygon points="${area}" fill="${fill}"/><line x1="0" x2="${CH_W}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" class="hz"/>
       <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>
-      <i class="dot${cur > 0 ? ' up' : ''}" style="top:${((altY(cur) / CH_H) * 100).toFixed(1)}%;--c:${stroke}"></i>`;
+      ${ni ? ni : `<i class="dot${cur > 0 ? ' up' : ''}" style="top:${((altY(cur) / CH_H) * 100).toFixed(1)}%;--c:${stroke}"></i>`}`;
   }
   /* twilight stage of the Sun at an instant: day, civil / nautical / astronomical twilight (evening = dusk, morning = dawn), night */
   const PHASE_COL = {
@@ -208,7 +226,7 @@ const Astro = (() => {
       const rating = q == null ? t('as.nobest') : t('as.rate.' + q);
       return `<div class="card night">
         <div class="night-h"><b>${esc(idx === 0 && n.day === model.rows[0].ts.slice(0, 10) ? t('as.tonight') : dayLabel(n.day))}</b><span class="chip aq q${q == null ? 'x' : q}">${esc(rating)}</span></div>
-        <div class="night-moon"><span class="mi">${PHASE_ICON[ph]}</span><span>${t('as.ph.' + ph)} · ${Math.round(n.mid.lit * 100)}%<small>${t('as.moonrise')} ${hm(n.mr)} · ${t('as.moonset')} ${hm(n.ms)}</small></span></div>
+        <div class="night-moon"><span class="mi">${moonIcon(n.mid.phase, model.lat, 36)}</span><span>${t('as.ph.' + ph)} · ${Math.round(n.mid.lit * 100)}%<small>${t('as.moonrise')} ${hm(n.mr)} · ${t('as.moonset')} ${hm(n.ms)}</small></span></div>
         <dl>
           <dt>${t('as.sunset')}</dt><dd>${hm(n.sunset)} → ${hm(n.sunrise)}</dd>
           <dt>${t('as.darkness')}</dt><dd>${n.dusk == null ? t('as.nodark') : `${hm(n.dusk)} → ${hm(n.dawn)}${dur != null ? ` <small>(${dur.toFixed(1)} h)</small>` : ''}`}</dd>

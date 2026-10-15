@@ -492,7 +492,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .night-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .night-h b { font-size: 15px; }
 .night-moon { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13.5px; font-weight: 600; }
-.night-moon .mi { font-size: 30px; line-height: 1; }
+.night-moon .mi { display: inline-flex; line-height: 0; }
 .night-moon small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
 .night dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
 .night dt { color: var(--muted); }
@@ -535,3 +535,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .phasekey { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
 .phasekey span { display: inline-flex; align-items: center; gap: 6px; }
 .phasekey i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); }
+
+.grid.astro td.achart .nowicon { position: absolute; width: 0; height: 0; z-index: 1; pointer-events: none; }
+.grid.astro td.achart .nowicon svg { position: absolute; left: -12px; top: -12px; display: block; width: 24px; height: 24px; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .35)); }
+.grid.astro td.achart .nowicon.below svg { opacity: .75; }
