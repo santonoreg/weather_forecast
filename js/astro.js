@@ -262,10 +262,10 @@ const Astro = (() => {
       return `<td class="aband" style="background:${bandBg(keys)}" title="${c ? esc(phaseName(c)) : ''}"></td>`;
     }, 'band');
     html += mk(t('as.row.moonalt'), t('as.row.moonalt.h'), (r) => `<td class="achart" title="${esc(sd(r.moonAlt) + '°')}">${altChart(model, r.e, 'moonAlt', '#7c8fc9', 'rgba(124,143,201,.30)')}</td>`, 'chart');
-    // tinted like the cloud rows (green = dark sky, red = bright Moon), but only while the Moon is up: below the horizon it does not matter
+    // moonlight as a grey level: black = no light (Moon down or new), white = full Moon high in the sky
     html += mk(t('as.row.moonlit'), t('as.row.moonlit.h'), (r) => {
-      const p = Math.round(r.lit * 100);
-      return r.moonAlt > 0 ? cell(p <= 10 ? 4 : p <= 25 ? 3 : p <= 50 ? 2 : p <= 75 ? 1 : 0, `${p}%`) : `<td class="aq nq dim">${p}%</td>`;
+      const p = Math.round(r.lit * 100), lvl = r.moonAlt > 0 ? r.lit * clamp(Math.sin(r.moonAlt * RAD) / 0.87, 0, 1) : 0, g = Math.round(255 * lvl);
+      return `<td class="amoon${lvl > 0.5 ? ' lt' : ''}" style="background:rgb(${g},${g},${g})" title="${esc(sd(r.moonAlt) + '°')}">${p}%</td>`;
     });
     html += mk(t('as.row.cloud'), t('as.row.cloud.h'), (r) => cell(qCloud(r.eff * 100), `<b>${sd(r.eff * 100)}%</b>${h.cloud_cover_min[r.i] != null && h.cloud_cover_max[r.i] - h.cloud_cover_min[r.i] >= 30 ? `<small>${h.cloud_cover_min[r.i]}–${h.cloud_cover_max[r.i]}</small>` : ''}`));
     [['low', 'cloud_cover_low'], ['mid', 'cloud_cover_mid'], ['high', 'cloud_cover_high']].forEach(([k, v]) => {

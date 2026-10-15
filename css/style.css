@@ -537,3 +537,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid.astro td.achart .nowicon { position: absolute; width: 0; height: 0; z-index: 1; pointer-events: none; }
 .grid.astro td.achart .nowicon svg { position: absolute; left: -12px; top: -12px; display: block; width: 24px; height: 24px; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .35)); }
 .grid.astro td.achart .nowicon.below svg { opacity: .75; }
+
+.grid.astro td.amoon { color: #e6ecff; font-weight: 600; }
+.grid.astro td.amoon.lt { color: #1b2333; }
