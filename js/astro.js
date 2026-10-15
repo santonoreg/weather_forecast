@@ -87,6 +87,19 @@ const Astro = (() => {
     return clamp(1 - (1 - l) * (1 - m) * (1 - 0.6 * hi), 0, 1);
   };
 
+  /* light pollution: Bortle class 1..9 -> how much of the deep-sky score survives, naked-eye limiting magnitude, sky brightness */
+  const BORTLE_FACTOR = [null, 1, 1, 0.97, 0.9, 0.78, 0.62, 0.47, 0.33, 0.22];
+  const BORTLE_NELM = [null, 7.6, 7.1, 6.6, 6.2, 5.6, 5.1, 4.6, 4.1, 3.8];
+  const BORTLE_SQM = [null, 21.9, 21.6, 21.3, 20.8, 20.1, 19.4, 18.9, 18.4, 17.8];
+  const DEFAULT_BORTLE = 5;                       // used while a place has no value yet
+  const bkey = (loc) => 'wefo.bortle.' + loc.lat + ',' + loc.lon;
+  /* the visitor's own choice (this browser) beats the stored one (database: seeded estimate for the Greek towns, admin's correction) */
+  function bortleOf(loc) {
+    try { const v = +localStorage.getItem(bkey(loc)); if (v >= 1 && v <= 9) return { v, src: 'own' }; } catch (e) { /* ignore */ }
+    if (loc.bortle >= 1 && loc.bortle <= 9) return { v: +loc.bortle, src: state.cities.includes(loc) ? 'est' : 'saved' };
+    return { v: null, src: 'none' };
+  }
+
   /* quality tiers 0 (bad) .. 4 (excellent) */
   const qSeeing = (a) => (a == null ? null : a <= 1.0 ? 4 : a <= 1.5 ? 3 : a <= 2.2 ? 2 : a <= 3.2 ? 1 : 0);
   const qTransp = (v) => (v == null ? null : v >= 80 ? 4 : v >= 65 ? 3 : v >= 50 ? 2 : v >= 35 ? 1 : 0);
@@ -98,7 +111,7 @@ const Astro = (() => {
   const qHum = (r) => (r == null ? null : r <= 60 ? 4 : r <= 75 ? 3 : r <= 88 ? 2 : r <= 95 ? 1 : 0);
 
   /* ---- build the hourly model of the whole response ---- */
-  function build(data) {
+  function build(data, bortle) {
     const off = data.utc_offset_seconds || 0, h = data.hourly, lat = data.lat, lon = data.lon;
     const rows = data.time.map((ts, i) => {
       const e = Date.UTC(+ts.slice(0, 4), +ts.slice(5, 7) - 1, +ts.slice(8, 10), +ts.slice(11, 13), +ts.slice(14, 16)) - off * 1000;
@@ -107,7 +120,8 @@ const Astro = (() => {
       const seeFrac = see == null ? 0.5 : clamp((3.2 - see) / 2.4, 0, 1);
       const darkDeep = clamp((-k.sunAlt - 6) / 12, 0, 1), darkPlan = clamp((-k.sunAlt - 3) / 6, 0, 1);
       const moonPen = k.moonAlt > 0 ? k.lit * clamp(0.35 + k.moonAlt / 45, 0, 1) : 0;
-      const deep = 100 * (1 - eff) * darkDeep * (1 - 0.75 * moonPen) * (0.55 + 0.45 * tr / 100) * (0.85 + 0.15 * seeFrac);
+      const lp = BORTLE_FACTOR[bortle || DEFAULT_BORTLE];
+      const deep = 100 * (1 - eff) * darkDeep * (1 - 0.75 * moonPen) * (0.55 + 0.45 * tr / 100) * (0.85 + 0.15 * seeFrac) * lp;
       const planets = 100 * (1 - eff) * darkPlan * (0.35 + 0.65 * seeFrac) * (0.7 + 0.3 * tr / 100);
       const dew = h.temperature_2m[i] != null && h.dew_point_2m[i] != null ? h.temperature_2m[i] - h.dew_point_2m[i] : null;
       return { i, ts, e, ...k, eff, see, tr, deep, planets, dew, jet: Math.max(h.wind_speed_300hPa[i] ?? 0, h.wind_speed_250hPa[i] ?? 0) || null };
@@ -204,27 +218,53 @@ const Astro = (() => {
     // scroll the first visible hour into place (table starts at "now")
   }
 
+  function renderBortle() {
+    const b = S.bortle || { v: null, src: 'none' };
+    $('astroBortle').innerHTML = `<option value="0">${esc(t('as.bl.none'))}</option>` + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => `<option value="${i}">${i} – ${esc(t('as.bl.' + i))}</option>`).join('');
+    $('astroBortle').value = String(b.v || 0);
+    const eff = b.v || DEFAULT_BORTLE;
+    $('astroBortleInfo').textContent = t('as.bl.info', { mag: BORTLE_NELM[eff], sqm: BORTLE_SQM[eff], pct: Math.round(BORTLE_FACTOR[eff] * 100) })
+      + ' · ' + t(b.src === 'none' ? 'as.bl.src.none' : 'as.bl.src.' + b.src);
+  }
+  function setBortle(v) {
+    const loc = state.current; if (!loc || !S.data) return;
+    S.bortle = { v: v || null, src: 'own' };
+    const done = () => { renderBortle(); model = build(S.data, S.bortle.v); nightsList = nights(model); render(); };
+    if (state.admin && loc.id != null) {
+      // the admin's value is stored with the location and becomes the default for everybody
+      api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'bortle', id: loc.id, bortle: v || null }) })
+        .then(() => { loc.bortle = v || null; try { localStorage.removeItem(bkey(loc)); } catch (e) { /* ignore */ } S.bortle = bortleOf(loc); done(); })
+        .catch((e) => { $('astroErr').textContent = e.message; $('astroErr').hidden = false; });
+      return;
+    }
+    try { if (v) localStorage.setItem(bkey(loc), v); else localStorage.removeItem(bkey(loc)); } catch (e) { /* ignore */ }
+    S.bortle = bortleOf(loc); done();
+  }
+
   function render() {
     if (!model) return;
+    renderBortle();
     renderNights();
     renderTable();
-    $('astroNote').innerHTML = t('as.note', { models: model.h ? esc(Astro.models.join(', ')) : '', aer: Astro.aerosols ? t('as.note.aer') : t('as.note.noaer') });
+    $('astroNote').innerHTML = t('as.note', { models: model.h ? esc(Astro.models.join(', ')) : '', aer: Astro.aerosols ? t('as.note.aer') : t('as.note.noaer'), lp: t('as.note.lp') });
   }
 
   /* ---- loading ---- */
-  const S = { token: 0, key: null, models: [], aerosols: false };
+  const S = { token: 0, key: null, models: [], aerosols: false, data: null, bortle: null };
   async function load(refresh = false) {
     const loc = state.current;
     $('astroEmpty').hidden = !!loc;
     if (!loc) { $('astroBody').hidden = true; return; }
     const key = loc.lat + ',' + loc.lon;
-    if (!refresh && model && S.key === key) { $('astroBody').hidden = false; render(); return; }
+    if (!refresh && model && S.key === key) { S.bortle = bortleOf(loc); $('astroBody').hidden = false; render(); return; }
     const token = ++S.token;
     $('astroErr').hidden = true; $('astroLoading').hidden = false; $('astroBody').hidden = true;
     try {
       const data = await api(`api/astro.php?lat=${loc.lat}&lon=${loc.lon}${refresh ? '&refresh=1' : ''}`);
       if (token !== S.token) return;
-      model = build(data); S.key = key; S.models = data.models || []; S.aerosols = !!data.aerosols;
+      S.data = data; S.key = key; S.models = data.models || []; S.aerosols = !!data.aerosols;
+      S.bortle = bortleOf(loc);
+      model = build(data, S.bortle.v);
       nightsList = nights(model);
       $('astroLoading').hidden = true; $('astroBody').hidden = false;
       $('astroMeta').textContent = `${locName(loc)} · ${(+data.lat).toFixed(3)}, ${(+data.lon).toFixed(3)}${data.elevation != null ? ' · ' + Math.round(data.elevation) + ' m' : ''}`;
@@ -235,11 +275,12 @@ const Astro = (() => {
     }
   }
 
-  return { load, render, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
+  return { load, render, setBortle, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
 })();
 
 $('astroRefresh').addEventListener('click', () => Astro.load(true));
 $('astroAll').addEventListener('change', () => Astro.render());
+$('astroBortle').addEventListener('change', (e) => Astro.setBortle(+e.target.value));
 $('astroLoc').addEventListener('change', () => {
   $('locSelect').value = $('astroLoc').value;
   $('locSelect').dispatchEvent(new Event('change'));

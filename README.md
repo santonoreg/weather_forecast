@@ -145,7 +145,7 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 - **From the weather models** (`api/astro.php`, mean of ECMWF IFS, NOAA GFS and DWD ICON via Open-Meteo): low/mid/high cloud, humidity, dew point, wind at the ground and at 850/700/500/300/250 hPa (jet stream), CAPE, visibility; plus aerosols and dust from CAMS (Open-Meteo air-quality API).
 - **Estimated** (no free source measures them): *seeing* (from the jet stream, upper-air wind shear, ground wind and convection) and *transparency* (from aerosols/dust, humidity, thin high cloud, visibility, rain). They rank hours against each other well, but the absolute values are approximate, and the tab says so.
 - Two 0–100 scores per hour — *deep sky* (cloud, darkness, Moon, transparency, seeing) and *planets & Moon* — and one card per night with sunset/sunrise, astronomical darkness, Moon, and the best three hours.
-- Not included: light pollution (Bortle) of the site.
+- **Light pollution (Bortle class 1–9)** per location, chosen in the tab's *Dark sky* drop-down. It scales the deep-sky score (class 8 keeps about a third of it) and shows the naked-eye limiting magnitude. The Greek towns are seeded with a rough class from the size of the town — the sky at its centre, so your observing site is probably darker. A visitor's choice is remembered in their browser; an admin's choice is stored in the database with the location and becomes the default for everybody. A point picked on the map starts at class 5 until set.
 
 ### Models drop-down
 
@@ -388,7 +388,7 @@ api/config.php      your own local config (git-ignored; absent = optional featur
 data/               SQLite database (created automatically, git-ignored)
 ```
 
-Database tables (created automatically): `locations(id, name, lat, lon, created_at)`, `cache(k, body, fetched_at)`, `history_daily(loc_id, d, tmax, tmin, tmean, prcp, wmax, gust, snow)` and `history_meta(loc_id, grid_lat, grid_lon, elevation, timezone, first_date, last_date, fetched_at)`. The history of one location takes roughly 2–3 MB.
+Database tables (created automatically): `locations(id, name, name_el, lat, lon, kind, bortle, created_at)`, `cache(k, body, fetched_at)`, `history_daily(loc_id, d, tmax, tmin, tmean, prcp, wmax, gust, snow)` and `history_meta(loc_id, grid_lat, grid_lon, elevation, timezone, first_date, last_date, fetched_at)`. The history of one location takes roughly 2–3 MB.
 
 ## HTTP API
 
@@ -397,6 +397,7 @@ Database tables (created automatically): `locations(id, name, lat, lon, created_
 | `GET api/locations.php` | `{cities, saved}`; `saved` only for a logged-in admin |
 | `GET/POST api/auth.php` | status; `{action:'login'\|'logout', user, password}` |
 | `POST api/locations.php` | admin only; body `{"name","lat","lon"}` – save a location |
+| `POST api/locations.php` | admin only; body `{"action":"bortle","id","bortle":1-9\|null}` – set a location's dark-sky class |
 | `DELETE api/locations.php?id=ID` | admin only; delete a saved location |
 | `GET api/geocode.php?q=TEXT&lang=en\|el` | search places |
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |

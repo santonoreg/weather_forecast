@@ -57,6 +57,8 @@ function db(): PDO
     $cols = array_column($pdo->query('PRAGMA table_info(locations)')->fetchAll(), 'name');
     if (!in_array('kind', $cols, true)) $pdo->exec("ALTER TABLE locations ADD COLUMN kind TEXT NOT NULL DEFAULT 'saved'");
     if (!in_array('name_el', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN name_el TEXT');
+    // Bortle dark-sky class 1..9 of the place (NULL = not known), used by the Astronomy tab
+    if (!in_array('bortle', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN bortle INTEGER');
     $pdo->exec('CREATE TABLE IF NOT EXISTS cache (
         k TEXT PRIMARY KEY,
         body TEXT NOT NULL,
@@ -93,13 +95,13 @@ function sync_cities(PDO $pdo): void
         $cur->execute(['cities:seed']);
         if ($cur->fetchColumn() !== $ver) {
             $find = $pdo->prepare("SELECT id FROM locations WHERE kind = 'city' AND name = ?");
-            $upd = $pdo->prepare('UPDATE locations SET name_el = ?, lat = ?, lon = ? WHERE id = ?');
-            $ins = $pdo->prepare("INSERT INTO locations (name, name_el, lat, lon, kind) VALUES (?, ?, ?, ?, 'city')");
+            $upd = $pdo->prepare('UPDATE locations SET name_el = ?, lat = ?, lon = ?, bortle = COALESCE(bortle, ?) WHERE id = ?');   // an admin's correction wins over the seed
+            $ins = $pdo->prepare("INSERT INTO locations (name, name_el, lat, lon, bortle, kind) VALUES (?, ?, ?, ?, ?, 'city')");
             $cities = require $file;
-            foreach ($cities as [$en, $el, $lat, $lon]) {
+            foreach ($cities as [$en, $el, $lat, $lon, $bortle]) {
                 $find->execute([$en]);
-                if (($id = $find->fetchColumn()) !== false) $upd->execute([$el, $lat, $lon, $id]);
-                else $ins->execute([$en, $el, $lat, $lon]);
+                if (($id = $find->fetchColumn()) !== false) $upd->execute([$el, $lat, $lon, $bortle, $id]);
+                else $ins->execute([$en, $el, $lat, $lon, $bortle]);
             }
             $pdo->prepare('INSERT OR REPLACE INTO cache (k, body, fetched_at) VALUES (?, ?, ?)')->execute(['cities:seed', $ver, time()]);
         }

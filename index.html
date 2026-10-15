@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261068">
+<link rel="stylesheet" href="css/style.css?v=20261070">
 </head>
 <body>
 <header class="topbar">
@@ -125,9 +125,13 @@
       <label><span data-i18n="tb.location">Location</span>
         <select id="astroLoc"></select>
       </label>
+      <label><span data-i18n="as.bortle">Dark sky (Bortle)</span>
+        <select id="astroBortle"></select>
+      </label>
       <label class="chk"><input type="checkbox" id="astroAll"> <span data-i18n="as.all">Show daytime hours</span></label>
       <button id="astroRefresh" class="btn ghost" data-i18n="tb.refresh" data-i18n-title="tb.refresh.title" title="Fetch fresh data">↻ Refresh</button>
       <span id="astroMeta" class="meta"></span>
+      <span id="astroBortleInfo" class="meta"></span>
     </div>
     <div id="astroEmpty" class="notice" data-i18n="as.empty" hidden></div>
     <div id="astroErr" class="notice error" hidden></div>
@@ -208,9 +212,9 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261068"></script>
-<script src="js/icons.js?v=20261068"></script>
-<script src="js/app.js?v=20261068"></script>
-<script src="js/astro.js?v=20261068"></script>
+<script src="js/i18n.js?v=20261070"></script>
+<script src="js/icons.js?v=20261070"></script>
+<script src="js/app.js?v=20261070"></script>
+<script src="js/astro.js?v=20261070"></script>
 </body>
 </html>
