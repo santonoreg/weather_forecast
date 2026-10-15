@@ -161,6 +161,38 @@ const Astro = (() => {
     return out;
   }
 
+  /* ---- per-hour mini charts: each cell draws its own hour (7 samples, 10 min apart), so the cells join up into one
+     continuous trajectory / band even when the daytime hours in between are hidden ---- */
+  const CH_H = 44, CH_W = 46, ALT_MIN = -40, ALT_MAX = 90;
+  const altY = (a) => (CH_H * (ALT_MAX - clamp(a, ALT_MIN, ALT_MAX))) / (ALT_MAX - ALT_MIN);
+  function altChart(m, e, key, stroke, fill) {
+    const pts = [];
+    for (let j = 0; j <= 6; j++) pts.push(sky(e - 1800e3 + j * 600e3, m.lat, m.lon)[key]);
+    const y0 = altY(0), x = (j) => ((j / 6) * CH_W).toFixed(1);
+    const line = pts.map((a, j) => `${x(j)},${altY(a).toFixed(1)}`).join(' ');
+    const area = `0,${y0.toFixed(1)} ` + pts.map((a, j) => `${x(j)},${Math.min(altY(a), y0).toFixed(1)}`).join(' ') + ` ${CH_W},${y0.toFixed(1)}`;
+    const cur = pts[3];
+    return `<svg viewBox="0 0 ${CH_W} ${CH_H}" preserveAspectRatio="none" class="alt" aria-hidden="true">
+      <polygon points="${area}" fill="${fill}"/><line x1="0" x2="${CH_W}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" class="hz"/>
+      <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>
+      <i class="dot${cur > 0 ? ' up' : ''}" style="top:${((altY(cur) / CH_H) * 100).toFixed(1)}%;--c:${stroke}"></i>`;
+  }
+  /* twilight stage of the Sun at an instant: day, civil / nautical / astronomical twilight (evening = dusk, morning = dawn), night */
+  const PHASE_COL = {
+    day: 'rgba(250,204,21,.38)', 'civ.d': 'rgba(251,146,60,.45)', 'civ.a': 'rgba(244,114,182,.40)', 'naut.d': 'rgba(129,140,248,.45)', 'naut.a': 'rgba(129,140,248,.45)',
+    'astro.d': 'rgba(67,56,202,.50)', 'astro.a': 'rgba(67,56,202,.50)', night: 'rgba(15,23,60,.82)', golden: 'rgba(245,158,11,.55)', blue: 'rgba(59,130,246,.50)',
+  };
+  function phaseAt(m, e) {
+    const a = sky(e, m.lat, m.lon).sunAlt;
+    if (a > 0) return 'day';
+    if (a <= -18) return 'night';
+    const falling = sky(e + 300e3, m.lat, m.lon).sunAlt < sky(e - 300e3, m.lat, m.lon).sunAlt;
+    return (a > -6 ? 'civ' : a > -12 ? 'naut' : 'astro') + (falling ? '.d' : '.a');
+  }
+  const gbAt = (m, e) => { const a = sky(e, m.lat, m.lon).sunAlt; return a <= 6 && a > -4 ? 'golden' : a <= -4 && a >= -8 ? 'blue' : null; };
+  const bandBg = (keys) => 'linear-gradient(90deg,' + keys.map((k, i) => `${k ? PHASE_COL[k] : 'transparent'} ${(i * 100) / keys.length}% ${((i + 1) * 100) / keys.length}%`).join(',') + ')';
+  const subTimes = (e) => [0, 1, 2, 3, 4, 5].map((j) => e - 1500e3 + j * 600e3);   // 6 stripes of 10 min, centred on the hour
+
   /* ---- rendering ---- */
   let model = null, nightsList = [];
   const cell = (q, html, extra = '') => `<td class="aq${q == null ? ' nq' : ' q' + q} ${extra}">${html}</td>`;
@@ -189,20 +221,33 @@ const Astro = (() => {
   function renderTable() {
     const { rows, h, off } = model;
     const all = $('astroAll').checked, nowE = Date.now() - 3600e3;
-    const vis = rows.filter((r) => r.e >= nowE && (all || r.sunAlt < -6));
+    const vis = rows.filter((r) => r.e >= nowE && (all || r.sunAlt < 0));
     if (!vis.length) { $('astroTable').innerHTML = `<tbody><tr><td class="pad">${t('as.nohours')}</td></tr></tbody>`; return; }
     const days = [];
     vis.forEach((r) => { const d = localDay(r.e, off); const last = days[days.length - 1]; if (last && last.d === d) last.n++; else days.push({ d, n: 1 }); });
     const rowH = (label, hint) => `<th class="rowh">${label}${hint ? `<small>${hint}</small>` : ''}</th>`;
     const mk = (label, hint, fn, cls = '') => `<tr class="${cls}">${rowH(label, hint)}${vis.map((r) => fn(r)).join('')}</tr>`;
-    const darkQ = (a) => (a < -18 ? 4 : a < -12 ? 3 : a < -6 ? 2 : a < -0.833 ? 1 : 0);
     let html = `<thead><tr><th class="rowh" rowspan="2">${t('as.col.metric')}</th>${days.map((d) => `<th class="dayh" colspan="${d.n}">${esc(dayLabel(d.d))}</th>`).join('')}</tr>
       <tr>${vis.map((r) => `<th class="hr${r.sunAlt >= -0.833 ? ' dayt' : ''}">${localHM(r.e, off).slice(0, 2)}</th>`).join('')}</tr></thead><tbody>`;
     html += mk(t('as.row.deep'), t('as.row.deep.h'), (r) => cell(qScore(r.deep), `<b>${sd(r.deep)}</b>`), 'ascore');
     html += mk(t('as.row.planets'), t('as.row.planets.h'), (r) => cell(qScore(r.planets), `<b>${sd(r.planets)}</b>`), 'ascore');
-    html += mk(t('as.row.sun'), t('as.row.sun.h'), (r) => cell(darkQ(r.sunAlt), `${sd(r.sunAlt)}°`));
-    html += mk(t('as.row.moonalt'), '', (r) => `<td class="${r.moonAlt > 0 ? 'moonup' : 'dim'}">${r.moonAlt > 0 ? sd(r.moonAlt) + '°' : '–'}</td>`);
-    html += mk(t('as.row.moonlit'), '', (r) => `<td class="${r.moonAlt > 0 ? 'moonup' : 'dim'}">${Math.round(r.lit * 100)}%</td>`);
+    const ab = { civ: t('as.ab.civ'), naut: t('as.ab.naut'), astro: t('as.ab.astro') };
+    const phaseName = (k) => t('as.ph2.' + k);
+    html += mk(t('as.row.sun'), t('as.row.sun.h'), (r) => `<td class="achart" title="${esc(sd(r.sunAlt) + '°')}">${altChart(model, r.e, 'sunAlt', '#f59e0b', 'rgba(245,158,11,.28)')}</td>`, 'chart');
+    html += mk(t('as.row.phase'), t('as.row.phase.h'), (r) => {
+      const keys = subTimes(r.e).map((e) => phaseAt(model, e)), c = keys[2];
+      const base = c.split('.')[0], txt = c === 'day' ? '' : c === 'night' ? '●' : ab[base] + (c.endsWith('.d') ? '↓' : '↑');
+      return `<td class="aband${c === 'night' || base === 'astro' ? ' dk' : ''}" style="background:${bandBg(keys)}" title="${esc(phaseName(c))}">${txt}</td>`;
+    }, 'band');
+    html += mk(t('as.row.gb'), t('as.row.gb.h'), (r) => {
+      const keys = subTimes(r.e).map((e) => gbAt(model, e)), c = keys[2] || keys.find(Boolean);
+      return `<td class="aband" style="background:${bandBg(keys)}" title="${c ? esc(phaseName(c)) : ''}"></td>`;
+    }, 'band');
+    html += mk(t('as.row.moonalt'), t('as.row.moonalt.h'), (r) => `<td class="achart" title="${esc(sd(r.moonAlt) + '°')}">${altChart(model, r.e, 'moonAlt', '#7c8fc9', 'rgba(124,143,201,.30)')}</td>`, 'chart');
+    html += mk(t('as.row.moonlit'), t('as.row.moonlit.h'), (r) => {
+      const p = Math.round(r.lit * 100);
+      return `<td class="alit${r.moonAlt > 0 ? '' : ' below'}" style="background:linear-gradient(to top,rgba(234,179,8,.5) ${p}%,transparent ${p}%)">${p}%</td>`;
+    });
     html += mk(t('as.row.cloud'), t('as.row.cloud.h'), (r) => cell(qCloud(r.eff * 100), `<b>${sd(r.eff * 100)}%</b>${h.cloud_cover_min[r.i] != null && h.cloud_cover_max[r.i] - h.cloud_cover_min[r.i] >= 30 ? `<small>${h.cloud_cover_min[r.i]}–${h.cloud_cover_max[r.i]}</small>` : ''}`));
     [['low', 'cloud_cover_low'], ['mid', 'cloud_cover_mid'], ['high', 'cloud_cover_high']].forEach(([k, v]) => {
       html += mk(t('as.row.' + k), '', (r) => cell(qCloud(h[v][r.i]), `${sd(h[v][r.i])}%`), 'sub');
@@ -215,6 +260,8 @@ const Astro = (() => {
     html += mk(t('as.row.jet'), t('as.row.jet.h'), (r) => cell(qJet(r.jet), sd(r.jet)));
     html += '</tbody>';
     $('astroTable').innerHTML = html;
+    $('astroPhaseKey').innerHTML = ['day', 'golden', 'blue', 'civ.d', 'civ.a', 'naut.d', 'naut.a', 'astro.d', 'astro.a', 'night']
+      .map((k) => `<span><i style="background:${PHASE_COL[k]}"></i>${esc(phaseName(k))}</span>`).join('');
     // scroll the first visible hour into place (table starts at "now")
   }
 

@@ -519,3 +519,19 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid.astro td.dim { color: var(--muted); opacity: .6; }
 .astro-tab .legend { margin-top: 12px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 @media (max-width: 700px) { .nights { grid-template-columns: 1fr; } }
+
+/* Astronomy: altitude charts, twilight bands, moon-lit shading */
+.grid.astro tr.chart td, .grid.astro tr.band td { padding: 0; }
+.grid.astro td.achart { position: relative; height: 46px; line-height: 0; border-left: 0; }
+.grid.astro td.achart svg.alt { display: block; width: 100%; height: 44px; margin: 1px 0; overflow: visible; }
+.grid.astro td.achart .hz { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; opacity: .55; }
+.grid.astro td.achart .dot { position: absolute; left: 50%; width: 7px; height: 7px; margin: -3px 0 0 -3px; border-radius: 50%; border: 1.5px solid var(--c); background: var(--panel); }
+.grid.astro td.achart .dot.up { background: var(--c); }
+.grid.astro td.aband { height: 26px; font-size: 11px; font-weight: 700; color: var(--text); }
+.grid.astro td.aband.dk { color: #e6ecff; }
+.grid.astro td.alit { font-weight: 600; background-color: transparent; }
+.grid.astro td.alit.below { color: var(--muted); font-weight: 400; }
+.grid.astro tr.chart th.rowh, .grid.astro tr.band th.rowh { padding-top: 4px; padding-bottom: 4px; }
+.phasekey { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.phasekey span { display: inline-flex; align-items: center; gap: 6px; }
+.phasekey i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); }
