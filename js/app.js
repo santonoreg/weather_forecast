@@ -399,9 +399,10 @@ function rainOutlook(c0) {
   if (horizon <= 1) return null;
   const wetAt = (i) => { const s = wshare(wpairs('precip', (p) => agg(p, 'precip', i, i + 1)), (x) => x >= RAIN_THR); return s != null && s >= 0.5; };
   const nowWet = wetAt(start);
+  const when = (i) => (data.time[i].slice(0, 10) === data.time[start].slice(0, 10) ? '' : t('hero.rain.tomorrow') + ' ') + data.time[i].slice(11, 16);   // "tomorrow 21:00", not a bare 21:00
   for (let k = 1; k < horizon; k++) {
     const i = start + k;
-    if (wetAt(i) !== nowWet) return nowWet ? t('hero.rain.break', { time: data.time[i].slice(11, 16) }) : t('hero.rain.start', { time: data.time[i].slice(11, 16) });
+    if (wetAt(i) !== nowWet) return nowWet ? t('hero.rain.break', { time: when(i) }) : t('hero.rain.start', { time: when(i) });
   }
   return nowWet ? t('hero.rain.continues') : t('hero.rain.none', { h: horizon });
 }
@@ -429,7 +430,7 @@ function renderHero() {
     const dots = Math.max(1, Math.round(top[1] * 5));
     const tv = nn(activeProviders().map((p) => agg(p, 'temperature_2m', c.a, c.b)));
     $('heroVerdict').className = `verdict ${level}`;
-    $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
+    $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { time: state.data.time[c.a].slice(11, 16), k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
     $('heroVerdict').hidden = false;
   } else { $('heroVerdict').hidden = true; }
   const obs = state.observed;
