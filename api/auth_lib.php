@@ -79,7 +79,7 @@ function auth_fail_count(PDO $pdo, string $key): int
 {
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
-    $row = $st->fetch();
+    $row = fetch_one($st);
     return ($row && time() - (int)$row['fetched_at'] < AUTH_FAIL_WINDOW) ? (int)$row['body'] : 0;
 }
 
@@ -87,7 +87,7 @@ function auth_fail_bump(PDO $pdo, string $key): void
 {
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
-    $row = $st->fetch();
+    $row = fetch_one($st);
     $fresh = $row && time() - (int)$row['fetched_at'] < AUTH_FAIL_WINDOW;
     // fetched_at marks the start of the window: only reset it when the previous window has expired
     $pdo->prepare('INSERT OR REPLACE INTO cache (k, body, fetched_at) VALUES (?, ?, ?)')

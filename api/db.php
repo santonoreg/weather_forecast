@@ -20,6 +20,23 @@ register_shutdown_function(function () {
     }
 });
 
+/* Read one row / one value and CLOSE the statement. A SELECT whose cursor is left open keeps a read snapshot
+   alive; with WAL, a later write on the same connection (e.g. the cache INSERT after a slow API call) then fails
+   at once with "database is locked" if any other request has committed in the meantime — busy_timeout can't help. */
+function fetch_one(PDOStatement $st): ?array
+{
+    $rows = $st->fetchAll();
+    $st->closeCursor();
+    return $rows[0] ?? null;
+}
+
+function fetch_col(PDOStatement $st)
+{
+    $rows = $st->fetchAll(PDO::FETCH_COLUMN);
+    $st->closeCursor();
+    return $rows ? $rows[0] : false;
+}
+
 function db(): PDO
 {
     static $pdo = null;
@@ -91,18 +108,18 @@ function sync_cities(PDO $pdo): void
     $ver = (string)md5_file($file);
     $cur = $pdo->prepare('SELECT body FROM cache WHERE k = ?');
     $cur->execute(['cities:seed']);
-    if ($cur->fetchColumn() === $ver) return;
+    if (fetch_col($cur) === $ver) return;
     $pdo->exec('BEGIN IMMEDIATE');   // two first requests at once must not both insert
     try {
         $cur->execute(['cities:seed']);
-        if ($cur->fetchColumn() !== $ver) {
+        if (fetch_col($cur) !== $ver) {
             $find = $pdo->prepare("SELECT id FROM locations WHERE kind = 'city' AND name = ?");
             $upd = $pdo->prepare('UPDATE locations SET name_el = ?, lat = ?, lon = ?, bortle = COALESCE(bortle, ?) WHERE id = ?');   // an admin's correction wins over the seed
             $ins = $pdo->prepare("INSERT INTO locations (name, name_el, lat, lon, bortle, kind) VALUES (?, ?, ?, ?, ?, 'city')");
             $cities = require $file;
             foreach ($cities as [$en, $el, $lat, $lon, $bortle]) {
                 $find->execute([$en]);
-                if (($id = $find->fetchColumn()) !== false) $upd->execute([$el, $lat, $lon, $bortle, $id]);
+                if (($id = fetch_col($find)) !== false) $upd->execute([$el, $lat, $lon, $bortle, $id]);
                 else $ins->execute([$en, $el, $lat, $lon, $bortle]);
             }
             $pdo->prepare('INSERT OR REPLACE INTO cache (k, body, fetched_at) VALUES (?, ?, ?)')->execute(['cities:seed', $ver, time()]);

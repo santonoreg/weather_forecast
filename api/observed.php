@@ -48,7 +48,7 @@ $pdo = db();
 $key = "obs:$lat:$lon";
 $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
 $st->execute([$key]);
-if (($row = $st->fetch()) && time() - (int)$row['fetched_at'] < OBS_TTL) {
+if (($row = fetch_one($st)) && time() - (int)$row['fetched_at'] < OBS_TTL) {
     header('Content-Type: application/json; charset=utf-8');
     header('X-Cache: HIT');
     echo $row['body'];

@@ -25,7 +25,7 @@ function cache_read(PDO $pdo, string $key): ?array
 {
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
-    return $st->fetch() ?: null;
+    return fetch_one($st) ?: null;
 }
 function cache_write(PDO $pdo, string $key, string $body): void
 {

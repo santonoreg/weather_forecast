@@ -17,12 +17,12 @@ $id = (int)($_GET['id'] ?? 0);
 $pdo = db();
 $st = $pdo->prepare('SELECT id, name, lat, lon FROM locations WHERE id = ?');
 $st->execute([$id]);
-$loc = $st->fetch();
+$loc = fetch_one($st);
 if (!$loc) json_out(['error' => 'Location not found'], 404);
 
 $mt = $pdo->prepare('SELECT * FROM history_meta WHERE loc_id = ?');
 $mt->execute([$id]);
-$meta = $mt->fetch() ?: null;
+$meta = fetch_one($mt) ?: null;
 
 $end = gmdate('Y-m-d', time() - HIST_LAG_DAYS * 86400);
 $refresh = !empty($_GET['refresh']) && auth_is_admin();   // a forced re-download is admin-only, so visitors can't hammer Open-Meteo
@@ -63,7 +63,7 @@ if ($needFetch) {
                        $meta['first_date'] ?? $first, $last ?? ($meta['last_date'] ?? null), time()]);
         $downloaded = !$prevLast;   // true only for the very first download
         $mt->execute([$id]);
-        $meta = $mt->fetch();
+        $meta = fetch_one($mt);
     }
 }
 
@@ -78,7 +78,7 @@ function one(PDO $pdo, string $sql, array $args): ?array
 {
     $s = $pdo->prepare($sql);
     $s->execute($args);
-    return $s->fetch() ?: null;
+    return fetch_one($s) ?: null;
 }
 function rows(PDO $pdo, string $sql, array $args): array
 {

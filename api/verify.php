@@ -52,7 +52,7 @@ $greece = in_greece($lat, $lon);
 $key = $greece ? 'vf3:greece' : "vf3:$lat:$lon";
 $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
 $st->execute([$key]);
-if (($row = $st->fetch()) && time() - (int)$row['fetched_at'] < VERIFY_TTL) {
+if (($row = fetch_one($st)) && time() - (int)$row['fetched_at'] < VERIFY_TTL) {
     header('Content-Type: application/json; charset=utf-8');
     echo $row['body'];
     exit;
@@ -167,7 +167,7 @@ function greece_stations(PDO $pdo): array
     $key = 'vf3:greece:stations';
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
-    if (($row = $st->fetch()) && time() - (int)$row['fetched_at'] < GREECE_STATIONS_TTL) {
+    if (($row = fetch_one($st)) && time() - (int)$row['fetched_at'] < GREECE_STATIONS_TTL) {
         return json_decode($row['body'], true) ?: [];
     }
     $body = http_get('https://aviationweather.gov/api/data/metar?format=json&hours=6&bbox=34.0,19.0,41.8,29.8', 30);

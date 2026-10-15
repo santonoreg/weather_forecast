@@ -26,7 +26,7 @@ function sample_frame(PDO $pdo, string $host, string $path, int $x, int $y, int 
     $key = "rv:$path:$x:$y";
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
-    if (($row = $st->fetch()) && time() - (int)$row['fetched_at'] < RADAR_TILE_TTL) {
+    if (($row = fetch_one($st)) && time() - (int)$row['fetched_at'] < RADAR_TILE_TTL) {
         return $row['body'] === '' ? null : $row['body'] === '1';
     }
     $url = "$host$path/256/" . RADAR_ZOOM . "/$x/$y/2/1_1.png";
@@ -53,7 +53,7 @@ $pdo = db();
 $metaKey = 'rv:meta';
 $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
 $st->execute([$metaKey]);
-if (($row = $st->fetch()) && time() - (int)$row['fetched_at'] < RADAR_META_TTL) {
+if (($row = fetch_one($st)) && time() - (int)$row['fetched_at'] < RADAR_META_TTL) {
     $meta = json_decode($row['body'], true);
 } else {
     $body = http_get('https://api.rainviewer.com/public/weather-maps.json', 15);
