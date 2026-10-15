@@ -8,7 +8,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
     // Built-in Greek cities for everybody; the saved locations only for a logged-in admin
-    $list = fn(string $kind) => $pdo->query("SELECT id, name, name_el, lat, lon, bortle FROM locations WHERE kind = '$kind' ORDER BY name COLLATE NOCASE")->fetchAll();
+    $list = fn(string $kind) => $pdo->query("SELECT id, name, name_el, lat, lon, bortle, bortle_set FROM locations WHERE kind = '$kind' ORDER BY name COLLATE NOCASE")->fetchAll();
     json_out(['cities' => $list('city'), 'saved' => auth_is_admin() ? $list('saved') : []]);
 }
 
@@ -19,7 +19,7 @@ if ($method === 'POST') {
     if (($in['action'] ?? '') === 'bortle') {   // set (or clear, with null) the dark-sky class of any listed location
         $b = $in['bortle'] ?? null;
         if ($b !== null && (!is_numeric($b) || (int)$b < 1 || (int)$b > 9)) json_out(['error' => 'Bortle class must be 1-9'], 400);
-        $pdo->prepare('UPDATE locations SET bortle = ? WHERE id = ?')->execute([$b === null ? null : (int)$b, (int)($in['id'] ?? 0)]);
+        $pdo->prepare('UPDATE locations SET bortle = ?, bortle_set = ? WHERE id = ?')->execute([$b === null ? null : (int)$b, $b === null ? 0 : 1, (int)($in['id'] ?? 0)]);
         json_out(['ok' => true]);
     }
     $name = trim((string)($in['name'] ?? ''));

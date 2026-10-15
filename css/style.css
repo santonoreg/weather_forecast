@@ -562,3 +562,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .lp-op { background: var(--panel); padding: 6px 10px; border-radius: 8px; box-shadow: 0 1px 5px rgba(0, 0, 0, .35); }
 .lp-op label { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; color: var(--text); white-space: nowrap; }
 .lp-op input { width: 110px; margin: 0; }
+.lpkey i { flex: none; max-width: none; width: 22px; height: 12px; border-radius: 3px; background-image: none; border: 1px solid var(--line); }
+.lpkey { gap: 3px; flex-wrap: wrap; }
+.lpkey span:first-child { margin-right: 6px; } .lpkey span:last-child { margin-left: 6px; }

@@ -99,9 +99,45 @@ const Astro = (() => {
   const DEFAULT_BORTLE = 5;                       // used while a place has no value yet
   const bkey = (loc) => 'wefo.bortle.' + loc.lat + ',' + loc.lon;
   /* the visitor's own choice (this browser) beats the stored one (database: seeded estimate for the Greek towns, admin's correction) */
+  /* ---- light-pollution atlas (David Lorenz, VIIRS 2025): the colour of the tile pixel under a point gives the
+     modelled zenith sky brightness there, which we turn into an approximate Bortle class ---- */
+  const ATLAS = 'https://djlorenz.github.io/astronomy/image_tiles/tiles2025/tile_{z}_{x}_{y}.png';   // 1024-px XYZ tiles, native zoom 0..6
+  const ZONES = [   // [zone, rgb, sky brightness in mag/arcsec² (middle of the zone), Bortle]
+    ['0', [0, 0, 0], 22.0, 1], ['1a', [34, 34, 34], 21.96, 2], ['1b', [66, 66, 66], 21.91, 2], ['2a', [20, 47, 114], 21.85, 3], ['2b', [33, 84, 216], 21.75, 3],
+    ['3a', [15, 87, 20], 21.6, 4], ['3b', [31, 161, 42], 21.38, 4], ['4a', [110, 100, 30], 21.08, 4], ['4b', [184, 166, 37], 20.7, 5], ['5a', [191, 100, 30], 20.25, 5],
+    ['5b', [253, 150, 80], 19.76, 6], ['6a', [251, 90, 73], 19.22, 6], ['6b', [251, 153, 138], 18.67, 7], ['7a', [160, 160, 160], 18.09, 8], ['7b', [242, 242, 242], 17.7, 9],
+  ];
+  const atlasTiles = new Map();
+  function atlasTile(z, x, y) {
+    const k = z + '/' + x + '/' + y;
+    if (!atlasTiles.has(k)) {
+      atlasTiles.set(k, new Promise((res, rej) => {
+        const im = new Image(); im.crossOrigin = 'anonymous';
+        im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0); res(g); };
+        im.onerror = () => { atlasTiles.delete(k); rej(new Error('atlas tile')); };
+        im.src = ATLAS.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+      }));
+    }
+    return atlasTiles.get(k);
+  }
+  async function atlasAt(lat, lon) {
+    const z = 6, n = 2 ** z, s = Math.sin(lat * RAD);
+    const fx = ((lon + 180) / 360) * n, fy = (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n;
+    const tx = Math.floor(fx), ty = Math.floor(fy);
+    const g = await atlasTile(z, ((tx % n) + n) % n, clamp(ty, 0, n - 1));
+    const px = clamp(Math.floor((fx - tx) * 1024), 0, 1023), py = clamp(Math.floor((fy - ty) * 1024), 0, 1023);
+    const d = g.getImageData(px, py, 1, 1).data;
+    let best = null, bd = 1e9;
+    for (const zn of ZONES) { const e = (zn[1][0] - d[0]) ** 2 + (zn[1][1] - d[1]) ** 2 + (zn[1][2] - d[2]) ** 2; if (e < bd) { bd = e; best = zn; } }
+    return best ? { zone: best[0], sqm: best[2], bortle: best[3] } : null;
+  }
+
   function bortleOf(loc) {
     try { const v = +localStorage.getItem(bkey(loc)); if (v >= 1 && v <= 9) return { v, src: 'own' }; } catch (e) { /* ignore */ }
-    if (loc.bortle >= 1 && loc.bortle <= 9) return { v: +loc.bortle, src: state.cities.includes(loc) ? 'est' : 'saved' };
+    const db = loc.bortle >= 1 && loc.bortle <= 9;
+    if (db && loc.bortle_set) return { v: +loc.bortle, src: 'saved' };                                 // an admin's own value
+    if (S.atlas && S.atlas.key === loc.lat + ',' + loc.lon) return { v: S.atlas.bortle, src: 'atlas' };   // computed from the atlas
+    if (db) return { v: +loc.bortle, src: state.cities.includes(loc) ? 'est' : 'saved' };               // seeded guess (atlas not available)
     return { v: null, src: 'none' };
   }
 
@@ -298,7 +334,7 @@ const Astro = (() => {
     $('astroBortle').value = String(b.v || 0);
     const eff = b.v || DEFAULT_BORTLE;
     $('astroBortleInfo').textContent = t('as.bl.info', { mag: BORTLE_NELM[eff], sqm: BORTLE_SQM[eff], pct: Math.round(BORTLE_FACTOR[eff] * 100) })
-      + ' · ' + t(b.src === 'none' ? 'as.bl.src.none' : 'as.bl.src.' + b.src);
+      + ' · ' + t(b.src === 'none' ? 'as.bl.src.none' : 'as.bl.src.' + b.src, S.atlas ? { sqm: S.atlas.sqm.toFixed(1), zone: S.atlas.zone } : {});
   }
   function setBortle(v) {
     const loc = state.current; if (!loc || !S.data) return;
@@ -307,7 +343,7 @@ const Astro = (() => {
     if (state.admin && loc.id != null) {
       // the admin's value is stored with the location and becomes the default for everybody
       api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'bortle', id: loc.id, bortle: v || null }) })
-        .then(() => { loc.bortle = v || null; try { localStorage.removeItem(bkey(loc)); } catch (e) { /* ignore */ } S.bortle = bortleOf(loc); done(); })
+        .then(() => { loc.bortle = v || null; loc.bortle_set = v ? 1 : 0; try { localStorage.removeItem(bkey(loc)); } catch (e) { /* ignore */ } S.bortle = bortleOf(loc); done(); })
         .catch((e) => { $('astroErr').textContent = e.message; $('astroErr').hidden = false; });
       return;
     }
@@ -318,7 +354,7 @@ const Astro = (() => {
   /* ---- light-pollution map: NASA VIIRS "Black Marble" night lights as an OVERLAY (with an opacity slider) on a
      base map, so towns, roads and coastlines stay readable under the glow ---- */
   let lpMap = null, lpMarker = null, lpControl = null, lpLayers = null, lpOpCtl = null;
-  let lpOpacity = 0.85;
+  let lpOpacity = 0.7;
   try { const v = +localStorage.getItem('wefo.lpop'); if (v >= 0.1 && v <= 1) lpOpacity = v; } catch (e) { /* ignore */ }
   function renderMap() {
     const loc = state.current;
@@ -329,10 +365,11 @@ const Astro = (() => {
       lpLayers = {
         dark: L.tileLayer(osmUrl, { maxZoom: 18, className: 'lp-dark', attribution: '© OpenStreetMap' }),   // OSM, darkened with a CSS filter
         osm: L.tileLayer(osmUrl, { maxZoom: 18, attribution: '© OpenStreetMap' }),
+        atlas: L.tileLayer(ATLAS, { minZoom: 2, maxNativeZoom: 8, maxZoom: 18, tileSize: 1024, zoomOffset: -2, opacity: lpOpacity, attribution: 'Sky brightness atlas © D. Lorenz (VIIRS 2025)' }),
         night: L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
           { maxNativeZoom: 8, maxZoom: 18, opacity: lpOpacity, className: 'lp-night', attribution: 'Night lights © NASA GIBS / VIIRS Black Marble' }),
       };
-      lpLayers.dark.addTo(lpMap); lpLayers.night.addTo(lpMap);
+      lpLayers.dark.addTo(lpMap); lpLayers.atlas.addTo(lpMap);
       // glow-on-dark blends the lights additively ("screen"); on the light base map they simply sit on top
       lpMap.on('baselayerchange', (e) => lpMap.getContainer().classList.toggle('lp-lightbase', e.layer === lpLayers.osm));
       lpMap.on('click', async (e) => {                       // click = look at that spot instead (same as the location map picker)
@@ -344,7 +381,7 @@ const Astro = (() => {
           const d = L.DomUtil.create('div', 'leaflet-bar lp-op');
           d.innerHTML = '<label><span id="astroLpOpLabel"></span><input type="range" min="10" max="100" step="5"></label>';
           const r = d.querySelector('input'); r.value = Math.round(lpOpacity * 100);
-          r.addEventListener('input', () => { lpOpacity = r.value / 100; lpLayers.night.setOpacity(lpOpacity); try { localStorage.setItem('wefo.lpop', lpOpacity); } catch (e) { /* ignore */ } });
+          r.addEventListener('input', () => { lpOpacity = r.value / 100; lpLayers.atlas.setOpacity(lpOpacity); lpLayers.night.setOpacity(lpOpacity); try { localStorage.setItem('wefo.lpop', lpOpacity); } catch (e) { /* ignore */ } });
           L.DomEvent.disableClickPropagation(d);
           return d;
         },
@@ -352,8 +389,9 @@ const Astro = (() => {
       lpOpCtl = new Op({ position: 'bottomleft' }).addTo(lpMap);
     }
     if (lpControl) lpMap.removeControl(lpControl);
-    lpControl = L.control.layers({ [t('as.lp.base.dark')]: lpLayers.dark, 'OpenStreetMap': lpLayers.osm }, { [t('as.lp.night')]: lpLayers.night }, { collapsed: false }).addTo(lpMap);
+    lpControl = L.control.layers({ [t('as.lp.base.dark')]: lpLayers.dark, 'OpenStreetMap': lpLayers.osm }, { [t('as.lp.atlas')]: lpLayers.atlas, [t('as.lp.night')]: lpLayers.night }, { collapsed: false }).addTo(lpMap);
     $('astroLpOpLabel').textContent = t('as.lp.opacity');
+    $('astroLpKey').innerHTML = `<span>${t('as.lp.dark')}</span>` + ZONES.map((z) => `<i title="${z[2].toFixed(1)} mag/arcsec²" style="background:rgb(${z[1]})"></i>`).join('') + `<span>${t('as.lp.bright')}</span>`;
     const pos = [loc.lat, loc.lon], b = S.bortle && S.bortle.v;
     const label = `<b>${esc(locName(loc))}</b>${b ? `<br>Bortle ${b}` : ''}`;
     if (lpMarker) lpMarker.setLatLng(pos).setPopupContent(label); else lpMarker = L.marker(pos).addTo(lpMap).bindPopup(label);
@@ -373,7 +411,17 @@ const Astro = (() => {
   }
 
   /* ---- loading ---- */
-  const S = { token: 0, key: null, models: [], aerosols: false, data: null, bortle: null };
+  const S = { token: 0, key: null, models: [], aerosols: false, data: null, bortle: null, atlas: null };
+  /* look the place up in the atlas; when the answer arrives the Bortle class (and every score) is recomputed */
+  function loadAtlas(loc) {
+    const key = loc.lat + ',' + loc.lon;
+    if (S.atlas && S.atlas.key === key) return;
+    atlasAt(loc.lat, loc.lon).then((a) => {
+      if (!a || !state.current || state.current.lat + ',' + state.current.lon !== key) return;
+      S.atlas = { ...a, key };
+      if (S.data && S.key === key) { S.bortle = bortleOf(state.current); model = build(S.data, S.bortle.v); nightsList = nights(model); render(); }
+    }).catch(() => { /* atlas unreachable: keep the stored/seeded value */ });
+  }
   async function load(refresh = false) {
     const loc = state.current;
     $('astroEmpty').hidden = !!loc;
@@ -388,6 +436,7 @@ const Astro = (() => {
       S.data = data; S.key = key; S.models = data.models || []; S.aerosols = !!data.aerosols;
       S.bortle = bortleOf(loc);
       model = build(data, S.bortle.v);
+      loadAtlas(loc);
       nightsList = nights(model);
       $('astroLoading').hidden = true; $('astroBody').hidden = false;
       $('astroMeta').textContent = `${locName(loc)} · ${(+data.lat).toFixed(3)}, ${(+data.lon).toFixed(3)}${data.elevation != null ? ' · ' + Math.round(data.elevation) + ' m' : ''}`;
