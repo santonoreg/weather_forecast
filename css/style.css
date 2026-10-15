@@ -548,7 +548,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid.astro td.achart .nowicon.lbl-below .nl { bottom: auto; top: 14px; }
 
 /* Astronomy: light-pollution map */
-.lpcard { margin-top: 14px; }
+.lpcard { margin-bottom: 14px; }
 .lpcard .legend { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 6px 0 10px; }
 .map.lpm { height: 420px; border-radius: 12px; }
 .lpkey { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; font-size: 12px; color: var(--muted); }
