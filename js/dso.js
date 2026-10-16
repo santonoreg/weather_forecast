@@ -316,8 +316,8 @@ const Dso = (() => {
     const w = (g) => ((g.b - g.a) / 1440) * 100;
     const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}">${w(g) > 9 ? `<span>${fmMin(g.a)}–${fmMin(g.b)}</span>` : ''}</i>`).join('');
     const gbar = d.gsegs.map((g) => `<i class="ph-${g.c}" style="left:${((g.a / 1440) * 100).toFixed(3)}%;width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
-    // trajectories drawn over the bar: altitude -60°..+90°, the dashed line is the horizon
-    const VB_W = 1440, VB_H = 150, yv = (a) => ((90 - clamp(a, -60, 90)) / 150) * VB_H;
+    // trajectories drawn over the bar: the whole altitude range -90°..+90° (nothing is clipped), the solid line is the horizon
+    const VB_W = 1440, VB_H = 180, yv = (a) => ((90 - clamp(a, -90, 90)) / 180) * VB_H;
     const line = (pts) => pts.map(([m, a]) => `${m},${yv(a).toFixed(1)}`).join(' ');
     const curves = `<svg class="dp-curves" viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${VB_W}" y1="${yv(0)}" y2="${yv(0)}" class="hz"/><polyline points="${line(d.moon)}" class="mo"/><polyline points="${line(d.sun)}" class="su"/></svg>`;
     const dotTop = (a) => `${((yv(a) / VB_H) * 100).toFixed(1)}%`, dotLeft = `${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%`;
