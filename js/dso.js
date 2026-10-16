@@ -6,7 +6,7 @@
 const Dso = (() => {
   const RAD = Math.PI / 180, MOON_ARCMIN = 31;
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
-  const S = { tab: 'tonight', cat: 'all', night: null, nightKey: null, shown: 60, view: null };
+  const S = { tab: 'tonight', cat: 'all', sort: 'score', rev: false, night: null, nightKey: null, shown: 60, view: null };
   let D = null, loading = null;
 
   /* ---------- data ---------- */
@@ -203,6 +203,11 @@ const Dso = (() => {
     const moon = `${t('dso.night.moon', { a: n.moonrise ? hm(n.moonrise) : '–', b: n.moonset ? hm(n.moonset) : '–', p: Math.round(n.moonBelow * 100) })}`;
     let c = candidates();
     if (S.cat !== 'all') c = c.filter((x) => x.o.cat === S.cat);
+    // sorting: recommended (score), highest altitude, size, apparent magnitude (brightest first); the arrow reverses it
+    const last = (v, dir) => (v == null ? (dir > 0 ? Infinity : -Infinity) : v);                 // unknown values always go to the end
+    const keys = { score: [(x) => x.score, 1], alt: [(x) => x.max, -1], size: [(x) => x.o.a, -1], mag: [(x) => x.o.mag, 1] };
+    const [kf, dir0] = keys[S.sort] || keys.score, dir = S.rev ? -dir0 : dir0;
+    c = [...c].sort((a, b) => { const va = kf(a), vb = kf(b); if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1; return (va - vb) * dir; });
     const cats = ['all', 'galaxy', 'cluster', 'nebula'];
     const loc = N.loc;
     const cw = Math.max(280, Math.round(($d('dsoNight').clientWidth || 700) - 34)), ch = cw < 520 ? 130 : 112;   // chart = the whole width of the card
@@ -247,7 +252,9 @@ const Dso = (() => {
           <dt>${esc(t('dso.night.moonlbl'))}</dt><dd>${esc(moon)}</dd>
           <dt>${esc(t('dso.cloudlbl'))}</dt><dd>${esc(cloudTxt)}</dd>
         </dl>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
-      <div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
+      <div class="dso-bar"><div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
+        <div class="dso-sort"><label><span>${esc(t('dso.sort'))}</span><select id="dsoSort">${['score', 'alt', 'size', 'mag'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('')}</select></label>
+          <button type="button" id="dsoRev" class="chip" title="${esc(t('dso.sort.rev'))}" aria-label="${esc(t('dso.sort.rev'))}">${S.rev ? '↑' : '↓'}</button></div></div>
       <div class="dso-h2"><h3>${esc(t('dso.cand.title'))} <span class="cnt">(${c.length})</span></h3>${infoBtn('cand')}</div>
       <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')} ${t('dso.vis.note')} ${t('dso.strip.moon.note')}</p>
       ${c.length ? `<div class="dso-cards">${cards}</div>${c.length > S.shown ? `<button type="button" class="btn ghost" id="dsoMore">${esc(t('dso.more'))}</button>` : ''}` : `<div class="notice">${esc(t('dso.cand.none'))}</div>`}`;
@@ -491,8 +498,10 @@ const Dso = (() => {
       const ph = e.target.closest('[data-photo]'); if (ph) { openPhoto(+ph.dataset.photo); return; }
       const cat = e.target.closest('[data-cat]'); if (cat) { S.cat = cat.dataset.cat; S.shown = 60; renderTonight(); return; }
       if (e.target.closest('#dsoMore')) { S.shown += 60; renderTonight(); return; }
+      if (e.target.closest('#dsoRev')) { S.rev = !S.rev; S.shown = 60; renderTonight(); return; }
       infoToggle(e);
     });
+    $d('dsoNight').addEventListener('change', (e) => { if (e.target.id === 'dsoSort') { S.sort = e.target.value; S.rev = false; S.shown = 60; renderTonight(); } });
     let rz = null;
     window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (state.view === 'dso' && S.chartW && Math.abs(($d('dsoNight').clientWidth - 34) - S.chartW) > 60) renderTonight(); }, 300); });
     $d('dsoLoc').addEventListener('change', () => { $d('locSelect').value = $d('dsoLoc').value; $d('locSelect').dispatchEvent(new Event('change')); $d('dsoLoc').value = $d('locSelect').value; });
