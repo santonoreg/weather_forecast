@@ -709,3 +709,25 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dso-card img { width: 168px; height: 168px; border-radius: 12px; }
 .dso-card .cb { gap: 3px; } .dso-card .cb b { font-size: 16px; } .dso-card .cb small { font-size: 13px; }
 @media (max-width: 700px) { .dso-card img { width: 120px; height: 120px; } .dso-card .cb b { font-size: 14.5px; } .dso-card .cb small { font-size: 12px; } }
+
+/* DSO Explorer: every line carries everything – photo, facts, altitude chart, Moon and cloud strips */
+.dso-line { display: grid; grid-template-columns: 220px minmax(250px, 1fr) minmax(320px, 1.35fr); gap: 16px; padding: 12px; border: 1px solid var(--d-line); border-radius: 14px; background: var(--d-card); color: var(--d-text); }
+.dso-line + .dso-line { margin-top: 10px; }
+.ln-photo { position: relative; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: #0b1226; cursor: zoom-in; align-self: start; width: 220px; height: 220px; }
+.ln-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ln-photo .fchip { position: absolute; left: 8px; top: 8px; padding: 2px 9px; border-radius: 999px; font: 600 11.5px Inter, sans-serif; color: #fff; background: rgba(8, 12, 28, .62); }
+.ln-info h4 { margin: 0; font-size: 17px; } .ln-info .mw { font-style: normal; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(234, 179, 8, .25); margin-left: 6px; }
+.ln-info dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 8px 0 4px; font-size: 13px; }
+.ln-info dt { color: var(--d-muted); } .ln-info dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ln-info dd.up { color: var(--d-go); } .ln-info dd.dn { color: var(--d-muted); }
+.dso-flags .cls { color: var(--text); border-color: transparent; background: var(--summary); font-weight: 700; }
+.dso-flags .cls.eye { background: rgba(22, 163, 74, .25); } .dso-flags .cls.bino { background: rgba(132, 204, 22, .25); } .dso-flags .cls.scope { background: rgba(234, 179, 8, .26); }
+.ln-charts { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.rw-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; font-size: 13px; } .rw-h b { font-size: 13px; } .rw-h span { margin-left: auto; font-weight: 700; color: var(--d-blue); font-size: 12px; }
+.rw-blk .dso-sub { display: block; margin-top: 4px; font-size: 12px; }
+.ln-charts .dso-alt { max-height: 140px; }
+.ln-charts .sbs { margin-top: 2px; }
+@media (max-width: 1100px) { .dso-line { grid-template-columns: 180px 1fr; } .ln-photo { width: 180px; height: 180px; } .ln-charts { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .dso-line { grid-template-columns: 1fr; } .ln-photo { width: 100%; height: auto; aspect-ratio: 1; max-height: 70vw; } }
+#dsoModal .modal-card { max-width: 720px; }
+#dsoModal .ph-view { max-height: 76vh; }

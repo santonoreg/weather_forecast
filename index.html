@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261092">
+<link rel="stylesheet" href="css/style.css?v=20261093">
 </head>
 <body>
 <header class="topbar">
@@ -168,10 +168,6 @@
       <div id="dsoMain">
         <div id="dsoNight"></div>
       </div>
-      <div id="dsoDetail" hidden>
-        <button type="button" id="dsoBack" class="btn ghost" data-i18n="dso.back">← Back</button>
-        <div id="dsoDetailBody"></div>
-      </div>
     </div>
   </section>
 
@@ -239,13 +235,23 @@
   </div>
 </div>
 
+<!-- DSO photo / finding chart -->
+<div id="dsoModal" class="modal" hidden>
+  <div class="modal-card wide">
+    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
+    <h2 id="dsoModalTitle"></h2>
+    <div class="seg2" id="dsoPM"><button type="button" class="on" data-pm="photo" data-i18n="dso.photo">Photo</button><button type="button" data-pm="map" data-i18n="dso.map">Finder chart</button></div>
+    <div id="dsoPMBox"></div>
+  </div>
+</div>
+
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261092"></script>
-<script src="js/icons.js?v=20261092"></script>
-<script src="js/app.js?v=20261092"></script>
-<script src="js/astro.js?v=20261092"></script>
-<script src="js/dso.js?v=20261092"></script>
+<script src="js/i18n.js?v=20261093"></script>
+<script src="js/icons.js?v=20261093"></script>
+<script src="js/app.js?v=20261093"></script>
+<script src="js/astro.js?v=20261093"></script>
+<script src="js/dso.js?v=20261093"></script>
 </body>
 </html>

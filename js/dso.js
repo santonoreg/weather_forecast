@@ -189,16 +189,33 @@ const Dso = (() => {
     let c = candidates();
     if (S.cat !== 'all') c = c.filter((x) => x.o.cat === S.cat);
     const cats = ['all', 'galaxy', 'cluster', 'nebula'];
+    const loc = N.loc;
     const cards = c.slice(0, S.shown).map((x) => {
-      const fov = fovDegOf(x.o);
-      return `<button type="button" class="dso-card" data-id="${x.o.id}" data-tonight="1" data-best="${x.tBest}">
-        <img loading="lazy" alt="" src="${photoUrl(x.o, 400)}">
-        <span class="cb"><b>${esc(x.o.title)}</b>
-          <small>${esc(typeName(x.o))} · ${esc(conName(x.o))}</small>
-          <small class="k">${t('dso.mag')} ${magTxt(x.o)} · ${esc(t('dso.card.peak', { alt: Math.round(x.max), t: hm(x.tBest) }))}</small>
-          <small>${esc(t('dso.card.above30', { h: hoursTxt(x.hours) }))}</small>
-          <small class="fld">${esc(t('dso.card.field2', { f: x.o.a ? `${Math.round(x.o.a)}′${x.o.b && Math.abs(x.o.b - x.o.a) > 0.5 ? ` × ${Math.round(x.o.b)}′` : ''}` : `${Math.round(fov * 60)}′` }))}</small>
-          ${x.moonNear ? `<em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}</span></button>`;
+      const o = x.o, fov = fovDegOf(o), v = vis(o), p = nowAlt(o, loc), up = p.alt > 0;
+      const flags = [o.m && t('dso.chip.m'), o.c && t('dso.chip.c'), o.best && t('dso.chip.best'), o.h4 && t('dso.chip.h4')].filter(Boolean);
+      const size = o.a ? `${o.a.toFixed(1)}′${o.b && Math.abs(o.b - o.a) > 0.5 ? ` × ${o.b.toFixed(1)}′` : ''}` : '–';
+      const wide = o.a && o.a > 15 ? ` · ${t('dso.d.moonw', { n: (o.a / MOON_ARCMIN).toFixed(1) })}` : '';
+      return `<article class="dso-line" data-id="${o.id}">
+        <button type="button" class="ln-photo" data-photo="${o.id}" title="${esc(t('dso.photo'))} / ${esc(t('dso.map'))}">
+          <img loading="lazy" alt="" src="${photoUrl(o, 600)}"><span class="fchip">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span></button>
+        <div class="ln-info">
+          <h4>${esc(o.title)}${x.moonNear ? ` <em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}</h4>
+          <p class="dso-sub">${esc(conName(o))} • ${esc(typeName(o))}</p>
+          <div class="dso-flags"><span class="cls ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</span>${flags.map((f) => `<span>${esc(f)}</span>`).join('')}</div>
+          <dl>
+            <dt>${esc(t('dso.d.mag'))}</dt><dd>${magTxt(o)}</dd>
+            <dt>${esc(t('dso.d.size'))}</dt><dd>${size}</dd>
+            <dt>RA / Dec</dt><dd>${fmtRa(o.raH)} · ${fmtDec(o.decDeg)}</dd>
+            <dt>${esc(t('dso.d.peak'))}</dt><dd>${Math.round(x.max)}° · ${hm(x.tBest)}</dd>
+            <dt>${esc(t('dso.d.above30'))}</dt><dd>${hoursTxt(x.hours)}</dd>
+            <dt>${esc(t('dso.d.nowlbl'))}</dt><dd class="${up ? 'up' : 'dn'}">${up ? '●' : '○'} ${p.alt.toFixed(0)}° · ${p.az.toFixed(0)}° ${Astro.compass(p.az)}</dd>
+          </dl>
+          <small class="dso-sub">${o.a ? esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) })) : ''}${esc(wide)}</small>
+        </div>
+        <div class="ln-charts">
+          <div class="rw-blk"><div class="rw-h"><b>${esc(t('dso.d.altchart'))}</b></div>${altChart(o, loc, n)}</div>
+          ${rowStrips(o, loc, n)}
+        </div></article>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
         <dl>
@@ -209,7 +226,7 @@ const Dso = (() => {
         </dl><p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
       <div class="dso-h2"><h3>${esc(t('dso.cand.title', { n: c.length }))}</h3>${infoBtn('cand')}</div>
-      <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')}</p>
+      <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')} ${t('dso.vis.note')} ${t('dso.strip.moon.note')}</p>
       ${c.length ? `<div class="dso-cards">${cards}</div>${c.length > S.shown ? `<button type="button" class="btn ghost" id="dsoMore">${esc(t('dso.more'))}</button>` : ''}` : `<div class="notice">${esc(t('dso.cand.none'))}</div>`}`;
   }
 
@@ -236,20 +253,19 @@ const Dso = (() => {
   }
 
   /* hourly Moon / cloud strips for the longest dark spell above 20° (only when opened from "Tonight") */
-  function strips(o, loc, night) {
+  function rowStrips(o, loc, night) {
     const pts = altSeries(o, loc, night.darkStart, night.darkEnd, 600e3);
     let best = null, cur = null;
     pts.forEach((p) => {
       if (p.alt > 20) { if (!cur) cur = { a: p.t, b: p.t }; cur.b = p.t; if (!best || cur.b - cur.a > best.b - best.a) best = cur; } else cur = null;
     });
-    if (!best) return `<section class="card"><p class="dso-note">${esc(t('dso.strip.none'))}</p></section>`;
+    if (!best) return `<p class="dso-note">${esc(t('dso.strip.none'))}</p>`;
     const chunks = [];
     for (let h = Math.floor((best.a + off() * 1000) / 3600e3) * 3600e3 - off() * 1000; h < best.b; h += 3600e3) {
       const a = Math.max(h, best.a), b = Math.min(h + 3600e3, best.b);
       if (b - a >= 60e3) chunks.push({ h, a, b });
     }
     const interval = `${hm(best.a)}–${hm(best.b)}`;
-    // Moon
     const mv = chunks.map((c) => {
       const mid = (c.a + c.b) / 2, k = Astro.sky(mid, loc.lat, loc.lon), m = Astro.moonEq(mid);
       const d = sepDeg(o.ra, o.dec, m.ra, m.dec), closeness = 0.3 + 0.7 * Math.max(0, 1 - d / 90), height = k.moonAlt > 0 ? Math.sin(k.moonAlt * RAD) : 0;
@@ -257,16 +273,13 @@ const Dso = (() => {
     });
     const worst = mv.reduce((w, x) => (x.v > w.v ? x : w), mv[0]);
     const stripHtml = (arr, cls, fmtv) => `<div class="sbs">${arr.map((x) => `<div class="sb ${cls}" style="--v:${(0.08 + 0.82 * clamp(x.v, 0, 1)).toFixed(2)}"><span class="${x.v > 0.5 ? 'dk' : ''}">${fmtv(x.v)}</span><small>${hm(x.c.h).slice(0, 2)}</small></div>`).join('')}</div>`;
-    const cv = chunks.map((c) => { const cc = cloudAt(c.h); return { c, v: cc == null ? null : cc / 100 }; });
-    const cloudHtml = night && S.night.hasCloud
-      ? stripHtml(cv.map((x) => ({ c: x.c, v: x.v == null ? 0 : x.v })), 'cl', (v) => Math.round(v * 100))
-      : `<p class="dso-note">${esc(t('dso.nocloud'))}</p>`;
+    const cv = chunks.map((c) => { const cc = cloudAt(c.h); return { c, v: cc == null ? 0 : cc / 100 }; });
+    const cloudHtml = S.night.hasCloud ? stripHtml(cv, 'cl', (v) => Math.round(v * 100)) : `<p class="dso-note">${esc(t('dso.nocloud'))}</p>`;
     const litMid = Math.round(Astro.sky((best.a + best.b) / 2, loc.lat, loc.lon).lit * 100);
-    return `<section class="card"><div class="dso-h"><h3>☾ ${esc(t('dso.strip.moon', { i: interval }))}</h3>${infoBtn('moon')}<span class="r">${esc(t('dso.strip.lit', { p: litMid }))}</span></div>
+    return `<div class="rw-blk"><div class="rw-h"><b>☾ ${esc(t('dso.strip.moon', { i: interval }))}</b><span>${esc(t('dso.strip.lit', { p: litMid }))}</span></div>
         ${stripHtml(mv, 'mo', (v) => Math.round(v * 100))}
-        <p class="dso-sub">${worst.v > 0.001 ? esc(t('dso.strip.worst', { t: hm(worst.c.h), v: Math.round(worst.v * 100) })) : esc(t('dso.strip.nomoon'))}</p>
-        <p class="dso-note" data-note="moon" hidden>${t('dso.strip.moon.note')}</p></section>
-      <section class="card"><div class="dso-h"><h3>☁ ${esc(t('dso.strip.cloud', { i: interval }))}</h3></div>${cloudHtml}</section>`;
+        <small class="dso-sub">${worst.v > 0.001 ? esc(t('dso.strip.worst', { t: hm(worst.c.h), v: Math.round(worst.v * 100) })) : esc(t('dso.strip.nomoon'))}</small></div>
+      <div class="rw-blk"><div class="rw-h"><b>☁ ${esc(t('dso.strip.cloud', { i: interval }))}</b></div>${cloudHtml}</div>`;
   }
 
   /* photo viewer: pinch, double tap (2.5×), +/− up to 4× */
@@ -361,54 +374,15 @@ const Dso = (() => {
     return draw;
   }
 
-  async function openDetail(id, fromTonight) {
-    const o = D.byId.get(id), loc = state.current;
-    if (!o || !loc) return;
-    if (!S.view) S.scrollY = window.scrollY;           // where to come back to
-    S.view = { id, fromTonight };
-    $d('dsoMain').hidden = true; $d('dsoDetail').hidden = false;
-    $d('dsoDetail').scrollIntoView({ block: 'start' });
-    const body = $d('dsoDetailBody');
-    body.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
-    const N = await ensureNight();
-    if (!S.view || S.view.id !== id) return;
-    const v = vis(o), p = nowAlt(o, loc), night = N && N.night;
-    const wide = o.a && o.a > 15 ? t('dso.d.moonw', { n: (o.a / MOON_ARCMIN).toFixed(1) }) : '';
-    const flags = [o.m && t('dso.chip.m'), o.c && t('dso.chip.c'), o.best && t('dso.chip.best'), o.h4 && t('dso.chip.h4')].filter(Boolean);
-    const up = p.alt > 0;
-    const stripsHtml = fromTonight && night ? strips(o, loc, night) : '';
-    body.innerHTML = `<h2 class="dso-title">${esc(o.title)}</h2>
-      <section class="card"><div class="seg2" id="dsoPM"><button type="button" class="on" data-pm="photo">${esc(t('dso.photo'))}</button><button type="button" data-pm="map">${esc(t('dso.map'))}</button></div><div id="dsoPMBox"></div></section>
-      <section class="card dso-d">
-        <h3>${esc(o.main)}</h3>
-        <p class="dso-sub">${esc(conName(o))} • ${esc(typeName(o))}${o.second && o.label ? '' : ''}</p>
-        ${flags.length ? `<div class="dso-flags">${flags.map((f) => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
-        <dl>
-          <dt>${esc(t('dso.d.ra'))}</dt><dd>${fmtRa(o.raH)}</dd>
-          <dt>${esc(t('dso.d.dec'))}</dt><dd>${fmtDec(o.decDeg)}</dd>
-          <dt>${esc(t('dso.d.mag'))}</dt><dd>${magTxt(o)}</dd>
-          <dt>${esc(t('dso.d.size'))}</dt><dd>${sizeTxt(o)}</dd>
-          <dt>${esc(t('dso.d.vis'))} ${infoBtn('vis')}</dt><dd><span class="dso-vis ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</span></dd>
-        </dl>
-        <p class="dso-sub">${o.a ? esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) })) : ''} ${esc(wide)}</p>
-        <p class="dso-note" data-note="vis" hidden>${t('dso.vis.note')}</p></section>
-      ${stripsHtml}
-      <section class="card dso-now ${up ? 'up' : 'down'}"><span class="eye">${up ? '👁' : '🚫'}</span><div><b>${esc(t(up ? 'dso.visnow' : 'dso.belownow'))}</b>
-        <small>${esc(t('dso.d.now2', { alt: p.alt.toFixed(1), az: p.az.toFixed(0), dir: Astro.compass(p.az) }))}</small></div></section>
-      <section class="card"><div class="dso-h"><h3>${esc(t('dso.d.altchart'))}</h3></div>${altChart(o, loc, night)}
-        <p class="dso-note">${esc(night ? t('dso.d.altnote') : t('dso.d.altnote.nonight'))}</p></section>`;
-    let redraw = null;
-    const show = (k) => {
-      body.querySelectorAll('#dsoPM button').forEach((b) => b.classList.toggle('on', b.dataset.pm === k));
-      const bx = body.querySelector('#dsoPMBox');
-      if (k === 'photo') photoViewer(bx, o); else redraw = finder(bx, o);
-    };
-    body.querySelectorAll('#dsoPM button').forEach((b) => b.addEventListener('click', () => show(b.dataset.pm)));
+  /* click a photo: big photo / finding chart in a dialog */
+  function openPhoto(id) {
+    const o = D.byId.get(id); if (!o) return;
+    $d('dsoModalTitle').textContent = o.title;
+    const bx = $d('dsoPMBox'), tabs = $d('dsoPM');
+    const show = (k) => { tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.pm === k)); if (k === 'photo') photoViewer(bx, o); else finder(bx, o); };
+    tabs.onclick = (e) => { const b = e.target.closest('[data-pm]'); if (b) show(b.dataset.pm); };
+    $d('dsoModal').hidden = false;
     show('photo');
-  }
-  function closeDetail() {
-    S.view = null; $d('dsoDetail').hidden = true; $d('dsoMain').hidden = false;
-    renderTonight().then(() => window.scrollTo(0, S.scrollY || 0));
   }
 
   /* ---------- shell ---------- */
@@ -420,27 +394,24 @@ const Dso = (() => {
     if (!state.current) return;
     try { await loadData(); } catch (e) { $d('dsoLoadErr').textContent = t('dso.loaderr'); $d('dsoLoadErr').hidden = false; $d('dsoBody').hidden = true; return; }
     $d('dsoMeta').textContent = locName(state.current) + ' · ' + state.current.lat.toFixed(3) + ', ' + state.current.lon.toFixed(3);
-    if (S.view && !$d('dsoDetail').hidden) { S.nightKey = null; closeDetail(); }
     setTab();
   }
-  function refreshLocation() { S.nightKey = null; S.night = null; if (S.view) closeDetail(); show(); }
-  function render() { if (!D || state.view !== 'dso') return; $d('dsoMeta').textContent = state.current ? locName(state.current) + ' · ' + state.current.lat.toFixed(3) + ', ' + state.current.lon.toFixed(3) : ''; if (S.view) openDetail(S.view.id, S.view.fromTonight); else renderTonight(); }
+  function refreshLocation() { S.nightKey = null; S.night = null; show(); }
+  function render() { if (!D || state.view !== 'dso') return; $d('dsoMeta').textContent = state.current ? locName(state.current) + ' · ' + state.current.lat.toFixed(3) + ', ' + state.current.lon.toFixed(3) : ''; renderTonight(); }
 
   /* events */
   function init() {
     $d('dsoNight').addEventListener('click', (e) => {
-      const card = e.target.closest('.dso-card'); if (card) { openDetail(+card.dataset.id, true); return; }
+      const ph = e.target.closest('[data-photo]'); if (ph) { openPhoto(+ph.dataset.photo); return; }
       const cat = e.target.closest('[data-cat]'); if (cat) { S.cat = cat.dataset.cat; S.shown = 60; renderTonight(); return; }
       if (e.target.closest('#dsoMore')) { S.shown += 60; renderTonight(); return; }
       infoToggle(e);
     });
-    $d('dsoDetail').addEventListener('click', infoToggle);
-    $d('dsoBack').addEventListener('click', closeDetail);
     $d('dsoLoc').addEventListener('change', () => { $d('locSelect').value = $d('dsoLoc').value; $d('locSelect').dispatchEvent(new Event('change')); $d('dsoLoc').value = $d('locSelect').value; });
   }
   function infoToggle(e) {
     const b = e.target.closest('[data-info]'); if (!b) return;
-    const n = b.closest('section, div').parentElement.querySelector(`[data-note="${b.dataset.info}"]`) || document.querySelector(`#view-dso [data-note="${b.dataset.info}"]`);
+    const n = document.querySelector(`#view-dso [data-note="${b.dataset.info}"]`);
     if (n) n.hidden = !n.hidden;
   }
 
