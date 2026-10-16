@@ -827,3 +827,13 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-list li { display: grid; grid-template-columns: 14px minmax(110px, 1.3fr) minmax(0, 1fr) 56px; gap: 10px; align-items: center; padding: 6px 0; font-size: 13.5px; }
 .dp-list .dot { width: 12px; height: 12px; border-radius: 50%; display: block; }
 .dp-list b { font-weight: 600; } .dp-list .rg { color: var(--d-muted); font-size: 11.5px; line-height: 1.35; font-variant-numeric: tabular-nums; } .dp-list .tot { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* DSO lines: every card the same size – fixed-size hour squares (they wrap, they never stretch), one-line header */
+.dl-top { grid-template-columns: minmax(0, 1fr) 480px; }
+.dl-obj, .dl-wx { min-height: 300px; }
+.dl-cells { display: grid; grid-template-columns: repeat(auto-fill, 36px); gap: 5px; justify-content: start; }
+.dl-cells .cell { width: 36px; height: 36px; aspect-ratio: auto; font-size: 13px; border-radius: 7px; }
+.dl-cells.hrs span { width: 36px; padding-bottom: 2px; font-size: 12px; }
+.dl-wh { flex-wrap: nowrap; gap: 6px; } .dl-wh h5 { white-space: nowrap; font-size: 11.5px; } .dl-wh h5 small { font-size: 10.5px; }
+.dl-wh .pill { white-space: nowrap; padding: 2px 9px; font-size: 11.5px; }
+@media (max-width: 1150px) { .dl-top { grid-template-columns: 1fr; } .dl-obj, .dl-wx { min-height: 0; } .dl-wh { flex-wrap: wrap; } }
