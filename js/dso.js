@@ -128,7 +128,11 @@ const Dso = (() => {
       const v = data.hourly.cloud_cover[i];
       if (v != null) cloud.set(Date.UTC(+ts.slice(0, 4), +ts.slice(5, 7) - 1, +ts.slice(8, 10), +ts.slice(11, 13)) - o * 1000, v);
     });
-    S.night = { off: o, night, cloud, hasCloud: cloud.size > 0, cand: null, loc };
+    // hourly deep-sky score of the Astronomy tab (cloud, darkness, Moon, transparency, seeing, light pollution)
+    const deep = new Map();
+    let bortle = null;
+    if (data) { try { bortle = await Astro.bortleFor(loc); Astro.buildModel(data, bortle).rows.forEach((r) => deep.set(r.e, r.deep)); } catch (e) { /* no scores */ } }
+    S.night = { off: o, night, cloud, hasCloud: cloud.size > 0, deep, bortle, cand: null, loc };
     S.nightKey = key;
     return S.night;
   }
@@ -196,26 +200,26 @@ const Dso = (() => {
       const size = o.a ? `${o.a.toFixed(1)}′${o.b && Math.abs(o.b - o.a) > 0.5 ? ` × ${o.b.toFixed(1)}′` : ''}` : '–';
       const wide = o.a && o.a > 15 ? ` · ${t('dso.d.moonw', { n: (o.a / MOON_ARCMIN).toFixed(1) })}` : '';
       return `<article class="dso-line" data-id="${o.id}">
-        <button type="button" class="ln-photo" data-photo="${o.id}" title="${esc(t('dso.photo'))} / ${esc(t('dso.map'))}">
-          <img loading="lazy" alt="" src="${photoUrl(o, 600)}"><span class="fchip">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span></button>
-        <div class="ln-info">
-          <h4>${esc(o.title)}${x.moonNear ? ` <em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}</h4>
-          <p class="dso-sub">${esc(conName(o))} • ${esc(typeName(o))}</p>
-          <div class="dso-flags"><span class="cls ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</span>${flags.map((f) => `<span>${esc(f)}</span>`).join('')}</div>
-          <dl>
-            <dt>${esc(t('dso.d.mag'))}</dt><dd>${magTxt(o)}</dd>
-            <dt>${esc(t('dso.d.size'))}</dt><dd>${size}</dd>
-            <dt>RA / Dec</dt><dd>${fmtRa(o.raH)} · ${fmtDec(o.decDeg)}</dd>
-            <dt>${esc(t('dso.d.peak'))}</dt><dd>${Math.round(x.max)}° · ${hm(x.tBest)}</dd>
-            <dt>${esc(t('dso.d.above30'))}</dt><dd>${hoursTxt(x.hours)}</dd>
-            <dt>${esc(t('dso.d.nowlbl'))}</dt><dd class="${up ? 'up' : 'dn'}">${up ? '●' : '○'} ${p.alt.toFixed(0)}° · ${p.az.toFixed(0)}° ${Astro.compass(p.az)}</dd>
-          </dl>
-          <small class="dso-sub">${o.a ? esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) })) : ''}${esc(wide)}</small>
+        <div class="ln-top">
+          <button type="button" class="ln-photo" data-photo="${o.id}" title="${esc(t('dso.photo'))} / ${esc(t('dso.map'))}">
+            <img loading="lazy" alt="" src="${photoUrl(o, 600)}"><span class="fchip">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span></button>
+          <div class="ln-info">
+            <h4>${esc(o.title)}${x.moonNear ? ` <em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}</h4>
+            <p class="dso-sub">${esc(conName(o))} • ${esc(typeName(o))}</p>
+            <div class="dso-flags"><span class="cls ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</span>${flags.map((f) => `<span>${esc(f)}</span>`).join('')}</div>
+            <dl>
+              <dt>${esc(t('dso.d.mag'))}</dt><dd>${magTxt(o)}</dd>
+              <dt>${esc(t('dso.d.size'))}</dt><dd>${size}</dd>
+              <dt>RA / Dec</dt><dd>${fmtRa(o.raH)} · ${fmtDec(o.decDeg)}</dd>
+              <dt>${esc(t('dso.d.peak'))}</dt><dd>${Math.round(x.max)}° · ${hm(x.tBest)}</dd>
+              <dt>${esc(t('dso.d.above30'))}</dt><dd>${hoursTxt(x.hours)}</dd>
+              <dt>${esc(t('dso.d.nowlbl'))}</dt><dd class="${up ? 'up' : 'dn'}">${up ? '●' : '○'} ${p.alt.toFixed(0)}° · ${p.az.toFixed(0)}° ${Astro.compass(p.az)}</dd>
+            </dl>
+            <small class="dso-sub">${o.a ? esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) })) : ''}${esc(wide)}</small>
+          </div>
+          <div class="ln-wx">${rowStrips(o, loc, n)}</div>
         </div>
-        <div class="ln-charts">
-          <div class="rw-blk"><div class="rw-h"><b>${esc(t('dso.d.altchart'))}</b></div>${altChart(o, loc, n)}</div>
-          ${rowStrips(o, loc, n)}
-        </div></article>`;
+        <div class="ln-chart"><div class="rw-h"><b>${esc(t('dso.d.altchart'))}</b></div>${altChart(o, loc, n)}</div></article>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
         <dl>
@@ -276,10 +280,17 @@ const Dso = (() => {
     const cv = chunks.map((c) => { const cc = cloudAt(c.h); return { c, v: cc == null ? 0 : cc / 100 }; });
     const cloudHtml = S.night.hasCloud ? stripHtml(cv, 'cl', (v) => Math.round(v * 100)) : `<p class="dso-note">${esc(t('dso.nocloud'))}</p>`;
     const litMid = Math.round(Astro.sky((best.a + best.b) / 2, loc.lat, loc.lon).lit * 100);
-    return `<div class="rw-blk"><div class="rw-h"><b>☾ ${esc(t('dso.strip.moon', { i: interval }))}</b><span>${esc(t('dso.strip.lit', { p: litMid }))}</span></div>
+    const q = (v) => (v >= 70 ? 4 : v >= 50 ? 3 : v >= 30 ? 2 : v >= 12 ? 1 : 0);          // same tiers as the Astronomy table
+    const dv = chunks.map((c) => { const d = S.night.deep.get(c.h); return { c, v: d == null ? null : d }; });
+    const deepHtml = S.night.deep.size
+      ? `<div class="sbs">${dv.map((x) => `<div class="sb ds q${x.v == null ? 'x' : q(x.v)}"><span>${x.v == null ? '–' : Math.round(x.v)}</span><small>${hm(x.c.h).slice(0, 2)}</small></div>`).join('')}</div>`
+      : `<p class="dso-note">${esc(t('dso.nocloud'))}</p>`;
+    const go = (view, label) => `<a class="rw-go" href="#${view}" data-goto="${view}" title="${esc(label)}">${esc(label)} <i>›</i></a>`;
+    return `<div class="rw-blk"><div class="rw-h"><span>${esc(t('dso.strip.lit', { p: litMid }))}</span><b>☾ ${esc(t('dso.strip.moon', { i: interval }))}</b></div>
         ${stripHtml(mv, 'mo', (v) => Math.round(v * 100))}
         <small class="dso-sub">${worst.v > 0.001 ? esc(t('dso.strip.worst', { t: hm(worst.c.h), v: Math.round(worst.v * 100) })) : esc(t('dso.strip.nomoon'))}</small></div>
-      <div class="rw-blk"><div class="rw-h"><b>☁ ${esc(t('dso.strip.cloud', { i: interval }))}</b></div>${cloudHtml}</div>`;
+      <div class="rw-blk"><div class="rw-h">${go('forecast', t('nav.forecast'))}<b>☁ ${esc(t('dso.strip.cloud', { i: interval }))}</b></div>${cloudHtml}</div>
+      <div class="rw-blk"><div class="rw-h">${go('astro', t('nav.astro'))}<b>✦ ${esc(t('dso.strip.deep', { i: interval }))}${S.night.bortle ? ` · Bortle ${S.night.bortle}` : ''}</b></div>${deepHtml}</div>`;
   }
 
   /* photo viewer: pinch, double tap (2.5×), +/− up to 4× */

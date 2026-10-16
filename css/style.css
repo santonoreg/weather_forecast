@@ -731,3 +731,20 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 @media (max-width: 560px) { .dso-line { grid-template-columns: 1fr; } .ln-photo { width: 100%; height: auto; aspect-ratio: 1; max-height: 70vw; } }
 #dsoModal .modal-card { max-width: 720px; }
 #dsoModal .ph-view { max-height: 76vh; }
+
+/* DSO line, second layout: photo | facts | weather (right-aligned) on top, the altitude chart across the bottom */
+.dso-line { display: block; padding: 12px; }
+.ln-top { display: grid; grid-template-columns: 200px minmax(220px, 1fr) minmax(300px, 380px); gap: 16px; align-items: start; }
+.ln-photo { width: 200px; height: 200px; }
+.ln-wx { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; text-align: right; min-width: 0; }
+.ln-wx .rw-blk { width: 100%; display: flex; flex-direction: column; align-items: flex-end; }
+.ln-wx .rw-h { width: 100%; justify-content: space-between; flex-direction: row-reverse; }
+.ln-wx .rw-h span { margin-left: 0; }
+.ln-wx .sbs { justify-content: flex-end; }
+.rw-go { font-size: 12px; font-weight: 700; color: var(--d-blue); text-decoration: none; white-space: nowrap; }
+.rw-go i { font-style: normal; font-size: 15px; } .rw-go:hover { text-decoration: underline; }
+.ln-chart { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--d-line); }
+.ln-chart .dso-alt { width: 100%; max-height: 170px; }
+.sb.ds.q0 { background: rgba(220, 38, 38, .38); } .sb.ds.q1 { background: rgba(234, 120, 20, .38); } .sb.ds.q2 { background: rgba(234, 179, 8, .34); } .sb.ds.q3 { background: rgba(132, 204, 22, .34); } .sb.ds.q4 { background: rgba(22, 163, 74, .45); } .sb.ds.qx { background: rgba(255, 255, 255, .06); }
+@media (max-width: 1100px) { .ln-top { grid-template-columns: 170px 1fr; } .ln-photo { width: 170px; height: 170px; } .ln-wx { grid-column: 1 / -1; align-items: stretch; } }
+@media (max-width: 560px) { .ln-top { grid-template-columns: 1fr; } .ln-photo { width: 100%; height: auto; aspect-ratio: 1; max-height: 70vw; } }

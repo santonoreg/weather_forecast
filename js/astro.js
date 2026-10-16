@@ -456,7 +456,13 @@ const Astro = (() => {
   }
   const moonEq = (ms) => { const m = moonCoords(toDays(ms)); return { ra: m.ra, dec: m.dec, dist: m.dist }; };
 
-  return { load, render, setBortle, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
+  /* hourly model for the DSO Explorer: the same scores as the Astronomy table, with this place's Bortle class (atlas included) */
+  async function bortleFor(loc) {
+    const key = loc.lat + ',' + loc.lon;
+    if (!S.atlas || S.atlas.key !== key) { try { const a = await atlasAt(loc.lat, loc.lon); if (a) S.atlas = { ...a, key }; } catch (e) { /* atlas unreachable: stored/seeded value */ } }
+    return bortleOf(loc).v;
+  }
+  return { load, render, setBortle, bortleFor, buildModel: build, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
 })();
 
 $('astroRefresh').addEventListener('click', () => Astro.load(true));
