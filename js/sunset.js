@@ -13,7 +13,7 @@ const Sunset = (() => {
     const d = km / EARTH, th = azDeg * RAD, p = lat * RAD, l = lon * RAD;
     const p2 = Math.asin(Math.sin(p) * Math.cos(d) + Math.cos(p) * Math.sin(d) * Math.cos(th));
     const l2 = l + Math.atan2(Math.sin(th) * Math.sin(d) * Math.cos(p), Math.cos(d) - Math.sin(p) * Math.sin(p2));
-    return [+(p2 / RAD).toFixed(2), +((((l2 / RAD) + 540) % 360) - 180).toFixed(2)];
+    return [+(p2 / RAD).toFixed(1), +((((l2 / RAD) + 540) % 360) - 180).toFixed(1)];            // 0.1° (~10 km): a week of sunsets share most points, so the request stays small
   }
   function events(loc, off) {
     const ln = new Date(Date.now() + off * 1000);
@@ -45,8 +45,8 @@ const Sunset = (() => {
     return a + (b - a) * clamp((t - tm[i]) / (tm[i + 1] - tm[i]), 0, 1);
   }
   const tri = (c) => Math.max(0.18, 1 - Math.abs(c - 45) / 45);        // light-catching cloud: best around 45 %, plain sky still gives some colour
-  function score(ev, firstPoint, sky, tm) {
-    const P = (j, name) => at(sky, tm, sky.points[firstPoint + j][name], ev.t);
+  function score(ev, sky, tm) {
+    const P = (j, name) => at(sky, tm, sky.points[ev.pi[j]][name], ev.t);
     const base = { low: at(sky, tm, sky.points[0].low, ev.t), mid: at(sky, tm, sky.points[0].mid, ev.t), high: at(sky, tm, sky.points[0].high, ev.t) };
     const pts = [base, ...[0, 1, 2].map((j) => ({ low: P(j, 'low'), mid: P(j, 'mid'), high: P(j, 'high') }))];
     const nz = (v) => (v == null ? 0 : v);
@@ -85,12 +85,12 @@ const Sunset = (() => {
       <button type="button" class="dso-i" id="ssInfo" aria-label="info">i</button></div>
       <p class="ss-note" id="ssNote" hidden>${t('sun.note')}</p>`;
     if (S.loading) { box.innerHTML = head + `<div class="loading"><div class="spinner"></div></div>`; return; }
-    if (S.err) { box.innerHTML = head + `<div class="notice error">${esc(S.err)}</div>`; return; }
+    if (S.err) { box.innerHTML = head + `<div class="notice error">${esc(S.err)} <button type="button" class="btn ghost" id="ssRetry">${esc(t('sun.retry'))}</button></div>`; return; }
     if (!S.sky || !S.ev) { box.innerHTML = head; return; }
     const tm = S.tm, seen = seenAll();
     const rows = S.ev.map((d) => {
       const out = { d };
-      ['set', 'rise'].forEach((kind) => { const ev = d[kind]; if (ev) { out[kind] = { ev, ...score(ev, ev.p0, S.sky, tm) }; } });
+      ['set', 'rise'].forEach((kind) => { const ev = d[kind]; if (ev) { out[kind] = { ev, ...score(ev, S.sky, tm) }; } });
       return out;
     });
     const list = rows.map((r) => r[S.kind] ? r : null).filter(Boolean);
@@ -115,30 +115,33 @@ const Sunset = (() => {
     box.innerHTML = head + `<div class="ss-bars">${bars}</div><div class="ss-list">${cards}</div>`;
   }
 
+  const withTimeout = (p, ms) => new Promise((res, rej) => { const id = setTimeout(() => rej(new Error(t('sun.timeout'))), ms); p.then((v) => { clearTimeout(id); res(v); }, (e) => { clearTimeout(id); rej(e); }); });
   async function render() {
     const loc = state.current;
     if (!loc || !state.data) return paint();
     const key = loc.lat + ',' + loc.lon;
     if (S.key === key && S.sky) return paint();
+    if (S.loading && S.pending === key) return;                      // the same request is already on its way: do not start another
     const off = state.data.utc_offset_seconds || 0;
     const ev = events(loc, off);
-    // points 0 = the place; then, per day, 3 points along the sunset azimuth and 3 along the sunrise azimuth
-    const pts = [[loc.lat, loc.lon]];
-    ev.forEach((d) => ['set', 'rise'].forEach((kind) => { if (d[kind]) { d[kind].p0 = pts.length; DIST.forEach((km) => pts.push(dest(loc.lat, loc.lon, d[kind].az, km))); } }));
-    S.loading = true; S.err = null; paint();
+    // points: [0] the place, then the (de-duplicated) points along the Sun's azimuth for every sunset / sunrise
+    const pts = [[loc.lat, loc.lon]], seen = new Map();
+    const idxOf = (p) => { const k = p.join(','); if (!seen.has(k)) { seen.set(k, pts.length); pts.push(p); } return seen.get(k); };
+    ev.forEach((d) => ['set', 'rise'].forEach((kind) => { if (d[kind]) d[kind].pi = DIST.map((km) => idxOf(dest(loc.lat, loc.lon, d[kind].az, km))); }));
+    S.loading = true; S.pending = key; S.err = null; paint();
     try {
-      const sky = await api('api/skypoints.php?pts=' + pts.map((p) => p.join(',')).join(';'));
-      if (!state.current || state.current.lat + ',' + state.current.lon !== key) return;
-      S.sky = sky; S.tm = tms(sky); S.ev = ev; S.key = key;
-    } catch (e) { S.err = e.message; S.sky = null; }
-    S.loading = false;
-    if (state.orient === 's') paint();
+      const sky = await withTimeout(api('api/skypoints.php?pts=' + pts.map((p) => p.join(',')).join(';')), 40000);
+      if (state.current && state.current.lat + ',' + state.current.lon === key) { S.sky = sky; S.tm = tms(sky); S.ev = ev; S.key = key; }
+    } catch (e) { S.err = e.message || String(e); S.sky = null; }
+    finally { S.loading = false; S.pending = null; }
+    if (state.orient === 's') { try { paint(); } catch (e) { S.err = e.message; $('sunsetBox').innerHTML = `<div class="notice error">${esc(e.message)}</div>`; } }
   }
 
   function init() {
     const box = $('sunsetBox');
     box.addEventListener('click', (e) => {
       const k = e.target.closest('#ssKind [data-k]'); if (k) { S.kind = k.dataset.k; paint(); return; }
+      if (e.target.closest('#ssRetry')) { S.key = null; S.err = null; render(); return; }
       if (e.target.closest('#ssInfo')) { const n = $('ssNote'); if (n) n.hidden = !n.hidden; return; }
       const sn = e.target.closest('[data-seen]'); if (sn) { toggleSeen(sn.dataset.seen); paint(); }
     });
