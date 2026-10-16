@@ -63,7 +63,7 @@ const Dso = (() => {
     if (o.mag == null) return (o._v = null);
     const sb = o.a ? o.mag + 2.5 * Math.log10((Math.PI / 4) * o.a * o.b * 3600) : o.mag;      // surface brightness, mag per arcsec²
     const eff = o.mag + 0.5 * Math.max(0, sb - 20.5);
-    return (o._v = { sb, eff, cls: eff <= 5.5 ? 'eye' : eff <= 8.5 ? 'bino' : eff <= 14 ? 'scope' : 'hard' });
+    return (o._v = { sb, eff, cls: eff <= 8.5 ? 'bino' : eff <= 14 ? 'scope' : 'hard' });
   }
   const fovDegOf = (o) => clamp(2.4 * (o.a || 0), 15, 240) / 60;          // photo / ring field, degrees
 

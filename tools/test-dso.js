@@ -43,9 +43,9 @@ for (const lb of ['M 31', 'M 42', 'M 45']) {
   check(`${lb} transit azimuth ${p.az.toFixed(2)}°`, southOk);
 }
 
-// --- visibility classes ---
+// --- visibility classes (two classes only: binoculars, telescope – the naked-eye objects are in 'bino') ---
 const cls = (lb) => Dso.vis(find(lb)).cls;
-for (const [lb, want] of [['M 31', 'eye'], ['M 45', 'eye'], ['M 42', 'eye'], ['M 13', 'bino'], ['M 57', 'scope'], ['M 1', 'scope'], ['M 51', 'scope'], ['M 74', 'scope']]) {
+for (const [lb, want] of [['M 31', 'bino'], ['M 45', 'bino'], ['M 42', 'bino'], ['M 13', 'bino'], ['M 57', 'scope'], ['M 1', 'scope'], ['M 51', 'scope'], ['M 74', 'scope']]) {
   const v = Dso.vis(find(lb));
   check(`${lb} class ${v.cls} (SB ${v.sb.toFixed(1)}, eff ${v.eff.toFixed(2)})`, v.cls === want, 'want ' + want);
 }
