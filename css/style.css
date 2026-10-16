@@ -661,3 +661,44 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 #dsoPMBox { margin-top: 2px; }
 .dso-i { margin-left: 2px; }
 .fc-wrap { max-width: 100%; }
+
+/* ---- DSO Explorer: the phone app's colours, full page width ---- */
+#view-dso {
+  --d-card: #ffffff; --d-line: #dfe5f2; --d-text: var(--text); --d-muted: var(--muted);
+  --d-accent: #7c5cf0; --d-blue: #2563eb; --d-blue-bg: rgba(37, 99, 235, .10); --d-blue-line: rgba(37, 99, 235, .45); --d-go: #16a34a;
+}
+:root[data-theme="dark"] #view-dso {
+  --d-card: #131a31; --d-line: #222c4d; --d-text: #e8ebf7; --d-muted: #8c97ba;
+  --d-accent: #8b6cf6; --d-blue: #6a9bff; --d-blue-bg: rgba(60, 100, 220, .20); --d-blue-line: rgba(80, 125, 245, .65); --d-go: #34d27b;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #view-dso {
+  --d-card: #131a31; --d-line: #222c4d; --d-text: #e8ebf7; --d-muted: #8c97ba;
+  --d-accent: #8b6cf6; --d-blue: #6a9bff; --d-blue-bg: rgba(60, 100, 220, .20); --d-blue-line: rgba(80, 125, 245, .65); --d-go: #34d27b;
+} }
+#dsoBody, #view-dso .toolbar { max-width: none; }
+#view-dso .card, .dso-row, .dso-card, .dso-tools input, .dso-tools select { background: var(--d-card); border: 1px solid var(--d-line); color: var(--d-text); box-shadow: none; }
+#view-dso .dso-note, #view-dso .dso-sub, .dso-row small, .dso-card small, .dso-count, .dso-d dt, .dso-now small, .credit { color: var(--d-muted); }
+#view-dso .seg button.on, .seg2 button.on { background: var(--d-accent); color: #fff; }
+:root[data-theme="dark"] #view-dso .seg button.on, :root[data-theme="dark"] .seg2 button.on { color: #fff; }
+#view-dso .seg { border-color: var(--d-line); } #view-dso .seg button { background: var(--d-card); color: var(--d-muted); }
+.dso-chips .chip, .dso-cats .chip { background: transparent; border: 1px solid var(--d-line); color: var(--d-muted); }
+.dso-chips .chip.on, .dso-cats .chip.on { background: var(--d-blue-bg); border-color: var(--d-blue-line); color: var(--d-blue); }
+:root[data-theme="dark"] .dso-chips .chip.on, :root[data-theme="dark"] .dso-cats .chip.on { color: var(--d-blue); }
+.dso-row .mgb { color: var(--d-blue); background: var(--d-blue-bg); }
+.dso-row .ra .dot.on { background: var(--d-go); }
+.dso-card .cb small.fld, .dso-h .r { color: var(--d-blue); }
+.dso-card .cb small.k { color: var(--d-text); }
+.dso-flags span { color: var(--d-blue); background: var(--d-blue-bg); border-color: var(--d-blue-line); }
+.dso-row:hover, .dso-card:hover { border-color: var(--d-blue-line); background: var(--d-card); }
+.dso-d dl, .dso-i { border-color: var(--d-line); }
+.dso-i { background: transparent; color: var(--d-muted); }
+.dso-alt .ln { stroke: var(--d-blue); } .dso-alt .t30 { stroke: var(--d-accent); } .dso-alt .ng { fill: rgba(80, 100, 190, .16); }
+.seg2 { border-color: var(--d-line); } .seg2 button { background: transparent; color: var(--d-muted); }
+.dso-scroll { height: 72vh; }
+/* wide screens: list rows and cards use the whole width */
+.dso-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+#dsoDetailBody { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 12px; align-items: start; }
+#dsoDetailBody > .dso-title { grid-column: 1 / -1; margin-bottom: 0; }
+#dsoDetailBody > .card { margin-bottom: 0; }
+#dsoDetailBody .ph-view { max-height: 76vh; }
+@media (max-width: 700px) { .dso-cards { grid-template-columns: 1fr; } }
