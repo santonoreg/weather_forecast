@@ -178,6 +178,17 @@ const Dso = (() => {
 
   /* tonight */
   const hoursTxt = (h) => (h >= 1 ? h.toFixed(1).replace(/\.0$/, '') + ' h' : Math.round(h * 60) + ' min');
+
+  /* photo = square as tall as the text column, so its bottom lines up with the "Now" pill */
+  function fitPhotos() {
+    document.querySelectorAll('#dsoNight .dl-obj').forEach((panel) => {
+      const ph = panel.querySelector('.ln-photo'), main = panel.querySelector('.dl-main');
+      if (!ph || !main) return;
+      if (getComputedStyle(panel).flexDirection === 'column') { ph.style.width = ph.style.height = ''; return; }
+      const h = Math.round(main.getBoundingClientRect().height);
+      if (h > 120) { ph.style.width = ph.style.height = h + 'px'; }
+    });
+  }
   async function renderTonight() {
     const box = $d('dsoNight');
     box.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
@@ -240,6 +251,8 @@ const Dso = (() => {
       <div class="dso-h2"><h3>${esc(t('dso.cand.title'))} <span class="cnt">(${c.length})</span></h3>${infoBtn('cand')}</div>
       <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')} ${t('dso.vis.note')} ${t('dso.strip.moon.note')}</p>
       ${c.length ? `<div class="dso-cards">${cards}</div>${c.length > S.shown ? `<button type="button" class="btn ghost" id="dsoMore">${esc(t('dso.more'))}</button>` : ''}` : `<div class="notice">${esc(t('dso.cand.none'))}</div>`}`;
+    fitPhotos();
+    document.querySelectorAll('#dsoNight .ln-photo img').forEach((im) => { if (!im.complete) im.addEventListener('load', fitPhotos, { once: true }); });
   }
 
   /* detail */

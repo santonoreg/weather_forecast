@@ -798,3 +798,15 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dso-alt .ar { fill: rgba(91, 140, 255, .26); } .dso-alt .ng { fill: rgba(120, 150, 255, .20); } .dso-alt .ln { stroke: #5b8cff; stroke-width: 2; } .dso-alt .lb { font-size: 11px; }
 @media (max-width: 1150px) { .dl-top { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .dl-obj { flex-direction: column; } .dl-obj .ln-photo { width: 100%; height: auto; aspect-ratio: 1; max-height: 78vw; } .dl-main h4 { font-size: 22px; } .dl-facts { grid-template-columns: 1fr; } .dl-facts .fcol + .fcol { border-left: 0; padding-left: 0; } .dl-cells .cell { font-size: 12px; border-radius: 6px; } .dl-cells { gap: 4px; } }
+
+/* DSO lines: photo as tall as the text column; slimmer, smaller weather panel */
+.dl-top { grid-template-columns: minmax(0, 1fr) 400px; }
+.dl-obj { align-items: flex-start; }
+.dl-obj .ln-photo { width: 230px; height: 230px; }
+.dl-wx { padding: 12px 14px; }
+.dl-wh h5 { font-size: 12px; } .dl-wh h5 small { font-size: 11px; } .dl-wh .pill { font-size: 12px; padding: 2px 10px; }
+.dl-cells { gap: 5px; }
+.dl-cells.hrs span { font-size: 12px; padding-bottom: 2px; }
+.dl-cells .cell { font-size: clamp(11px, 1vw, 15px); border-radius: 7px; }
+.dl-rt { margin: 8px 0 4px; } .dl-rt b { font-size: 14px; } .dl-rt small { font-size: 11px; } .dl-go { font-size: 12.5px; }
+@media (max-width: 1150px) { .dl-top { grid-template-columns: 1fr; } }
