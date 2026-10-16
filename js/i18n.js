@@ -2,8 +2,8 @@
 /* Translations (English is the default, Greek is available). Add a language by adding a new key to I18N. */
 const I18N = {
   en: {
-    'title': 'WeFo · Weather model comparison',
-    'brand.sub': 'weather model comparison',
+    'title': 'WeFO · Weather · Forecast · Observer',
+    'brand.sub': 'weather · forecast · observer',
     'nav.forecast': 'Forecast', 'nav.places': 'Locations & Map',
     'orient.s.tip': 'Sunset & sunrise: will the sky colour up?',
     'sun.set': 'Sunset', 'sun.rise': 'Sunrise', 'sun.q.0': 'Weak', 'sun.q.1': 'Low', 'sun.q.2': 'Fair', 'sun.q.3': 'Good', 'sun.q.4': 'Spectacular',
@@ -160,9 +160,9 @@ const I18N = {
     'lane.weather': 'Weather', 'lane.agree': 'Agree', 'lane.temp': 'Temp', 'lane.rain': 'Rain', 'lane.wind': 'Wind',
     'tomorrow': 'Tomorrow',
     'ex.title': 'See what the models say',
-    'ex.hint': 'Each thin grey line is one model, the highlighted line is WeFo\'s weighted average. Tight lines mean a confident forecast; spread lines mean uncertainty.',
+    'ex.hint': 'Each thin grey line is one model, the highlighted line is WeFO\'s weighted average. Tight lines mean a confident forecast; spread lines mean uncertainty.',
     'ex.temp': 'Temperature, next 48 hours', 'ex.precip': 'Precipitation per hour',
-    'ex.line.model': 'One weather model', 'ex.line.wefo': 'WeFo (weighted average)',
+    'ex.line.model': 'One weather model', 'ex.line.wefo': 'WeFO (weighted average)',
     'ex.bar.avg': 'Model average', 'ex.bar.wet': 'Wettest model',
     'mg.temp': 'Temperature (line = average, band = model range) °C', 'mg.precip': 'Precipitation (mm/h, average)', 'mg.wind': 'Wind speed (average) km/h',
     'g.avg_mm': 'Average (mm)', 'g.upto': 'up to {v}', 'g.prob_rain': 'Chance of rain',
@@ -228,8 +228,8 @@ const I18N = {
   },
 
   el: {
-    'title': 'WeFo · Σύγκριση προγνώσεων καιρού',
-    'brand.sub': 'σύγκριση μοντέλων καιρού',
+    'title': 'WeFO · Καιρός · Πρόγνωση · Παρατήρηση',
+    'brand.sub': 'καιρός · πρόγνωση · παρατήρηση',
     'nav.forecast': 'Πρόγνωση', 'nav.places': 'Τοποθεσίες & Χάρτης',
     'orient.s.tip': 'Ηλιοβασίλεμα & ανατολή: θα χρωματιστεί ο ουρανός;',
     'sun.set': 'Ηλιοβασίλεμα', 'sun.rise': 'Ανατολή', 'sun.q.0': 'Αδύναμο', 'sun.q.1': 'Χαμηλό', 'sun.q.2': 'Μέτριο', 'sun.q.3': 'Καλό', 'sun.q.4': 'Εντυπωσιακό',
@@ -386,9 +386,9 @@ const I18N = {
     'lane.weather': 'Καιρός', 'lane.agree': 'Συμφωνία', 'lane.temp': 'Θερμ.', 'lane.rain': 'Βροχή', 'lane.wind': 'Άνεμος',
     'tomorrow': 'Αύριο',
     'ex.title': 'Δες τι λένε τα μοντέλα',
-    'ex.hint': 'Κάθε λεπτή γκρι γραμμή είναι ένα μοντέλο, η έντονη γραμμή είναι ο σταθμισμένος μέσος όρος του WeFo. Οι γραμμές κοντά μεταξύ τους δείχνουν σίγουρη πρόγνωση· όσο πιο απλωμένες, τόσο πιο αβέβαιη.',
+    'ex.hint': 'Κάθε λεπτή γκρι γραμμή είναι ένα μοντέλο, η έντονη γραμμή είναι ο σταθμισμένος μέσος όρος του WeFO. Οι γραμμές κοντά μεταξύ τους δείχνουν σίγουρη πρόγνωση· όσο πιο απλωμένες, τόσο πιο αβέβαιη.',
     'ex.temp': 'Θερμοκρασία, επόμενες 48 ώρες', 'ex.precip': 'Βροχόπτωση ανά ώρα',
-    'ex.line.model': 'Ένα μοντέλο καιρού', 'ex.line.wefo': 'WeFo (σταθμισμένος μέσος όρος)',
+    'ex.line.model': 'Ένα μοντέλο καιρού', 'ex.line.wefo': 'WeFO (σταθμισμένος μέσος όρος)',
     'ex.bar.avg': 'Μέσος όρος μοντέλων', 'ex.bar.wet': 'Πιο βροχερό μοντέλο',
     'mg.temp': 'Θερμοκρασία (γραμμή = μέσος όρος, ζώνη = εύρος μοντέλων) °C', 'mg.precip': 'Βροχόπτωση (mm/ώρα, μέσος όρος)', 'mg.wind': 'Ταχύτητα ανέμου (μέσος όρος) km/h',
     'g.avg_mm': 'Μέσος όρος (mm)', 'g.upto': 'έως {v}', 'g.prob_rain': 'Πιθανότητα βροχής',

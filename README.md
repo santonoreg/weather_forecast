@@ -1,8 +1,8 @@
-# WeFo – weather model comparison
+# WeFO – Weather · Forecast · Observer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-WeFo is a small self-hosted web app that puts the forecasts of many **free** weather models side by side, hour by hour, and adds a final row with a **probability derived from how much the models agree** (optionally weighted by how reliable each model has recently been for your location).
+WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that puts the forecasts of many **free** weather models side by side, hour by hour, and adds a final row with a **probability derived from how much the models agree** (optionally weighted by how reliable each model has recently been for your location).
 
 - Backend: **PHP 8** + **SQLite** (no framework, no Composer)
 - Frontend: plain **HTML / CSS / JavaScript** (no build step), [Leaflet](https://leafletjs.com/) for the map
@@ -190,7 +190,7 @@ A page for deep-sky observing, next to *Sky Conditions*. Everything is computed 
 - Disabled models disappear from the tables and from all averages and probabilities. At least one model must stay enabled.
 - The choice is **per browser** (saved in `localStorage`, see [privacy](#data-privacy-and-external-services)) and applies to all locations.
 - Models that cannot cover the selected location are listed under *No coverage for this location*.
-- Some regional models (KNMI, DMI, MET Norway Nordic) silently return a **copy of a global model** outside their domain. WeFo detects identical series and counts them **only once**; they are shown greyed out with the note *Same data as …*.
+- Some regional models (KNMI, DMI, MET Norway Nordic) silently return a **copy of a global model** outside their domain. WeFO detects identical series and counts them **only once**; they are shown greyed out with the note *Same data as …*.
 
 ---
 
@@ -207,7 +207,7 @@ Real observations used only for the reliability score come from [aviationweather
 
 ### Consensus and probability
 
-For every time step and every parameter WeFo collects one value per active provider and computes:
+For every time step and every parameter WeFO collects one value per active provider and computes:
 
 - **Average / range** – (weighted) mean, min and max of the provider values.
 - **Weather category** – WMO weather codes are grouped into *clear, partly cloudy, overcast, fog, drizzle, rain, snow, thunderstorm*. Each provider votes for its category; the shares are shown as percentages. If a provider gives no weather code it is derived from precipitation, temperature (snow), CAPE and cloud cover.
@@ -239,9 +239,9 @@ Notes and caveats:
 - Models without archived data for the area (regional models outside their domain) and Yr are not scored and count with weight 1. Rain weights are only used when the period contains enough rain events to be meaningful.
 - Outside Greece, if no METAR station with enough reports is near the location, ERA5 alone is used and the note says so.
 
-### Optional: Google WeatherNext 3, and the "WeFo vs AI" comparison
+### Optional: Google WeatherNext 3, and the "WeFO vs AI" comparison
 
-In the **Weather** tab, right after the *Most likely weather* row (WeFo's own weighted result — unchanged, still just the category breakdown), two more rows appear on their own, tagged **AI**, for direct comparison with it:
+In the **Weather** tab, right after the *Most likely weather* row (WeFO's own weighted result — unchanged, still just the category breakdown), two more rows appear on their own, tagged **AI**, for direct comparison with it:
 
 - **ECMWF AIFS** – always shown (it's just another free Open-Meteo model, see above).
 - **Google WeatherNext 3** – Google DeepMind's AI weather model, exposed via the paid [Google Maps Platform Weather API](https://developers.google.com/maps/documentation/weather/overview). This is **optional and off by default**: unlike every other data source in this app, it needs your own Google Cloud project with billing enabled and an API key, and is not free beyond a monthly quota.
@@ -396,7 +396,7 @@ Most settings are constants in the PHP files below. One optional file, `api/conf
 | `api/db.php` | `http_get()` | User-Agent and cURL options |
 | `api/google_weather.php` | `GOOGLE_CACHE_TTL`, `GOOGLE_HOURS`, `GOOGLE_PAGE_SIZE`, `GOOGLE_DAILY_CALL_CAP`, `GOOGLE_FAIL_COOLDOWN` | Google WeatherNext 3 cache lifetime, hours requested per fetch, Google's page size cap, hard daily call cap, retry backoff after a failure |
 | `js/app.js` | `RAIN_THR`, `WIND_THR`, `TOL` | thresholds for the probabilities |
-| `js/app.js` | `HEADLINE_MODEL_IDS` | which models get their own named line in the "WeFo vs AI" comparison |
+| `js/app.js` | `HEADLINE_MODEL_IDS` | which models get their own named line in the "WeFO vs AI" comparison |
 
 **Please change the User-Agent** in `api/db.php` (`wefo-weather-compare/1.0 …`) to identify your own installation with a contact address – [MET Norway requires this](https://api.met.no/doc/TermsOfService).
 

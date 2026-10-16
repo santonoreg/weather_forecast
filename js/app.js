@@ -761,7 +761,7 @@ const ALL_MODEL_IDS = Object.keys(MODEL_NAMES);   // used to list models without
 // won't have them configured, so — unlike an ordinary "no coverage here" model — they are only ever
 // listed when actually present in the data, never shown as a perpetual "missing" placeholder.
 const OPTIONAL_MODEL_IDS = ['google_weathernext'];
-// Individual models to call out by name in the weighted "most likely weather" cell, next to WeFo's own
+// Individual models to call out by name in the weighted "most likely weather" cell, next to WeFO's own
 // blended result — the flagship single-model AI forecasts people are most likely to compare against.
 const HEADLINE_MODEL_IDS = ['google_weathernext', 'ecmwf_aifs025_single'];
 
