@@ -6,7 +6,7 @@
 const Dso = (() => {
   const RAD = Math.PI / 180, MOON_ARCMIN = 31;
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
-  const S = { tab: 'catalog', q: '', flags: new Set(), sort: 'main', cat: 'all', night: null, nightKey: null, shown: 60, view: null };
+  const S = { tab: 'tonight', cat: 'all', night: null, nightKey: null, shown: 60, view: null };
   let D = null, loading = null;
 
   /* ---------- data ---------- */
@@ -171,47 +171,6 @@ const Dso = (() => {
   const magTxt = (o) => (o.mag == null ? '–' : o.mag.toFixed(1));
   const sizeTxt = (o) => (o.a ? (o.b && Math.abs(o.b - o.a) > 0.05 ? `${o.a.toFixed(1)}′ × ${o.b.toFixed(1)}′` : `${o.a.toFixed(1)}′`) : '–');
   const natural = (a, b) => String(a).localeCompare(String(b), 'en', { numeric: true });
-
-  /* catalogue: filter, sort, virtual list */
-  const ROW = 72;
-  let list = [];
-  function filterSort() {
-    const q = S.q.trim().toLowerCase().replace(/\s+/g, ' ');
-    list = D.dso.filter((o) => {
-      if (S.flags.has('m') && !o.m) return false;
-      if (S.flags.has('c') && !o.c) return false;
-      if (S.flags.has('best') && !o.best) return false;
-      if (S.flags.has('h4') && !o.h4) return false;
-      return !q || o.hay.includes(q);
-    });
-    const key = S.sort === 'con' ? (o) => conName(o) : S.sort === 'second' ? (o) => o.second || '~' : (o) => o.main;
-    list.sort((a, b) => (S.sort === 'con' ? conName(a).localeCompare(conName(b), LANG) || natural(a.main, b.main) : natural(key(a), key(b))));
-    $d('dsoCount').textContent = t('dso.count', { n: list.length });
-    const sc = $d('dsoScroll'); sc.scrollTop = 0;
-    $d('dsoSpacer').style.height = list.length * ROW + 'px';
-    paintRows();
-  }
-  function paintRows() {
-    const sc = $d('dsoScroll'), loc = state.current;
-    const first = Math.max(0, Math.floor(sc.scrollTop / ROW) - 3), last = Math.min(list.length, first + Math.ceil(sc.clientHeight / ROW) + 7);
-    let html = '';
-    for (let i = first; i < last; i++) {
-      const o = list[i], up = loc ? nowAlt(o, loc).alt > 0 : null;
-      html += `<button type="button" class="dso-row" style="top:${i * ROW}px" data-id="${o.id}">
-        <span class="mgb">${magTxt(o)}</span>
-        <span class="tt"><b>${esc(o.title)}</b><small>${esc(conName(o))} • ${esc(typeName(o))}</small></span>
-        <span class="ra">${fmtRa(o.raH)}<i class="dot ${up == null ? '' : up ? 'on' : 'off'}" title="${esc(up ? t('dso.visnow') : t('dso.belownow'))}"></i></span></button>`;
-    }
-    $d('dsoRows').innerHTML = html;
-  }
-
-  function renderCatalog() {
-    const chip = (k, label) => `<button type="button" class="chip${S.flags.has(k) ? ' on' : ''}" data-flag="${k}">${S.flags.has(k) ? '✓ ' : ''}${label}</button>`;
-    $d('dsoChips').innerHTML = chip('m', t('dso.chip.m')) + chip('c', t('dso.chip.c')) + chip('best', t('dso.chip.best')) + chip('h4', t('dso.chip.h4'));
-    $d('dsoSort').innerHTML = ['main', 'second', 'con'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('');
-    $d('dsoSearch').placeholder = t('dso.search');
-    filterSort();
-  }
 
   /* tonight */
   const hoursTxt = (h) => (h >= 1 ? h.toFixed(1).replace(/\.0$/, '') + ' h' : Math.round(h * 60) + ' min');
@@ -449,17 +408,11 @@ const Dso = (() => {
   }
   function closeDetail() {
     S.view = null; $d('dsoDetail').hidden = true; $d('dsoMain').hidden = false;
-    if (S.tab === 'catalog') { paintRows(); window.scrollTo(0, S.scrollY || 0); }
-    else renderTonight().then(() => window.scrollTo(0, S.scrollY || 0));
+    renderTonight().then(() => window.scrollTo(0, S.scrollY || 0));
   }
 
   /* ---------- shell ---------- */
-  function setTab(tab) {
-    S.tab = tab;
-    document.querySelectorAll('#dsoTabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    $d('dsoCatalog').hidden = tab !== 'catalog'; $d('dsoNight').hidden = tab !== 'tonight';
-    if (tab === 'catalog') { renderCatalog(); } else { S.shown = 60; renderTonight(); }
-  }
+  function setTab() { S.shown = 60; renderTonight(); }
   async function show() {
     $d('dsoEmpty').hidden = !!state.current;
     $d('dsoBody').hidden = !state.current;
@@ -468,19 +421,13 @@ const Dso = (() => {
     try { await loadData(); } catch (e) { $d('dsoLoadErr').textContent = t('dso.loaderr'); $d('dsoLoadErr').hidden = false; $d('dsoBody').hidden = true; return; }
     $d('dsoMeta').textContent = locName(state.current) + ' · ' + state.current.lat.toFixed(3) + ', ' + state.current.lon.toFixed(3);
     if (S.view && !$d('dsoDetail').hidden) { S.nightKey = null; closeDetail(); }
-    setTab(S.tab);
+    setTab();
   }
   function refreshLocation() { S.nightKey = null; S.night = null; if (S.view) closeDetail(); show(); }
-  function render() { if (!D || state.view !== 'dso') return; $d('dsoMeta').textContent = state.current ? locName(state.current) + ' · ' + state.current.lat.toFixed(3) + ', ' + state.current.lon.toFixed(3) : ''; if (S.view) openDetail(S.view.id, S.view.fromTonight); else setTab(S.tab); }
+  function render() { if (!D || state.view !== 'dso') return; $d('dsoMeta').textContent = state.current ? locName(state.current) + ' · ' + state.current.lat.toFixed(3) + ', ' + state.current.lon.toFixed(3) : ''; if (S.view) openDetail(S.view.id, S.view.fromTonight); else renderTonight(); }
 
   /* events */
   function init() {
-    $d('dsoTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
-    $d('dsoSearch').addEventListener('input', (e) => { S.q = e.target.value; filterSort(); });
-    $d('dsoSort').addEventListener('change', (e) => { S.sort = e.target.value; filterSort(); });
-    $d('dsoChips').addEventListener('click', (e) => { const b = e.target.closest('[data-flag]'); if (!b) return; const k = b.dataset.flag; S.flags.has(k) ? S.flags.delete(k) : S.flags.add(k); renderCatalog(); });
-    $d('dsoScroll').addEventListener('scroll', () => paintRows(), { passive: true });
-    $d('dsoRows').addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) openDetail(+b.dataset.id, false); });
     $d('dsoNight').addEventListener('click', (e) => {
       const card = e.target.closest('.dso-card'); if (card) { openDetail(+card.dataset.id, true); return; }
       const cat = e.target.closest('[data-cat]'); if (cat) { S.cat = cat.dataset.cat; S.shown = 60; renderTonight(); return; }

@@ -702,3 +702,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 #dsoDetailBody > .card { margin-bottom: 0; }
 #dsoDetailBody .ph-view { max-height: 76vh; }
 @media (max-width: 700px) { .dso-cards { grid-template-columns: 1fr; } }
+
+/* DSO Explorer: only "Tonight" – one object per line, bigger thumbnail */
+.dso-cards { display: flex; flex-direction: column; gap: 10px; }
+.dso-card { padding: 12px; gap: 16px; align-items: center; }
+.dso-card img { width: 168px; height: 168px; border-radius: 12px; }
+.dso-card .cb { gap: 3px; } .dso-card .cb b { font-size: 16px; } .dso-card .cb small { font-size: 13px; }
+@media (max-width: 700px) { .dso-card img { width: 120px; height: 120px; } .dso-card .cb b { font-size: 14.5px; } .dso-card .cb small { font-size: 12px; } }
