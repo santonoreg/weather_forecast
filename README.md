@@ -9,7 +9,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
 - **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
 - No API keys needed. Everything is open to visitors except the *Locations & Map* manager, which sits behind a single optional [admin login](#admin-login)
-- Beyond the forecast: an [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
+- Beyond the forecast: a [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
 
