@@ -20,7 +20,7 @@ async function api(path, opts) {
 
 const state = { view: 'forecast', locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
-try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm') ? so : 'h'; } catch (e) { /* ignore */ }
+try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
 try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
@@ -640,6 +640,10 @@ function renderGrid() {
   $('relNote').hidden = param !== 'reliability';
   $('orientSeg').hidden = !notReliability;
   renderSegKey();
+  // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
+  const sun = state.orient === 's' && notReliability;
+  document.querySelector('.hours .tabsrow').hidden = sun; $('legend').hidden = sun; $('expert').hidden = sun; $('sunsetBox').hidden = !sun;
+  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('meteo').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
   if (param === 'reliability') { $('grid').classList.remove('vert', 'lanes'); $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
 
   if (state.orient === 'm') {

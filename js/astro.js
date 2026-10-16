@@ -462,7 +462,7 @@ const Astro = (() => {
     if (!S.atlas || S.atlas.key !== key) { try { const a = await atlasAt(loc.lat, loc.lon); if (a) S.atlas = { ...a, key }; } catch (e) { /* atlas unreachable: stored/seeded value */ } }
     return bortleOf(loc).v;
   }
-  return { load, render, setBortle, bortleFor, sunIcon, moonIcon, buildModel: build, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
+  return { load, render, setBortle, bortleFor, sunIcon, moonIcon, crossing, buildModel: build, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
 })();
 
 $('astroRefresh').addEventListener('click', () => Astro.load(true));

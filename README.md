@@ -148,6 +148,10 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 - A **light pollution map** below the table: David Lorenz's sky-brightness atlas (VIIRS 2025, a simulation of the artificial glow that also spreads far around cities) laid over a dark map, plus the raw NASA VIIRS night lights as a second overlay, an opacity slider, and click-to-look-there. Both come straight from the browser to `djlorenz.github.io` and NASA GIBS (free, no key); a link opens the full lightpollutionmap.info atlas.
 - **Light pollution (Bortle class 1–9)** is worked out automatically for any place: the browser reads the colour of the atlas tile under the point (zone → zenith sky brightness → approximate class; the atlas models zenith brightness and is not a Bortle measurement). It scales the deep-sky score (class 8 keeps about a third of it) and shows the naked-eye limiting magnitude. The *Dark sky* drop-down overrides it: a visitor's choice is remembered in their browser; an admin's choice is stored in the database with the location (`bortle_set`) and beats the atlas for everybody. The Greek towns also carry a rough size-based guess, used only if the atlas can't be reached.
 
+### Sunset & sunrise colours (Forecast tab)
+
+The last icon of the *Hour by hour* switch (a half sun over the horizon, right after the meteogram) opens a seven-day outlook for **sunset** and **sunrise**: a 0–100 score per day (Weak / Low / Fair / Good / Spectacular), the time and direction of the Sun, the golden and blue hour windows, and the factors behind the score. It is an estimate: high and mid cloud catch the light (best at about 45 % cover), the horizon on the Sun's side has to be open (low cloud at 80–150 km along its azimuth hides it — `api/skypoints.php` forecasts points along that direction), a little aerosol deepens the reds, and rain or poor visibility spoil it. The *I saw it* stars are kept only in your browser.
+
 ### DSO Explorer (open to everyone)
 
 A page for deep-sky observing, next to *Astronomy*. Everything is computed in the browser from three static files in `assets/` (the 2936-object catalogue, the 1627 stars to magnitude 5 and the constellation lines):
@@ -390,6 +394,8 @@ tools/hash-password.php   CLI helper that creates the admin password hash
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
+api/skypoints.php   cloud layers at points along the Sun's azimuth (Sunset & sunrise view), 30 min cache
+js/sunset.js        Sunset & sunrise quality view
 api/astro.php       atmosphere inputs for the Astronomy tab (multi-model mean + aerosols), 30 min cache
 js/dso.js           DSO Explorer: catalogue, tonight's targets, object screen, photo viewer, finding chart
 assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
@@ -417,6 +423,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
 | `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
+| `GET api/skypoints.php?pts=lat,lon;lat,lon;…` | low/mid/high cloud (3-model mean) at up to 64 points, 7 days hourly, plus aerosol, visibility, humidity and rain at the first point |
 | `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Astronomy tab |
 | `GET api/history.php?id=ID[&refresh=1]` | history summary (records, monthly, annual) for a saved location; downloads and stores the data on first use |
 
