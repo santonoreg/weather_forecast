@@ -901,3 +901,4 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* smaller Sun / Moon icons on the day-phases bar */
 .dp-ico svg { left: -9px; top: -9px; width: 18px; height: 18px; }
+.dp-bar { height: 112px; }
