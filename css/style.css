@@ -887,3 +887,4 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-ico svg { position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; display: block; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .45)); }
 .dp-ico.below svg { opacity: .8; }
 .dp-key i { height: 0; border-top: 2px dashed; background: none !important; } .dp-key i.su { border-color: #ffe28a; } .dp-key i.mo { border-color: #e9efff; }
+.dp-bar { height: 108px; }
