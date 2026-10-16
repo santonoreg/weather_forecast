@@ -283,32 +283,38 @@ const Dso = (() => {
   const ICO = {'star': '<path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/>', 'expand': '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', 'globe': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', 'peak': '<path d="M12 20V6M6 12l6-6 6 6M5 21h14"/>', 'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 'nav': '<path d="M3 11l18-8-8 18-2-8z"/>'};
   const ico = (k) => `<svg viewBox="0 0 24 24" class="ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
 
-  /* the local calendar day split into night / astronomical / nautical / civil twilight / day (1-minute samples) */
+  /* the local calendar day split into night / astronomical / nautical / civil twilight / day, plus golden and blue hour (1-minute samples) */
   const PH_ORDER = ['night', 'astro', 'naut', 'civil', 'day'];
   function dayPhases(loc, offSec) {
     const ln = new Date(Date.now() + offSec * 1000);
     const t0 = Date.UTC(ln.getUTCFullYear(), ln.getUTCMonth(), ln.getUTCDate()) - offSec * 1000;
     const cls = (a) => (a < -18 ? 'night' : a < -12 ? 'astro' : a < -6 ? 'naut' : a < 0 ? 'civil' : 'day');
-    const segs = [];
+    const gb = (a) => (a <= 6 && a > -4 ? 'golden' : a <= -4 && a >= -8 ? 'blue' : null);
+    const segs = [], gsegs = [];
+    const push = (arr, c, m) => { const last = arr[arr.length - 1]; if (last && last.c === c && last.b === m) last.b = m + 1; else if (c) arr.push({ c, a: m, b: m + 1 }); };
     for (let m = 0; m < 1440; m++) {
-      const c = cls(Astro.sky(t0 + (m + 0.5) * 60e3, loc.lat, loc.lon).sunAlt), last = segs[segs.length - 1];
-      if (last && last.c === c) last.b = m + 1; else segs.push({ c, a: m, b: m + 1 });
+      const a = Astro.sky(t0 + (m + 0.5) * 60e3, loc.lat, loc.lon).sunAlt;
+      push(segs, cls(a), m); push(gsegs, gb(a), m);
     }
-    return { segs, nowMin: (Date.now() - t0) / 60e3, date: ln };
+    return { segs, gsegs, nowMin: (Date.now() - t0) / 60e3, date: ln };
   }
   const fmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
   function phasesHtml(loc, offSec) {
     const d = dayPhases(loc, offSec);
     const dateTxt = d.date.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', timeZone: 'UTC' });
-    const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${(((g.b - g.a) / 1440) * 100).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
-    const rows = PH_ORDER.map((c) => {
-      const parts = d.segs.filter((g) => g.c === c);
-      const total = parts.reduce((a, g) => a + (g.b - g.a), 0);
-      return `<li><i class="dot ph-${c}"></i><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join('<br>') : '–'}</span><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
-    }).join('');
+    const w = (g) => ((g.b - g.a) / 1440) * 100;
+    const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}">${w(g) > 9 ? `<span>${fmMin(g.a)}–${fmMin(g.b)}</span>` : ''}</i>`).join('');
+    const gbar = d.gsegs.map((g) => `<i class="ph-${g.c}" style="left:${((g.a / 1440) * 100).toFixed(3)}%;width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
+    const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}</b>`).join('');
+    const leg = (c, arr) => {
+      const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
+      return `<li><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
+    };
     return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small></div>
       <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
-      <ul class="dp-list">${rows}</ul></div>`;
+      <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
+      <div class="dp-axis">${axis}</div>
+      <ul class="dp-leg">${PH_ORDER.map((c) => leg(c, d.segs)).join('')}${leg('golden', d.gsegs)}${leg('blue', d.gsegs)}</ul></div>`;
   }
 
   /* colour ramps for the hour boxes */

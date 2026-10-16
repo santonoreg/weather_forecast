@@ -837,3 +837,18 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dl-wh { flex-wrap: nowrap; gap: 6px; } .dl-wh h5 { white-space: nowrap; font-size: 11.5px; } .dl-wh h5 small { font-size: 10.5px; }
 .dl-wh .pill { white-space: nowrap; padding: 2px 9px; font-size: 11.5px; }
 @media (max-width: 1150px) { .dl-top { grid-template-columns: 1fr; } .dl-obj, .dl-wx { min-height: 0; } .dl-wh { flex-wrap: wrap; } }
+
+/* Day phases, second layout: full-width bar with the times on it, golden/blue hour strip, legend underneath */
+.dso-sum { display: block; }
+.dso-sum .dp { grid-column: auto; grid-row: auto; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--d-line); }
+.ph-golden { background: #f2a516; } .ph-blue { background: #2f6fe0; }
+.dp-bar { height: 44px; }
+.dp-bar > i { display: flex; align-items: center; justify-content: center; overflow: hidden; } .dp-bar > i span { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .9); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dp-bar > i.ph-day span { color: #fff7d6; }
+.dp-gb { position: relative; height: 12px; margin-top: 4px; border-radius: 6px; background: rgba(120, 130, 170, .16); overflow: hidden; }
+.dp-gb > i { position: absolute; top: 0; bottom: 0; } .dp-gb .now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #22e07a; }
+.dp-axis { position: relative; height: 18px; margin-top: 3px; } .dp-axis b { position: absolute; transform: translateX(-50%); font-size: 11.5px; font-weight: 500; color: var(--d-muted); } .dp-axis b:first-child { transform: none; } .dp-axis b:last-child { transform: translateX(-100%); }
+.dp-leg { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px 18px; }
+.dp-leg li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 4px 0; font-size: 13px; }
+.dp-leg .dot { width: 14px; height: 14px; border-radius: 4px; display: block; }
+.dp-leg b { display: block; font-weight: 600; } .dp-leg .rg { display: block; color: var(--d-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; } .dp-leg .tot { font-weight: 800; font-variant-numeric: tabular-nums; }
