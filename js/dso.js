@@ -246,7 +246,7 @@ const Dso = (() => {
           <dt>${esc(t(n.partial ? 'dso.night.darkpartial' : 'dso.night.dark'))}</dt><dd>${hm(n.darkStart)} → ${hm(n.darkEnd)} <small>(${((n.darkEnd - n.darkStart) / 3600e3).toFixed(1)} h)</small></dd>
           <dt>${esc(t('dso.night.moonlbl'))}</dt><dd>${esc(moon)}</dd>
           <dt>${esc(t('dso.cloudlbl'))}</dt><dd>${esc(cloudTxt)}</dd>
-        </dl><p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
+        </dl>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
       <div class="dso-h2"><h3>${esc(t('dso.cand.title'))} <span class="cnt">(${c.length})</span></h3>${infoBtn('cand')}</div>
       <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')} ${t('dso.vis.note')} ${t('dso.strip.moon.note')}</p>
@@ -282,6 +282,35 @@ const Dso = (() => {
 
   const ICO = {'star': '<path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/>', 'expand': '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', 'globe': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', 'peak': '<path d="M12 20V6M6 12l6-6 6 6M5 21h14"/>', 'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 'nav': '<path d="M3 11l18-8-8 18-2-8z"/>'};
   const ico = (k) => `<svg viewBox="0 0 24 24" class="ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICO[k]}</svg>`;
+
+  /* the local calendar day split into night / astronomical / nautical / civil twilight / day (1-minute samples) */
+  const PH_ORDER = ['night', 'astro', 'naut', 'civil', 'day'];
+  function dayPhases(loc, offSec) {
+    const ln = new Date(Date.now() + offSec * 1000);
+    const t0 = Date.UTC(ln.getUTCFullYear(), ln.getUTCMonth(), ln.getUTCDate()) - offSec * 1000;
+    const cls = (a) => (a < -18 ? 'night' : a < -12 ? 'astro' : a < -6 ? 'naut' : a < 0 ? 'civil' : 'day');
+    const segs = [];
+    for (let m = 0; m < 1440; m++) {
+      const c = cls(Astro.sky(t0 + (m + 0.5) * 60e3, loc.lat, loc.lon).sunAlt), last = segs[segs.length - 1];
+      if (last && last.c === c) last.b = m + 1; else segs.push({ c, a: m, b: m + 1 });
+    }
+    return { segs, nowMin: (Date.now() - t0) / 60e3, date: ln };
+  }
+  const fmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  function phasesHtml(loc, offSec) {
+    const d = dayPhases(loc, offSec);
+    const dateTxt = d.date.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${(((g.b - g.a) / 1440) * 100).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
+    const rows = PH_ORDER.map((c) => {
+      const parts = d.segs.filter((g) => g.c === c);
+      const total = parts.reduce((a, g) => a + (g.b - g.a), 0);
+      return `<li><i class="dot ph-${c}"></i><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join('<br>') : '–'}</span><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
+    }).join('');
+    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small></div>
+      <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
+      <ul class="dp-list">${rows}</ul></div>`;
+  }
+
   /* colour ramps for the hour boxes */
   const ramp = (v, stops) => {
     if (v <= stops[0][0]) return stops[0][1];

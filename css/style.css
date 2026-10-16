@@ -810,3 +810,20 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dl-cells .cell { font-size: clamp(11px, 1vw, 15px); border-radius: 7px; }
 .dl-rt { margin: 8px 0 4px; } .dl-rt b { font-size: 14px; } .dl-rt small { font-size: 11px; } .dl-go { font-size: 12.5px; }
 @media (max-width: 1150px) { .dl-top { grid-template-columns: 1fr; } }
+
+/* DSO "Tonight" card: day phases (night / astronomical / nautical / civil / day) */
+.dso-sum { display: grid; grid-template-columns: 1fr; gap: 0 28px; }
+.dso-sum .dso-h, .dso-sum .dso-note { grid-column: 1 / -1; }
+@media (min-width: 900px) { .dso-sum { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } .dso-sum dl { align-self: start; } .dso-sum .dp { grid-column: 2; grid-row: 2 / span 2; } }
+.ph-night { background: #1b1f3f; } .ph-astro { background: #4f3d96; } .ph-naut { background: #3a58a8; } .ph-civil { background: #5b8cff; } .ph-day { background: #8f7d1f; }
+.dp { margin-top: 12px; }
+.dp-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dp-date { padding: 2px 10px; border-radius: 8px; border: 1px solid #e0813a; color: #e0813a; font-weight: 700; font-size: 13px; background: rgba(224, 129, 58, .12); }
+.dp-h small { color: var(--d-muted); font-size: 12.5px; }
+.dp-bar { position: relative; display: flex; height: 36px; border-radius: 10px; overflow: hidden; background: #1b1f3f; }
+.dp-bar > i { display: block; height: 100%; } .dp-bar > i.sep { border-left: 1px dashed rgba(255, 255, 255, .55); }
+.dp-bar .now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #22e07a; box-shadow: 0 0 6px #22e07a; text-decoration: none; }
+.dp-list { list-style: none; margin: 10px 0 0; padding: 0; }
+.dp-list li { display: grid; grid-template-columns: 14px minmax(110px, 1.3fr) minmax(0, 1fr) 56px; gap: 10px; align-items: center; padding: 6px 0; font-size: 13.5px; }
+.dp-list .dot { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.dp-list b { font-weight: 600; } .dp-list .rg { color: var(--d-muted); font-size: 11.5px; line-height: 1.35; font-variant-numeric: tabular-nums; } .dp-list .tot { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
