@@ -205,7 +205,8 @@ const Dso = (() => {
     if (S.cat !== 'all') c = c.filter((x) => x.o.cat === S.cat);
     // sorting: recommended (score), highest altitude, size, apparent magnitude (brightest first); the arrow reverses it
     const last = (v, dir) => (v == null ? (dir > 0 ? Infinity : -Infinity) : v);                 // unknown values always go to the end
-    const keys = { score: [(x) => x.score, 1], alt: [(x) => x.max, -1], size: [(x) => x.o.a, -1], mag: [(x) => x.o.mag, 1] };
+    c.forEach((x) => { x.now = nowAlt(x.o, N.loc).alt; });                                        // altitude right now
+    const keys = { score: [(x) => x.score, 1], now: [(x) => x.now, -1], alt: [(x) => x.max, -1], size: [(x) => x.o.a, -1], mag: [(x) => x.o.mag, 1] };
     const [kf, dir0] = keys[S.sort] || keys.score, dir = S.rev ? -dir0 : dir0;
     c = [...c].sort((a, b) => { const va = kf(a), vb = kf(b); if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1; return (va - vb) * dir; });
     const cats = ['all', 'galaxy', 'cluster', 'nebula'];
@@ -253,7 +254,7 @@ const Dso = (() => {
           <dt>${esc(t('dso.cloudlbl'))}</dt><dd>${esc(cloudTxt)}</dd>
         </dl>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-bar"><div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
-        <div class="dso-sort"><label><span>${esc(t('dso.sort'))}</span><select id="dsoSort">${['score', 'alt', 'size', 'mag'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('')}</select></label>
+        <div class="dso-sort"><label><span>${esc(t('dso.sort'))}</span><select id="dsoSort" title="${esc(t('dso.sort.help'))}">${['score', 'now', 'alt', 'size', 'mag'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('')}</select></label>
           <button type="button" id="dsoRev" class="chip" title="${esc(t('dso.sort.rev'))}" aria-label="${esc(t('dso.sort.rev'))}">${S.rev ? '↑' : '↓'}</button></div></div>
       <div class="dso-h2"><h3>${esc(t('dso.cand.title'))} <span class="cnt">(${c.length})</span></h3>${infoBtn('cand')}</div>
       <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')} ${t('dso.vis.note')} ${t('dso.strip.moon.note')}</p>
