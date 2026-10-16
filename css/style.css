@@ -877,3 +877,13 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-key { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--d-muted); }
 .dp-key i { width: 18px; height: 3px; border-radius: 2px; display: inline-block; margin-left: 8px; } .dp-key i:first-child { margin-left: 0; }
 .dp-key i.su { background: #ffd24a; } .dp-key i.mo { background: #dfe8ff; }
+
+/* Day phases, lighter: lower bar, thin dashed trajectories, Sun and Moon (with its phase) as icons */
+.dp-bar { height: 86px; }
+.dp-curves .hz { stroke: rgba(255, 255, 255, .3); stroke-width: 1; }
+.dp-curves polyline { stroke-width: 1.3; stroke-dasharray: 5 4; opacity: .75; }
+.dp-curves .su { stroke: #ffe28a; } .dp-curves .mo { stroke: #e9efff; stroke-dasharray: 5 4; }
+.dp-ico { position: absolute; width: 0; height: 0; z-index: 2; }
+.dp-ico svg { position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; display: block; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .45)); }
+.dp-ico.below svg { opacity: .8; }
+.dp-key i { height: 0; border-top: 2px dashed; background: none !important; } .dp-key i.su { border-color: #ffe28a; } .dp-key i.mo { border-color: #e9efff; }
