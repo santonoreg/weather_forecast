@@ -447,7 +447,16 @@ const Astro = (() => {
     }
   }
 
-  return { load, render, setBortle, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
+  /* ---- sky maths shared with the DSO Explorer tab ---- */
+  const lstRad = (ms, lon) => sidereal(toDays(ms), RAD * -lon);                                    // local sidereal time, radians
+  /* RA/Dec (radians) -> altitude and azimuth (degrees, azimuth clockwise from north) for an observer */
+  function eq2hor(ra, de, ms, lat, lon) {
+    const H = lstRad(ms, lon) - ra, phi = RAD * lat;
+    return { alt: altitude(H, phi, de) / RAD, az: azimuth(H, phi, de) };
+  }
+  const moonEq = (ms) => { const m = moonCoords(toDays(ms)); return { ra: m.ra, dec: m.dec, dist: m.dist }; };
+
+  return { load, render, setBortle, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
 })();
 
 $('astroRefresh').addEventListener('click', () => Astro.load(true));

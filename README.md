@@ -148,6 +148,17 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 - A **light pollution map** below the table: David Lorenz's sky-brightness atlas (VIIRS 2025, a simulation of the artificial glow that also spreads far around cities) laid over a dark map, plus the raw NASA VIIRS night lights as a second overlay, an opacity slider, and click-to-look-there. Both come straight from the browser to `djlorenz.github.io` and NASA GIBS (free, no key); a link opens the full lightpollutionmap.info atlas.
 - **Light pollution (Bortle class 1–9)** is worked out automatically for any place: the browser reads the colour of the atlas tile under the point (zone → zenith sky brightness → approximate class; the atlas models zenith brightness and is not a Bortle measurement). It scales the deep-sky score (class 8 keeps about a third of it) and shows the naked-eye limiting magnitude. The *Dark sky* drop-down overrides it: a visitor's choice is remembered in their browser; an admin's choice is stored in the database with the location (`bortle_set`) and beats the atlas for everybody. The Greek towns also carry a rough size-based guess, used only if the atlas can't be reached.
 
+### DSO Explorer (open to everyone)
+
+A page for deep-sky observing, next to *Astronomy*. Everything is computed in the browser from three static files in `assets/` (the 2936-object catalogue, the 1627 stars to magnitude 5 and the constellation lines):
+
+- **Catalogue:** search by name or constellation, Messier / Caldwell / Best NGC / Herschel 400 filters, sorting, a virtualised list, and a green/grey dot for "above the horizon now".
+- **Tonight:** sunset/sunrise, astronomical darkness (Sun below −18°, or sunset + 90 min … sunrise − 90 min where it never gets that dark), Moon rise/set and how much of the darkness the Moon is down, the cloud forecast for the dark hours (the same three-model mean as the Astronomy tab), and the best targets: catalogue objects with a magnitude that reach 30° and stay above it for an hour or more, ranked by effective magnitude, with a "Moon nearby" warning.
+- **Object screen:** names, type, size, RA/Dec, current altitude/azimuth, a 24 h altitude chart, a visibility class, a DSS2 photo (CDS `hips2fits`; pinch, double-tap, +/−) and an offline finding chart (stereographic, north up). Opened from *Tonight* it also shows hourly Moon-light and cloud strips for the longest dark spell above 20°.
+- **Visibility class is an estimate:** surface brightness SB = mag + 2.5·log10(π/4·a·b·3600), effective magnitude = mag + 0.5·max(0, SB − 20.5); ≤ 5.5 naked eye, ≤ 8.5 binoculars, ≤ 14 telescope, otherwise very difficult. It assumes a dark sky and no Moon.
+- **Offline:** `sw.js` (a small service worker) keeps the data files and every photo you have opened; the finding chart needs no network at all. Photos: Digitized Sky Survey (DSS2), STScI/NASA via CDS.
+- `node tools/test-dso.js` checks the maths: transit altitude/azimuth of M31, M42 and M45, the visibility classes of the reference objects, the night figures and the Moon-strip values.
+
 ### Models drop-down
 
 - Each model has a checkbox, a short note about **which regions it is best for**, and its reliability score (0–100) once verification has loaded.
@@ -381,6 +392,9 @@ api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
 api/astro.php       atmosphere inputs for the Astronomy tab (multi-model mean + aerosols), 30 min cache
+js/dso.js           DSO Explorer: catalogue, tonight's targets, object screen, photo viewer, finding chart
+assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
+sw.js               service worker: offline catalogue files and opened photos
 js/astro.js         Astronomy tab: Sun/Moon maths, seeing/transparency estimates, scores, rendering
 api/history.php     long-term daily history per saved location (download once, cached in SQLite)
 api/google_weather.php   optional Google WeatherNext 3 integration (used by forecast.php)
@@ -416,7 +430,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 - **Server side:** saved locations, cached API responses and the downloaded weather history in `data/wefo.sqlite`. No personal data or cookies.
 - **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
 - **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station), (reverse geocoding) Nominatim, and — only if you configured a key — Google (`weather.googleapis.com`).
-- **Requests made by the browser:** map tiles (OpenStreetMap; in the Astronomy tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
+- **Requests made by the browser:** map tiles (OpenStreetMap; DSS2 photos from alasky.cds.unistra.fr in the DSO Explorer; in the Astronomy tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
 - **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment. The optional Google Weather API is **not free beyond its monthly quota** and is entirely opt-in — see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison).
 
 ## Limitations

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261085">
+<link rel="stylesheet" href="css/style.css?v=20261088">
 </head>
 <body>
 <header class="topbar">
@@ -18,6 +18,7 @@
     <nav>
       <button class="nav-btn active" data-view="forecast" data-i18n="nav.forecast">Forecast</button>
       <button class="nav-btn" data-view="astro" data-i18n="nav.astro">Astronomy</button>
+      <button class="nav-btn" data-view="dso" data-i18n="nav.dso">DSO Explorer</button>
       <button class="nav-btn" data-view="places" data-i18n="nav.places" hidden>Locations &amp; Map</button>
     </nav>
     <button id="loginBtn" class="auth-btn" type="button" data-i18n="auth.login">Admin login</button>
@@ -153,6 +154,37 @@
     </div>
   </section>
 
+  <!-- ============ DSO EXPLORER ============ -->
+  <section id="view-dso" class="view">
+    <div class="toolbar">
+      <label><span data-i18n="tb.location">Location</span>
+        <select id="dsoLoc"></select>
+      </label>
+      <div class="seg" id="dsoTabs" role="group">
+        <button type="button" class="active on" data-tab="catalog" data-i18n="dso.tab.catalog">Catalogue</button>
+        <button type="button" data-tab="tonight" data-i18n="dso.tab.tonight">Tonight</button>
+      </div>
+      <span id="dsoMeta" class="meta"></span>
+    </div>
+    <div id="dsoEmpty" class="notice" data-i18n="as.empty" hidden></div>
+    <div id="dsoLoadErr" class="notice error" hidden></div>
+    <div id="dsoBody">
+      <div id="dsoMain">
+        <div id="dsoCatalog">
+          <div class="dso-tools"><input id="dsoSearch" type="search" autocomplete="off"><select id="dsoSort" aria-label="sort"></select></div>
+          <div id="dsoChips" class="dso-chips"></div>
+          <p class="dso-count" id="dsoCount"></p>
+          <div id="dsoScroll" class="dso-scroll"><div id="dsoSpacer"><div id="dsoRows"></div></div></div>
+        </div>
+        <div id="dsoNight" hidden></div>
+      </div>
+      <div id="dsoDetail" hidden>
+        <button type="button" id="dsoBack" class="btn ghost" data-i18n="dso.back">← Back</button>
+        <div id="dsoDetailBody"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ LOCATIONS ============ -->
   <section id="view-places" class="view">
     <div class="places-layout">
@@ -220,9 +252,10 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261085"></script>
-<script src="js/icons.js?v=20261085"></script>
-<script src="js/app.js?v=20261085"></script>
-<script src="js/astro.js?v=20261085"></script>
+<script src="js/i18n.js?v=20261088"></script>
+<script src="js/icons.js?v=20261088"></script>
+<script src="js/app.js?v=20261088"></script>
+<script src="js/astro.js?v=20261088"></script>
+<script src="js/dso.js?v=20261088"></script>
 </body>
 </html>
