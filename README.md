@@ -9,7 +9,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
 - **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
 - No API keys needed. Everything is open to visitors except the *Locations & Map* manager, which sits behind a single optional [admin login](#admin-login)
-- Beyond the forecast: an [Astronomy](#astronomy-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
+- Beyond the forecast: an [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
 
@@ -25,9 +25,9 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Sunset and sunrise outlook](docs/screenshots/forecast-sunset.png)
 
-**Astronomy** – light pollution map on top, one card per night (Moon, astronomical darkness, best three hours), then the hour-by-hour table with Sun/Moon altitude charts, twilight bands, seeing, transparency and the deep-sky score
+**Sky Conditions** – light pollution map on top, one card per night (Moon, astronomical darkness, best three hours), then the hour-by-hour table with Sun/Moon altitude charts, twilight bands, seeing, transparency and the deep-sky score
 
-![Astronomy tab](docs/screenshots/astronomy.png)
+![Sky Conditions tab](docs/screenshots/astronomy.png)
 
 **Light pollution map** – David Lorenz's sky-brightness atlas laid over a dark map (with the NASA VIIRS night lights as a second overlay); click anywhere to look at that spot, the Bortle class is worked out from the atlas
 
@@ -159,7 +159,7 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
 7. **Weight by reliability** checkbox: turn reliability weighting on/off.
 8. **Refresh** forces a fresh download (otherwise data is cached for 30 minutes).
 
-### Astronomy (open to everyone)
+### Sky Conditions (open to everyone)
 
 A separate tab next to *Forecast* with the observing conditions for the selected location, hour by hour:
 
@@ -176,9 +176,9 @@ The last icon of the *Hour by hour* switch (a half sun over the horizon, right a
 
 ### DSO Explorer (open to everyone)
 
-A page for deep-sky observing, next to *Astronomy*. Everything is computed in the browser from three static files in `assets/` (the 2936-object catalogue, the 1627 stars to magnitude 5 and the constellation lines):
+A page for deep-sky observing, next to *Sky Conditions*. Everything is computed in the browser from three static files in `assets/` (the 2936-object catalogue, the 1627 stars to magnitude 5 and the constellation lines):
 
-- **Tonight** (the only list; the catalogue browser was dropped): sunset/sunrise, astronomical darkness (Sun below −18°, or sunset + 90 min … sunrise − 90 min where it never gets that dark), Moon rise/set and how much of the darkness the Moon is down, the cloud forecast for the dark hours (the same three-model mean as the Astronomy tab), and the best targets: catalogue objects with a magnitude that reach 30° and stay above it for an hour or more, ranked by effective magnitude, with a "Moon nearby" warning. The list can be re-sorted by altitude right now, peak altitude tonight, size or apparent magnitude (brightest first), with an arrow to reverse the order.
+- **Tonight** (the only list; the catalogue browser was dropped): sunset/sunrise, astronomical darkness (Sun below −18°, or sunset + 90 min … sunrise − 90 min where it never gets that dark), Moon rise/set and how much of the darkness the Moon is down, the cloud forecast for the dark hours (the same three-model mean as the Sky Conditions tab), and the best targets: catalogue objects with a magnitude that reach 30° and stay above it for an hour or more, ranked by effective magnitude, with a "Moon nearby" warning. The list can be re-sorted by altitude right now, peak altitude tonight, size or apparent magnitude (brightest first), with an arrow to reverse the order.
 - **Every target is one full-width line** with everything on it: a big DSS2 photo (click it for the zoomable photo and the offline finding chart, stereographic, north up), the facts (names, type, size, RA/Dec, peak altitude and time, hours above 30°, current altitude/azimuth, visibility class, catalogue flags), a 24 h altitude chart and the hourly Moon-light and cloud strips for the longest dark spell above 20°. There is no separate object page.
 - **Visibility class is an estimate:** surface brightness SB = mag + 2.5·log10(π/4·a·b·3600), effective magnitude = mag + 0.5·max(0, SB − 20.5); ≤ 8.5 binoculars (the brightest of these are visible to the naked eye too), ≤ 14 telescope, otherwise very difficult. It assumes a dark sky and no Moon.
 - **Offline:** `sw.js` (a small service worker) keeps the data files and every photo you have opened; the finding chart needs no network at all. Photos: Digitized Sky Survey (DSS2), STScI/NASA via CDS.
@@ -403,13 +403,13 @@ Most settings are constants in the PHP files below. One optional file, `api/conf
 ## Project structure
 
 ```
-index.html          single-page UI (Forecast, Astronomy, DSO Explorer, Locations views)
+index.html          single-page UI (Forecast, Sky Conditions, DSO Explorer, Locations views)
 css/style.css       styles (light/dark, responsive)
 js/i18n.js          translations (en, el) and language switching
 js/icons.js         3D-style SVG weather icons, WMO code → category mapping
 js/app.js           UI logic: tables, consensus, weighting, map, preferences, admin login
 js/sunset.js        Sunset & sunrise quality view (Forecast tab)
-js/astro.js         Astronomy tab: Sun/Moon maths, seeing/transparency estimates, scores, light-pollution map
+js/astro.js         Sky Conditions tab: Sun/Moon maths, seeing/transparency estimates, scores, light-pollution map
 js/dso.js           DSO Explorer: tonight's targets, hour boxes, altitude charts, photo viewer, finding chart
 sw.js               service worker: offline catalogue files and opened photos
 assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
@@ -417,7 +417,7 @@ api/db.php          SQLite connection (WAL), JSON helpers, HTTP client, error ha
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
 api/observed.php    latest METAR observation near the location
-api/astro.php       atmosphere inputs for the Astronomy tab (multi-model mean + aerosols), 30 min cache
+api/astro.php       atmosphere inputs for the Sky Conditions tab (multi-model mean + aerosols), 30 min cache
 api/skypoints.php   cloud layers at points along the Sun's azimuth (Sunset & sunrise view), 30 min cache
 api/history.php     long-term daily history per saved location (download once, cached in SQLite)
 api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved locations (admin)
@@ -449,7 +449,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
 | `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
 | `GET api/skypoints.php?pts=lat,lon;lat,lon;…` | low/mid/high cloud (3-model mean) at up to 64 points, 7 days hourly, plus aerosol, visibility, humidity and rain at the first point |
-| `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Astronomy tab |
+| `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Sky Conditions tab |
 | `GET api/history.php?id=ID[&refresh=1]` | history summary (records, monthly, annual) for a saved location; downloads and stores the data on first use |
 
 Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
@@ -461,7 +461,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 - **Server side:** saved locations, cached API responses and the downloaded weather history in `data/wefo.sqlite`. No personal data or cookies.
 - **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
 - **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station), (reverse geocoding) Nominatim, and — only if you configured a key — Google (`weather.googleapis.com`).
-- **Requests made by the browser:** map tiles (OpenStreetMap; DSS2 photos from alasky.cds.unistra.fr in the DSO Explorer; in the Astronomy tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
+- **Requests made by the browser:** map tiles (OpenStreetMap; DSS2 photos from alasky.cds.unistra.fr in the DSO Explorer; in the Sky Conditions tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
 - **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment. The optional Google Weather API is **not free beyond its monthly quota** and is entirely opt-in — see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison).
 
 ## Limitations
