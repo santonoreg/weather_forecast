@@ -944,3 +944,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .ss-t3 { background: linear-gradient(135deg, rgba(247, 153, 58, .5), rgba(239, 106, 58, .5)); color: var(--text); }
 .ss-t4 { background: linear-gradient(135deg, rgba(255, 122, 69, .55), rgba(232, 54, 111, .55)); color: var(--text); box-shadow: 0 0 10px rgba(232, 54, 111, .18); }
 .ss-score { box-shadow: none; } .ss-bar > span { box-shadow: none; }
+/* .seg2 also lives outside the DSO page (Sunset view): fall back to the site's own colours there */
+.seg2 { border-color: var(--d-line, var(--line)); }
+.seg2 button { color: var(--d-muted, var(--muted)); }
+.seg2 button.on { background: var(--d-accent, var(--accent)); color: #fff; }
+.ss-top .seg2 { display: inline-flex; width: auto; } .ss-top .seg2 button { flex: none; padding: 8px 20px; }
+:root[data-theme="dark"] .seg2 button.on { color: #0b1220; }
+:root[data-theme="dark"] #view-dso .seg2 button.on { color: #fff; }

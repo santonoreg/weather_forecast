@@ -8,7 +8,8 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 - Frontend: plain **HTML / CSS / JavaScript** (no build step), [Leaflet](https://leafletjs.com/) for the map
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
 - **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
-- No API keys, no accounts
+- No API keys needed. Everything is open to visitors except the *Locations & Map* manager, which sits behind a single optional [admin login](#admin-login)
+- Beyond the forecast: an [Astronomy](#astronomy-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
 
@@ -19,6 +20,22 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 **Forecast – weather** (hero card with rain outlook and days-ahead on the left; on the right, the Weather tab's five-lane dashboard – Weather, Agree, Temp, Rain, Wind – with the individual providers collapsed behind "Show all models"; the current interval is highlighted)
 
 ![Forecast – weather](docs/screenshots/forecast-weather.png)
+
+**Sunset & sunrise colours** – the last icon of the *Hour by hour* switch: a 0–100 outlook for the next seven sunsets (or sunrises) from the cloud layers along the Sun's direction, with golden/blue hour windows
+
+![Sunset and sunrise outlook](docs/screenshots/forecast-sunset.png)
+
+**Astronomy** – light pollution map on top, one card per night (Moon, astronomical darkness, best three hours), then the hour-by-hour table with Sun/Moon altitude charts, twilight bands, seeing, transparency and the deep-sky score
+
+![Astronomy tab](docs/screenshots/astronomy.png)
+
+**Light pollution map** – David Lorenz's sky-brightness atlas laid over a dark map (with the NASA VIIRS night lights as a second overlay); click anywhere to look at that spot, the Bortle class is worked out from the atlas
+
+![Light pollution map](docs/screenshots/astronomy-lightpollution.png)
+
+**DSO Explorer** – tonight's night summary and day phases, then the best deep-sky targets: photo, facts, Moon / cloud / deep-sky hour boxes and a 24 h altitude chart, one object per line
+
+![DSO Explorer](docs/screenshots/dso-tonight.png)
 
 **See what the models say** – a per-provider spaghetti chart (temperature, next 48h) and precipitation bars, expandable below the table
 
@@ -48,7 +65,7 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ![Models drop-down](docs/screenshots/models-dropdown.png)
 
-**Locations & Map** – pick a point on the map, search, save locations
+**Locations & Map** (admin login) – pick a point on the map, search, save locations
 
 ![Locations & Map](docs/screenshots/locations-map.png)
 
@@ -70,6 +87,10 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 
 ---
 
+_The screenshots are regenerated with `node tools/screenshots.js` (headless Edge/Chrome against a local copy; an admin login is needed for the Locations and History shots)._
+
+---
+
 ## Table of contents
 
 1. [Screenshots](#screenshots)
@@ -77,13 +98,14 @@ WeFo is a small self-hosted web app that puts the forecasts of many **free** wea
 3. [How it works](#how-it-works)
 4. [Requirements](#requirements)
 5. [Installation](#installation)
-6. [Configuration](#configuration)
-7. [Project structure](#project-structure)
-8. [HTTP API](#http-api)
-9. [Data, privacy and external services](#data-privacy-and-external-services)
-10. [Limitations](#limitations)
-11. [Adding a language](#adding-a-language)
-12. [Troubleshooting](#troubleshooting)
+6. [Admin login](#admin-login)
+7. [Configuration](#configuration)
+8. [Project structure](#project-structure)
+9. [HTTP API](#http-api)
+10. [Data, privacy and external services](#data-privacy-and-external-services)
+11. [Limitations](#limitations)
+12. [Adding a language](#adding-a-language)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -381,30 +403,33 @@ Most settings are constants in the PHP files below. One optional file, `api/conf
 ## Project structure
 
 ```
-index.html          single-page UI (Forecast + Locations views)
+index.html          single-page UI (Forecast, Astronomy, DSO Explorer, Locations views)
 css/style.css       styles (light/dark, responsive)
 js/i18n.js          translations (en, el) and language switching
 js/icons.js         3D-style SVG weather icons, WMO code → category mapping
-js/app.js           UI logic: tables, consensus, weighting, map, preferences
-api/db.php          SQLite connection, JSON helpers, HTTP client, error handling
-api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved locations (admin)
-api/auth.php        admin login / logout / status (api/auth_lib.php: cookie + throttle helpers)
-api/cities.php      list of Greek cities shown to everyone
-tools/hash-password.php   CLI helper that creates the admin password hash
-api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
+js/app.js           UI logic: tables, consensus, weighting, map, preferences, admin login
+js/sunset.js        Sunset & sunrise quality view (Forecast tab)
+js/astro.js         Astronomy tab: Sun/Moon maths, seeing/transparency estimates, scores, light-pollution map
+js/dso.js           DSO Explorer: tonight's targets, hour boxes, altitude charts, photo viewer, finding chart
+sw.js               service worker: offline catalogue files and opened photos
+assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
+api/db.php          SQLite connection (WAL), JSON helpers, HTTP client, error handling
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
-api/skypoints.php   cloud layers at points along the Sun's azimuth (Sunset & sunrise view), 30 min cache
-js/sunset.js        Sunset & sunrise quality view
+api/observed.php    latest METAR observation near the location
 api/astro.php       atmosphere inputs for the Astronomy tab (multi-model mean + aerosols), 30 min cache
-js/dso.js           DSO Explorer: catalogue, tonight's targets, object screen, photo viewer, finding chart
-assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
-sw.js               service worker: offline catalogue files and opened photos
-js/astro.js         Astronomy tab: Sun/Moon maths, seeing/transparency estimates, scores, rendering
+api/skypoints.php   cloud layers at points along the Sun's azimuth (Sunset & sunrise view), 30 min cache
 api/history.php     long-term daily history per saved location (download once, cached in SQLite)
+api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved locations (admin)
+api/cities.php      list of Greek cities shown to everyone
+api/auth.php        admin login / logout / status (api/auth_lib.php: cookie + throttle helpers)
+api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/google_weather.php   optional Google WeatherNext 3 integration (used by forecast.php)
 api/config.example.php   template for api/config.php (your own API keys — copy it, don't edit this one)
 api/config.php      your own local config (git-ignored; absent = optional features stay off)
+tools/hash-password.php  CLI helper that creates the admin password hash
+tools/test-dso.js        checks of the astronomy maths (node tools/test-dso.js)
+tools/screenshots.js     retakes the README screenshots with a headless browser
 data/               SQLite database (created automatically, git-ignored)
 ```
 
