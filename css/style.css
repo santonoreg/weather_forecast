@@ -864,3 +864,16 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dso-sort label { flex-direction: row; align-items: center; margin: 0; }
 .dso-sort select, .dso-sort .chip { height: 34px; box-sizing: border-box; }
 .dso-sort .chip { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+
+/* Day phases: taller bar with the Sun and Moon trajectories drawn over it */
+.dp-bar { height: 130px; }
+.dp-bar > i { align-items: flex-start; } .dp-bar > i span { margin-top: 8px; }
+.dp-curves { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.dp-curves .hz { stroke: rgba(255, 255, 255, .45); stroke-width: 1; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; }
+.dp-curves polyline { fill: none; stroke-width: 2.4; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.dp-curves .su { stroke: #ffd24a; } .dp-curves .mo { stroke: #dfe8ff; stroke-dasharray: 1 0; }
+.dp-dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 6px rgba(0, 0, 0, .5); z-index: 2; }
+.dp-dot.su { background: #ffc61a; } .dp-dot.mo { background: #e8eeff; border-color: #8aa0d8; }
+.dp-key { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--d-muted); }
+.dp-key i { width: 18px; height: 3px; border-radius: 2px; display: inline-block; margin-left: 8px; } .dp-key i:first-child { margin-left: 0; }
+.dp-key i.su { background: #ffd24a; } .dp-key i.mo { background: #dfe8ff; }

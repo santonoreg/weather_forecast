@@ -304,7 +304,10 @@ const Dso = (() => {
       const a = Astro.sky(t0 + (m + 0.5) * 60e3, loc.lat, loc.lon).sunAlt;
       push(segs, cls(a), m); push(gsegs, gb(a), m);
     }
-    return { segs, gsegs, nowMin: (Date.now() - t0) / 60e3, date: ln };
+    const sun = [], moon = [];
+    for (let m = 0; m <= 1440; m += 10) { const k = Astro.sky(t0 + m * 60e3, loc.lat, loc.lon); sun.push([m, k.sunAlt]); moon.push([m, k.moonAlt]); }
+    const nowK = Astro.sky(Date.now(), loc.lat, loc.lon);
+    return { segs, gsegs, sun, moon, now: nowK, nowMin: (Date.now() - t0) / 60e3, date: ln };
   }
   const fmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
   function phasesHtml(loc, offSec) {
@@ -313,13 +316,19 @@ const Dso = (() => {
     const w = (g) => ((g.b - g.a) / 1440) * 100;
     const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}">${w(g) > 9 ? `<span>${fmMin(g.a)}–${fmMin(g.b)}</span>` : ''}</i>`).join('');
     const gbar = d.gsegs.map((g) => `<i class="ph-${g.c}" style="left:${((g.a / 1440) * 100).toFixed(3)}%;width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
+    // trajectories drawn over the bar: altitude -60°..+90°, the dashed line is the horizon
+    const VB_W = 1440, VB_H = 150, yv = (a) => ((90 - clamp(a, -60, 90)) / 150) * VB_H;
+    const line = (pts) => pts.map(([m, a]) => `${m},${yv(a).toFixed(1)}`).join(' ');
+    const curves = `<svg class="dp-curves" viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${VB_W}" y1="${yv(0)}" y2="${yv(0)}" class="hz"/><polyline points="${line(d.moon)}" class="mo"/><polyline points="${line(d.sun)}" class="su"/></svg>`;
+    const dotTop = (a) => `${((yv(a) / VB_H) * 100).toFixed(1)}%`, dotLeft = `${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%`;
+    const dots = `<b class="dp-dot su" style="left:${dotLeft};top:${dotTop(d.now.sunAlt)}" title="${esc(t('dso.ph.sun'))} ${d.now.sunAlt.toFixed(0)}°"></b><b class="dp-dot mo" style="left:${dotLeft};top:${dotTop(d.now.moonAlt)}" title="${esc(t('dso.ph.moon'))} ${d.now.moonAlt.toFixed(0)}°"></b>`;
     const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}</b>`).join('');
     const leg = (c, arr) => {
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
       return `<li><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
     };
-    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small></div>
-      <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
+    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><i class="su"></i>${esc(t('dso.ph.sun'))}<i class="mo"></i>${esc(t('dso.ph.moon'))}</span></div>
+      <div class="dp-bar">${bar}${curves}${dots}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-axis">${axis}</div>
       <ul class="dp-leg">${PH_ORDER.map((c) => leg(c, d.segs)).join('')}${leg('golden', d.gsegs)}${leg('blue', d.gsegs)}</ul></div>`;
