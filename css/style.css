@@ -888,3 +888,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-ico.below svg { opacity: .8; }
 .dp-key i { height: 0; border-top: 2px dashed; background: none !important; } .dp-key i.su { border-color: #ffe28a; } .dp-key i.mo { border-color: #e9efff; }
 .dp-bar { height: 108px; }
+/* thinner trajectories, a solid thin horizon line */
+.dp-curves .hz { stroke-dasharray: none; stroke-width: 0.8; stroke: rgba(255, 255, 255, .35); }
+.dp-curves polyline { stroke-width: 0.9; }
