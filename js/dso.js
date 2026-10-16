@@ -390,16 +390,24 @@ const Dso = (() => {
   /* photo viewer: pinch, double tap (2.5×), +/− up to 4× */
   function photoViewer(box, o) {
     const fov = fovDegOf(o);
-    box.innerHTML = `<div class="ph-view"><img alt="" decoding="async" src="${photoUrl(o, 1200)}" draggable="false">
-        <span class="fchip">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span>
-        <span class="zbtns"><button type="button" data-z="-1">−</button><button type="button" data-z="1">+</button></span></div>
+    box.innerHTML = `<div class="ph-view"><img alt="" decoding="async" src="${photoUrl(o, 1200)}" draggable="false"></div>
+      <div class="ph-ctl"><span class="fchip static">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span><span class="sp"></span><button type="button" data-z="-1">−</button><button type="button" data-z="1">+</button></div>
       <p class="credit">${esc(t('dso.credit'))}</p>`;
     const view = box.querySelector('.ph-view'), img = view.querySelector('img');
-    view.querySelector('.zbtns').addEventListener('pointerdown', (e) => e.stopPropagation());
     let sc = 1, tx = 0, ty = 0;
     const apply = () => { const lim = ((sc - 1) * view.clientWidth) / 2; tx = clamp(tx, -lim, lim); ty = clamp(ty, -lim, lim); img.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; };
-    const zoom = (f) => { sc = clamp(sc * f, 1, 4); if (sc === 1) { tx = 0; ty = 0; } apply(); };
+    // zoom by factor f; (cx, cy) = the point to keep under the cursor, relative to the centre of the photo
+    const zoom = (f, cx = 0, cy = 0) => {
+      const ns = clamp(sc * f, 1, 4), k = ns / sc;
+      tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k; sc = ns;
+      if (sc === 1) { tx = 0; ty = 0; } apply();
+    };
     box.querySelectorAll('[data-z]').forEach((b) => b.addEventListener('click', () => zoom(+b.dataset.z > 0 ? 1.5 : 1 / 1.5)));
+    view.addEventListener('wheel', (e) => {                                  // the mouse wheel zooms the photo, as it does on the finding chart (the page does not scroll)
+      e.preventDefault();
+      const r = view.getBoundingClientRect();
+      zoom(e.deltaY > 0 ? 1 / 1.2 : 1.2, e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2);
+    }, { passive: false });
     view.addEventListener('dblclick', () => { sc = sc > 1 ? 1 : 2.5; if (sc === 1) { tx = 0; ty = 0; } apply(); });
     const ptrs = new Map(); let last = 0, lastTap = 0;
     view.addEventListener('pointerdown', (e) => {
