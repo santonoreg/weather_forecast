@@ -94,7 +94,7 @@ const Sunset = (() => {
       return out;
     });
     const list = rows.map((r) => r[S.kind] ? r : null).filter(Boolean);
-    const bars = list.map((r) => { const e = r[S.kind]; return `<div class="ss-bar" title="${esc(label(e.score))}"><span class="aq q${tier(e.score)}" style="height:${Math.max(8, e.score)}%"><b>${e.score}</b></span><small>${esc(dayName(r.d.ymd, r.d.k))}</small></div>`; }).join('');
+    const bars = list.map((r) => { const e = r[S.kind]; return `<div class="ss-bar" title="${esc(label(e.score))}"><span class="ss-t${tier(e.score)}" style="height:${Math.max(8, e.score)}%"><b>${e.score}</b></span><small>${esc(dayName(r.d.ymd, r.d.k))}</small></div>`; }).join('');
     const cards = list.map((r) => {
       const e = r[S.kind], ev = e.ev, past = ev.t < Date.now() - 1800e3, key = seenKey(loc, ev), on = !!seen[key];
       const g = S.kind === 'set' ? [ev.gold, ev.blue] : [ev.blue, ev.gold];
@@ -102,7 +102,7 @@ const Sunset = (() => {
       return `<article class="ss-card${past ? ' past' : ''}">
         <div class="ss-day"><b>${esc(dayName(r.d.ymd, r.d.k))}</b><small>${esc(dayDate(r.d.ymd))}</small></div>
         <div class="ss-when"><span class="ss-ico">${S.kind === 'set' ? '🌇' : '🌅'}</span><b>${hm(ev.t, off)}</b><small>${ev.az.toFixed(0)}° ${esc(Astro.compass(ev.az))}</small></div>
-        <div class="ss-score aq q${tier(e.score)}"><span class="num">${e.score}</span><small>${esc(label(e.score))}</small></div>
+        <div class="ss-score ss-t${tier(e.score)}"><span class="num">${e.score}</span><small>${esc(label(e.score))}</small></div>
         <div class="ss-facts">
           <div><span>${esc(t('sun.f.canvas'))}</span><b>${e.canvas}%</b><i><u style="width:${clamp(e.canvas, 0, 100)}%"></u></i></div>
           <div><span>${esc(t('sun.f.open'))}</span><b>${e.open}%</b><i><u style="width:${clamp(e.open, 0, 100)}%"></u></i></div>
