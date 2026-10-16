@@ -321,6 +321,7 @@ const Dso = (() => {
     const line = (pts) => pts.map(([m, a]) => `${m},${yv(a).toFixed(1)}`).join(' ');
     const curves = `<svg class="dp-curves" viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${VB_W}" y1="${yv(0)}" y2="${yv(0)}" class="hz"/><polyline points="${line(d.moon)}" class="mo"/><polyline points="${line(d.sun)}" class="su"/></svg>`;
     const dotTop = (a) => `${((yv(a) / VB_H) * 100).toFixed(1)}%`, dotLeft = `${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%`;
+    const bodyPos = (alt, az) => `${alt.toFixed(0)}° · ${az.toFixed(0)}° ${Astro.compass(az)}`;     // altitude · azimuth direction
     const ico = (svg, a) => `<b class="dp-ico${a > 0 ? '' : ' below'}" style="left:${dotLeft};top:${dotTop(a)}">${svg}</b>`;
     const dots = ico(Astro.moonIcon(d.now.phase, loc.lat, 26), d.now.moonAlt) + ico(Astro.sunIcon(), d.now.sunAlt);   // Moon with its phase, Sun with rays
     const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}</b>`).join('');
@@ -328,7 +329,7 @@ const Dso = (() => {
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
       return `<li><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
     };
-    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><i class="su"></i>${esc(t('dso.ph.sun'))}<i class="mo"></i>${esc(t('dso.ph.moon'))}</span></div>
+    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><span class="k"><i class="su"></i>${esc(t('dso.ph.sun'))} <b>${bodyPos(d.now.sunAlt, d.now.sunAz)}</b></span><span class="k"><i class="mo"></i>${esc(t('dso.ph.moon'))} <b>${bodyPos(d.now.moonAlt, d.now.moonAz)}</b></span></span></div>
       <div class="dp-bar">${bar}${curves}${dots}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-axis">${axis}</div>

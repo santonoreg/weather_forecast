@@ -891,3 +891,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 /* thinner trajectories, a solid thin horizon line */
 .dp-curves .hz { stroke-dasharray: none; stroke-width: 0.8; stroke: rgba(255, 255, 255, .35); }
 .dp-curves polyline { stroke-width: 0.9; }
+
+/* taller bar; Sun and Moon positions next to the title */
+.dp-bar { height: 132px; }
+.dp-key { margin-left: 8px; gap: 18px; flex-wrap: wrap; }
+.dp-key .k { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--d-muted); }
+.dp-key .k b { color: var(--d-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dp-key .k i { margin-left: 0; }
