@@ -194,6 +194,8 @@ const Dso = (() => {
     if (S.cat !== 'all') c = c.filter((x) => x.o.cat === S.cat);
     const cats = ['all', 'galaxy', 'cluster', 'nebula'];
     const loc = N.loc;
+    const cw = Math.max(280, Math.round(($d('dsoNight').clientWidth || 700) - 26)), ch = cw < 520 ? 110 : 92;   // chart = the whole width of the card
+    S.chartW = cw;
     const cards = c.slice(0, S.shown).map((x) => {
       const o = x.o, fov = fovDegOf(o), v = vis(o), p = nowAlt(o, loc), up = p.alt > 0;
       const flags = [o.m && t('dso.chip.m'), o.c && t('dso.chip.c'), o.best && t('dso.chip.best'), o.h4 && t('dso.chip.h4')].filter(Boolean);
@@ -207,19 +209,18 @@ const Dso = (() => {
             <h4>${esc(o.title)}${x.moonNear ? ` <em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}</h4>
             <p class="dso-sub">${esc(conName(o))} • ${esc(typeName(o))}</p>
             <div class="dso-flags"><span class="cls ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</span>${flags.map((f) => `<span>${esc(f)}</span>`).join('')}</div>
-            <dl>
-              <dt>${esc(t('dso.d.mag'))}</dt><dd>${magTxt(o)}</dd>
-              <dt>${esc(t('dso.d.size'))}</dt><dd>${size}</dd>
-              <dt>RA / Dec</dt><dd>${fmtRa(o.raH)} · ${fmtDec(o.decDeg)}</dd>
-              <dt>${esc(t('dso.d.peak'))}</dt><dd>${Math.round(x.max)}° · ${hm(x.tBest)}</dd>
-              <dt>${esc(t('dso.d.above30'))}</dt><dd>${hoursTxt(x.hours)}</dd>
-              <dt>${esc(t('dso.d.nowlbl'))}</dt><dd class="${up ? 'up' : 'dn'}">${up ? '●' : '○'} ${p.alt.toFixed(0)}° · ${p.az.toFixed(0)}° ${Astro.compass(p.az)}</dd>
-            </dl>
-            <small class="dso-sub">${o.a ? esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) })) : ''}${esc(wide)}</small>
+            <div class="kvs">
+              <div class="kv"><span>${esc(t('dso.d.mag'))}:</span> <b>${magTxt(o)}</b></div>
+              <div class="kv"><span>${esc(t('dso.d.size'))}:</span> <b>${size}</b></div>
+              <div class="kv"><span>RA / Dec:</span> <b>${fmtRa(o.raH)} · ${fmtDec(o.decDeg)}</b></div>
+              <div class="kv"><span>${esc(t('dso.d.peak'))}:</span> <b>${Math.round(x.max)}° · ${hm(x.tBest)}</b></div>
+              <div class="kv"><span>${esc(t('dso.d.above30'))}:</span> <b>${hoursTxt(x.hours)}</b></div>
+              <div class="kv"><span>${esc(t('dso.d.nowlbl'))}:</span> <b class="${up ? 'up' : 'dn'}">${up ? '●' : '○'} ${p.alt.toFixed(0)}° · ${p.az.toFixed(0)}° ${Astro.compass(p.az)}</b></div>
+            </div>
           </div>
           <div class="ln-wx">${rowStrips(o, loc, n)}</div>
         </div>
-        <div class="ln-chart"><div class="rw-h"><b>${esc(t('dso.d.altchart'))}</b></div>${altChart(o, loc, n)}</div></article>`;
+        <div class="ln-chart"><div class="rw-h"><b>${esc(t('dso.d.altchart'))}</b></div>${altChart(o, loc, n, cw, ch)}${o.a ? `<p class="ln-cap">${esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) }))}${esc(wide)}</p>` : ''}</div></article>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
         <dl>
@@ -241,8 +242,8 @@ const Dso = (() => {
     for (let tt = t0; tt <= t1; tt += step) out.push({ t: tt, alt: Astro.eq2hor(o.ra, o.dec, tt, loc.lat, loc.lon).alt });
     return out;
   }
-  function altChart(o, loc, night) {
-    const base = night ? night.base : Date.now() - 6 * 3600e3, W = 640, H = 150, pl = 34, pr = 10, pt = 8, pb = 22;
+  function altChart(o, loc, night, W = 640, H = 150) {
+    const base = night ? night.base : Date.now() - 6 * 3600e3, pl = 34, pr = 10, pt = 8, pb = 22;
     const pts = altSeries(o, loc, base, base + 86400e3, 600e3);
     const x = (tt) => pl + ((tt - base) / 86400e3) * (W - pl - pr), y = (a) => pt + (H - pt - pb) * (1 - (clamp(a, -60, 90) + 60) / 150);
     let g = '';
@@ -253,7 +254,7 @@ const Dso = (() => {
     g += `<polyline points="${pts.map((p) => `${x(p.t).toFixed(1)},${y(p.alt).toFixed(1)}`).join(' ')}" class="ln" fill="none"/>`;
     const now = Date.now();
     if (now >= base && now <= base + 86400e3) g += `<line x1="${x(now).toFixed(1)}" x2="${x(now).toFixed(1)}" y1="${pt}" y2="${H - pb}" class="now"/>`;
-    return `<svg viewBox="0 0 ${W} ${H}" class="dso-alt" role="img">${g}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="dso-alt" role="img">${g}</svg>`;
   }
 
   /* hourly Moon / cloud strips for the longest dark spell above 20° (only when opened from "Tonight") */
@@ -418,6 +419,8 @@ const Dso = (() => {
       if (e.target.closest('#dsoMore')) { S.shown += 60; renderTonight(); return; }
       infoToggle(e);
     });
+    let rz = null;
+    window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (state.view === 'dso' && S.chartW && Math.abs(($d('dsoNight').clientWidth - 26) - S.chartW) > 60) renderTonight(); }, 300); });
     $d('dsoLoc').addEventListener('change', () => { $d('locSelect').value = $d('dsoLoc').value; $d('locSelect').dispatchEvent(new Event('change')); $d('dsoLoc').value = $d('locSelect').value; });
   }
   function infoToggle(e) {

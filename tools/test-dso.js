@@ -10,8 +10,8 @@ const root = path.join(__dirname, '..');
 const stubEl = () => ({ addEventListener() {}, set innerHTML(v) {}, classList: { toggle() {}, add() {}, remove() {} }, hidden: false });
 const doc = { getElementById: stubEl, querySelectorAll: () => [] };
 const src = fs.readFileSync(path.join(root, 'js/astro.js'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'js/dso.js'), 'utf8');
-const run = new Function('$', 'document', 'state', 'dateLocale', 't', 'esc', 'locName', 'LANG', 'api', 'setCurrent', 'adhocName', 'renderLocSelect', src + '\nreturn { Astro, Dso };');
-const { Astro, Dso } = run(stubEl, doc, { cities: [], current: null }, () => 'en-GB', (k) => k, (s) => s, () => 'x', 'en', async () => ({}), () => {}, async () => '', () => {});
+const run = new Function('$', 'document', 'window', 'state', 'dateLocale', 't', 'esc', 'locName', 'LANG', 'api', 'setCurrent', 'adhocName', 'renderLocSelect', src + '\nreturn { Astro, Dso };');
+const { Astro, Dso } = run(stubEl, doc, { addEventListener() {} }, { cities: [], current: null }, () => 'en-GB', (k) => k, (s) => s, () => 'x', 'en', async () => ({}), () => {}, async () => '', () => {});
 
 const raw = JSON.parse(fs.readFileSync(path.join(root, 'assets/dso.json'), 'utf8'));
 const objs = Dso.prep(raw);

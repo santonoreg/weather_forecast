@@ -748,3 +748,16 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .sb.ds.q0 { background: rgba(220, 38, 38, .38); } .sb.ds.q1 { background: rgba(234, 120, 20, .38); } .sb.ds.q2 { background: rgba(234, 179, 8, .34); } .sb.ds.q3 { background: rgba(132, 204, 22, .34); } .sb.ds.q4 { background: rgba(22, 163, 74, .45); } .sb.ds.qx { background: rgba(255, 255, 255, .06); }
 @media (max-width: 1100px) { .ln-top { grid-template-columns: 170px 1fr; } .ln-photo { width: 170px; height: 170px; } .ln-wx { grid-column: 1 / -1; align-items: stretch; } }
 @media (max-width: 560px) { .ln-top { grid-template-columns: 1fr; } .ln-photo { width: 100%; height: auto; aspect-ratio: 1; max-height: 70vw; } }
+
+/* DSO line, third pass: left-aligned facts, square weather boxes, full-width low chart */
+.ln-info .kvs { display: flex; flex-direction: column; gap: 3px; margin: 8px 0 0; font-size: 13px; }
+.ln-info .kv span { color: var(--d-muted); } .ln-info .kv b { margin-left: 2px; font-variant-numeric: tabular-nums; }
+.ln-info .kv b.up { color: var(--d-go); } .ln-info .kv b.dn { color: var(--d-muted); }
+.ln-top { grid-template-columns: 200px minmax(220px, 1fr) minmax(360px, 500px); gap: 20px; }
+.ln-wx { gap: 12px; }
+.ln-wx .sbs { gap: 6px; padding: 8px; width: 100%; box-sizing: border-box; }
+.ln-wx .sb { flex: 1 1 0; min-width: 34px; max-width: 54px; max-height: 54px; aspect-ratio: 1; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-size: 14px; }
+.ln-wx .sb small { margin-top: 1px; font-size: 10.5px; }
+.ln-chart .dso-alt { display: block; width: 100%; height: auto; max-height: none; }
+.ln-cap { margin: 6px 0 0; font-size: 11px; color: var(--d-muted); text-align: left; }
+@media (max-width: 1100px) { .ln-wx .sbs { justify-content: flex-start; } }
