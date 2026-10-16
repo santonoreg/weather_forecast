@@ -173,7 +173,7 @@ const Dso = (() => {
   const natural = (a, b) => String(a).localeCompare(String(b), 'en', { numeric: true });
 
   /* catalogue: filter, sort, virtual list */
-  const ROW = 64;
+  const ROW = 72;
   let list = [];
   function filterSort() {
     const q = S.q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -198,15 +198,15 @@ const Dso = (() => {
     for (let i = first; i < last; i++) {
       const o = list[i], up = loc ? nowAlt(o, loc).alt > 0 : null;
       html += `<button type="button" class="dso-row" style="top:${i * ROW}px" data-id="${o.id}">
-        <i class="dot ${up == null ? '' : up ? 'on' : 'off'}" title="${esc(up ? t('dso.visnow') : t('dso.belownow'))}"></i>
-        <span class="tt"><b>${esc(o.title)}</b><small>${esc(typeName(o))} · ${esc(conName(o))}</small></span>
-        <span class="mg">${magTxt(o)}<small>${sizeTxt(o)}</small></span></button>`;
+        <span class="mgb">${magTxt(o)}</span>
+        <span class="tt"><b>${esc(o.title)}</b><small>${esc(conName(o))} • ${esc(typeName(o))}</small></span>
+        <span class="ra">${fmtRa(o.raH)}<i class="dot ${up == null ? '' : up ? 'on' : 'off'}" title="${esc(up ? t('dso.visnow') : t('dso.belownow'))}"></i></span></button>`;
     }
     $d('dsoRows').innerHTML = html;
   }
 
   function renderCatalog() {
-    const chip = (k, label) => `<button type="button" class="chip${S.flags.has(k) ? ' on' : ''}" data-flag="${k}">${label}</button>`;
+    const chip = (k, label) => `<button type="button" class="chip${S.flags.has(k) ? ' on' : ''}" data-flag="${k}">${S.flags.has(k) ? '✓ ' : ''}${label}</button>`;
     $d('dsoChips').innerHTML = chip('m', t('dso.chip.m')) + chip('c', t('dso.chip.c')) + chip('best', t('dso.chip.best')) + chip('h4', t('dso.chip.h4'));
     $d('dsoSort').innerHTML = ['main', 'second', 'con'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('');
     $d('dsoSearch').placeholder = t('dso.search');
@@ -234,10 +234,12 @@ const Dso = (() => {
       const fov = fovDegOf(x.o);
       return `<button type="button" class="dso-card" data-id="${x.o.id}" data-tonight="1" data-best="${x.tBest}">
         <img loading="lazy" alt="" src="${photoUrl(x.o, 400)}">
-        <span class="cb"><b>${esc(x.o.title)}</b>${x.moonNear ? `<em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}
-          <small>${esc(typeName(x.o))} · ${esc(clsName(x.cls))}</small>
-          <small>${t('dso.mag')} ${magTxt(x.o)} · ${esc(t('dso.card.peak', { alt: Math.round(x.max), t: hm(x.tBest) }))}</small>
-          <small>${esc(t('dso.card.above30', { h: hoursTxt(x.hours) }))} · ${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</small></span></button>`;
+        <span class="cb"><b>${esc(x.o.title)}</b>
+          <small>${esc(typeName(x.o))} · ${esc(conName(x.o))}</small>
+          <small class="k">${t('dso.mag')} ${magTxt(x.o)} · ${esc(t('dso.card.peak', { alt: Math.round(x.max), t: hm(x.tBest) }))}</small>
+          <small>${esc(t('dso.card.above30', { h: hoursTxt(x.hours) }))}</small>
+          <small class="fld">${esc(t('dso.card.field2', { f: x.o.a ? `${Math.round(x.o.a)}′${x.o.b && Math.abs(x.o.b - x.o.a) > 0.5 ? ` × ${Math.round(x.o.b)}′` : ''}` : `${Math.round(fov * 60)}′` }))}</small>
+          ${x.moonNear ? `<em class="mw">☾ ${esc(t('dso.moonnear'))}</em>` : ''}</span></button>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
         <dl>
@@ -260,12 +262,12 @@ const Dso = (() => {
     return out;
   }
   function altChart(o, loc, night) {
-    const base = night ? night.base : Date.now() - 6 * 3600e3, W = 640, H = 190, pl = 34, pr = 10, pt = 10, pb = 24;
+    const base = night ? night.base : Date.now() - 6 * 3600e3, W = 640, H = 150, pl = 34, pr = 10, pt = 8, pb = 22;
     const pts = altSeries(o, loc, base, base + 86400e3, 600e3);
-    const x = (tt) => pl + ((tt - base) / 86400e3) * (W - pl - pr), y = (a) => pt + (H - pt - pb) * (1 - (clamp(a, -30, 90) + 30) / 120);
+    const x = (tt) => pl + ((tt - base) / 86400e3) * (W - pl - pr), y = (a) => pt + (H - pt - pb) * (1 - (clamp(a, -60, 90) + 60) / 150);
     let g = '';
     if (night) g += `<rect x="${x(night.darkStart).toFixed(1)}" y="${pt}" width="${(x(night.darkEnd) - x(night.darkStart)).toFixed(1)}" height="${H - pt - pb}" class="ng"/>`;
-    for (const a of [-30, 0, 30, 60, 90]) g += `<line x1="${pl}" x2="${W - pr}" y1="${y(a).toFixed(1)}" y2="${y(a).toFixed(1)}" class="${a === 0 ? 'hz' : 'gl'}"/><text x="${pl - 5}" y="${(y(a) + 3).toFixed(1)}" text-anchor="end" class="lb">${a}°</text>`;
+    for (const a of [-60, -30, 0, 30, 60, 90]) g += `<line x1="${pl}" x2="${W - pr}" y1="${y(a).toFixed(1)}" y2="${y(a).toFixed(1)}" class="${a === 0 ? 'hz' : 'gl'}"/><text x="${pl - 5}" y="${(y(a) + 3).toFixed(1)}" text-anchor="end" class="lb">${a}°</text>`;
     for (let h = 0; h <= 24; h += 3) { const tt = base + h * 3600e3; g += `<text x="${x(tt).toFixed(1)}" y="${H - 7}" text-anchor="middle" class="lb">${hm(tt).slice(0, 2)}</text>`; }
     g += `<line x1="${pl}" x2="${W - pr}" y1="${y(30).toFixed(1)}" y2="${y(30).toFixed(1)}" class="t30"/>`;
     g += `<polyline points="${pts.map((p) => `${x(p.t).toFixed(1)},${y(p.alt).toFixed(1)}`).join(' ')}" class="ln" fill="none"/>`;
@@ -300,20 +302,23 @@ const Dso = (() => {
     const cloudHtml = night && S.night.hasCloud
       ? stripHtml(cv.map((x) => ({ c: x.c, v: x.v == null ? 0 : x.v })), 'cl', (v) => Math.round(v * 100))
       : `<p class="dso-note">${esc(t('dso.nocloud'))}</p>`;
-    return `<section class="card"><div class="dso-h"><h3>${esc(t('dso.strip.moon', { i: interval }))}</h3>${infoBtn('moon')}</div>
+    const litMid = Math.round(Astro.sky((best.a + best.b) / 2, loc.lat, loc.lon).lit * 100);
+    return `<section class="card"><div class="dso-h"><h3>☾ ${esc(t('dso.strip.moon', { i: interval }))}</h3>${infoBtn('moon')}<span class="r">${esc(t('dso.strip.lit', { p: litMid }))}</span></div>
         ${stripHtml(mv, 'mo', (v) => Math.round(v * 100))}
         <p class="dso-sub">${worst.v > 0.001 ? esc(t('dso.strip.worst', { t: hm(worst.c.h), v: Math.round(worst.v * 100) })) : esc(t('dso.strip.nomoon'))}</p>
         <p class="dso-note" data-note="moon" hidden>${t('dso.strip.moon.note')}</p></section>
-      <section class="card"><div class="dso-h"><h3>${esc(t('dso.strip.cloud', { i: interval }))}</h3></div>${cloudHtml}</section>`;
+      <section class="card"><div class="dso-h"><h3>☁ ${esc(t('dso.strip.cloud', { i: interval }))}</h3></div>${cloudHtml}</section>`;
   }
 
   /* photo viewer: pinch, double tap (2.5×), +/− up to 4× */
   function photoViewer(box, o) {
     const fov = fovDegOf(o);
-    box.innerHTML = `<div class="ph-view"><img alt="" decoding="async" src="${photoUrl(o, 1200)}" draggable="false"></div>
-      <div class="ph-ctl"><span class="chip on">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span><span class="sp"></span><button type="button" data-z="-1">−</button><button type="button" data-z="1">+</button></div>
+    box.innerHTML = `<div class="ph-view"><img alt="" decoding="async" src="${photoUrl(o, 1200)}" draggable="false">
+        <span class="fchip">${esc(t('dso.card.field', { fov: fov >= 1 ? fov.toFixed(1) : fov.toFixed(2) }))}</span>
+        <span class="zbtns"><button type="button" data-z="-1">−</button><button type="button" data-z="1">+</button></span></div>
       <p class="credit">${esc(t('dso.credit'))}</p>`;
     const view = box.querySelector('.ph-view'), img = view.querySelector('img');
+    view.querySelector('.zbtns').addEventListener('pointerdown', (e) => e.stopPropagation());
     let sc = 1, tx = 0, ty = 0;
     const apply = () => { const lim = ((sc - 1) * view.clientWidth) / 2; tx = clamp(tx, -lim, lim); ty = clamp(ty, -lim, lim); img.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; };
     const zoom = (f) => { sc = clamp(sc * f, 1, 4); if (sc === 1) { tx = 0; ty = 0; } apply(); };
@@ -337,7 +342,7 @@ const Dso = (() => {
 
   /* finding chart: stereographic, north up, east left */
   function finder(box, o) {
-    box.innerHTML = `<div class="fc-wrap"><canvas class="fc"></canvas></div><div class="ph-ctl"><span class="chip on" id="fcFov"></span><span class="sp"></span><button type="button" data-z="-1">−</button><button type="button" data-z="1">+</button></div>
+    box.innerHTML = `<div class="fc-wrap"><canvas class="fc"></canvas></div><div class="ph-ctl"><span class="fchip static" id="fcFov"></span><span class="sp"></span><button type="button" data-z="-1">−</button><button type="button" data-z="1">+</button></div>
       <p class="credit">${esc(t('dso.map.note'))}</p>`;
     const cv = box.querySelector('canvas'), wrap = box.querySelector('.fc-wrap');
     let fov = 25;
@@ -410,23 +415,29 @@ const Dso = (() => {
     if (!S.view || S.view.id !== id) return;
     const v = vis(o), p = nowAlt(o, loc), night = N && N.night;
     const wide = o.a && o.a > 15 ? t('dso.d.moonw', { n: (o.a / MOON_ARCMIN).toFixed(1) }) : '';
-    body.innerHTML = `<section class="card dso-d">
-        <h2>${esc(o.title)}</h2>
-        <p class="dso-sub">${esc(typeName(o))} · ${esc(conName(o))}${o.other && !o.label ? ' · ' + esc(o.other) : ''}</p>
+    const flags = [o.m && t('dso.chip.m'), o.c && t('dso.chip.c'), o.best && t('dso.chip.best'), o.h4 && t('dso.chip.h4')].filter(Boolean);
+    const up = p.alt > 0;
+    const stripsHtml = fromTonight && night ? strips(o, loc, night) : '';
+    body.innerHTML = `<h2 class="dso-title">${esc(o.title)}</h2>
+      <section class="card"><div class="seg2" id="dsoPM"><button type="button" class="on" data-pm="photo">${esc(t('dso.photo'))}</button><button type="button" data-pm="map">${esc(t('dso.map'))}</button></div><div id="dsoPMBox"></div></section>
+      <section class="card dso-d">
+        <h3>${esc(o.main)}</h3>
+        <p class="dso-sub">${esc(conName(o))} • ${esc(typeName(o))}${o.second && o.label ? '' : ''}</p>
+        ${flags.length ? `<div class="dso-flags">${flags.map((f) => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
         <dl>
-          <dt>${esc(t('dso.mag'))}</dt><dd>${magTxt(o)}</dd>
+          <dt>${esc(t('dso.d.ra'))}</dt><dd>${fmtRa(o.raH)}</dd>
+          <dt>${esc(t('dso.d.dec'))}</dt><dd>${fmtDec(o.decDeg)}</dd>
+          <dt>${esc(t('dso.d.mag'))}</dt><dd>${magTxt(o)}</dd>
           <dt>${esc(t('dso.d.size'))}</dt><dd>${sizeTxt(o)}</dd>
-          <dt>RA / Dec (J2000)</dt><dd>${fmtRa(o.raH)} · ${fmtDec(o.decDeg)}</dd>
-          <dt>${esc(t('dso.d.nowlbl'))}</dt><dd>${esc(t('dso.d.now', { alt: p.alt.toFixed(0), az: p.az.toFixed(0), dir: Astro.compass(p.az), st: t(p.alt > 0 ? 'dso.visnow' : 'dso.belownow') }))}</dd>
-        </dl></section>
-      <section class="card"><div class="dso-h"><h3>${esc(t('dso.d.altchart'))}</h3></div>${altChart(o, loc, night)}
-        <p class="dso-note">${esc(night ? t('dso.d.altnote') : t('dso.d.altnote.nonight'))}</p></section>
-      <section class="card"><div class="dso-h"><h3>${esc(t('dso.d.vis'))}</h3>${infoBtn('vis')}</div>
-        <p class="dso-vis ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</p>
+          <dt>${esc(t('dso.d.vis'))} ${infoBtn('vis')}</dt><dd><span class="dso-vis ${v ? v.cls : ''}">${esc(clsName(v && v.cls))}</span></dd>
+        </dl>
         <p class="dso-sub">${o.a ? esc(t('dso.d.covers', { a: o.a.toFixed(1), b: (o.b || o.a).toFixed(1) })) : ''} ${esc(wide)}</p>
         <p class="dso-note" data-note="vis" hidden>${t('dso.vis.note')}</p></section>
-      <section class="card"><div class="seg2" id="dsoPM"><button type="button" class="on" data-pm="photo">${esc(t('dso.photo'))}</button><button type="button" data-pm="map">${esc(t('dso.map'))}</button></div><div id="dsoPMBox"></div></section>
-      ${fromTonight && night ? strips(o, loc, night) : ''}`;
+      ${stripsHtml}
+      <section class="card dso-now ${up ? 'up' : 'down'}"><span class="eye">${up ? '👁' : '🚫'}</span><div><b>${esc(t(up ? 'dso.visnow' : 'dso.belownow'))}</b>
+        <small>${esc(t('dso.d.now2', { alt: p.alt.toFixed(1), az: p.az.toFixed(0), dir: Astro.compass(p.az) }))}</small></div></section>
+      <section class="card"><div class="dso-h"><h3>${esc(t('dso.d.altchart'))}</h3></div>${altChart(o, loc, night)}
+        <p class="dso-note">${esc(night ? t('dso.d.altnote') : t('dso.d.altnote.nonight'))}</p></section>`;
     let redraw = null;
     const show = (k) => {
       body.querySelectorAll('#dsoPM button').forEach((b) => b.classList.toggle('on', b.dataset.pm === k));
@@ -467,7 +478,7 @@ const Dso = (() => {
     $d('dsoTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
     $d('dsoSearch').addEventListener('input', (e) => { S.q = e.target.value; filterSort(); });
     $d('dsoSort').addEventListener('change', (e) => { S.sort = e.target.value; filterSort(); });
-    $d('dsoChips').addEventListener('click', (e) => { const b = e.target.closest('[data-flag]'); if (!b) return; const k = b.dataset.flag; S.flags.has(k) ? S.flags.delete(k) : S.flags.add(k); b.classList.toggle('on', S.flags.has(k)); filterSort(); });
+    $d('dsoChips').addEventListener('click', (e) => { const b = e.target.closest('[data-flag]'); if (!b) return; const k = b.dataset.flag; S.flags.has(k) ? S.flags.delete(k) : S.flags.add(k); renderCatalog(); });
     $d('dsoScroll').addEventListener('scroll', () => paintRows(), { passive: true });
     $d('dsoRows').addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) openDetail(+b.dataset.id, false); });
     $d('dsoNight').addEventListener('click', (e) => {

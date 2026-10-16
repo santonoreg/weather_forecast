@@ -625,3 +625,39 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .sb.mo { --c: #f5e7b0; } .sb.cl { --c: #ffffff; }
 .sb span { color: #e6ecff; } .sb span.dk { color: #1b2333; } .sb small { display: block; font-weight: 500; font-size: 10.5px; color: #9fb3e6; }
 @media (max-width: 700px) { .dso-cards { grid-template-columns: 1fr 1fr; gap: 8px; } .dso-card .cb b { font-size: 13px; } .dso-scroll { height: 62vh; } }
+
+/* ---- DSO Explorer: phone-app layout (narrow column, rounded cards) ---- */
+#dsoBody { max-width: 600px; margin: 0 auto; }
+#view-dso .toolbar { max-width: 600px; margin-left: auto; margin-right: auto; }
+.dso-tools input { padding-left: 14px; }
+.dso-scroll { border: 0; background: transparent; height: 70vh; }
+.dso-row { height: 64px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); margin: 0; }
+.dso-row .mgb { flex: none; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.dso-row .ra { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dso-row .ra .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: block; } .dso-row .ra .dot.on { background: #16a34a; } .dso-row .ra .dot.off { background: #94a3b8; }
+.dso-cards { display: flex; flex-direction: column; gap: 10px; }
+.dso-card { flex-direction: row; align-items: stretch; gap: 12px; padding: 10px; border-radius: 14px; }
+.dso-card img { width: 86px; height: 86px; flex: none; aspect-ratio: auto; border-radius: 10px; }
+.dso-card .cb { padding: 0; gap: 1px; min-width: 0; }
+.dso-card .cb small.k { color: var(--text); font-weight: 600; } .dso-card .cb small.fld { color: var(--accent); font-weight: 600; }
+.dso-title { margin: 4px 2px 10px; font-size: 18px; text-align: center; }
+.dso-d h3 { margin: 0; font-size: 17px; }
+.dso-flags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 2px; }
+.dso-flags span { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.dso-d dl { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
+.dso-d dd .dso-vis { margin: 0; padding: 1px 12px; font-size: 12.5px; }
+.dso-now { display: flex; align-items: center; gap: 12px; } .dso-now .eye { font-size: 22px; }
+.dso-now b { display: block; font-size: 15px; } .dso-now small { color: var(--muted); font-size: 12.5px; }
+.dso-h .r { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--accent); }
+.dso-alt { max-height: 150px; }
+.sbs { gap: 3px; padding: 6px; }
+.sb { flex: 0 0 34px; max-width: 34px; padding: 6px 0 2px; border-radius: 6px; font-size: 12px; }
+.sb small { font-size: 10px; margin-top: 2px; }
+.ph-view .fchip, .fchip.static { position: absolute; left: 10px; top: 10px; padding: 3px 10px; border-radius: 999px; font: 600 12px Inter, sans-serif; color: #fff; background: rgba(8, 12, 28, .62); }
+.fchip.static { position: static; display: inline-block; color: var(--text); background: var(--summary); }
+.ph-view .zbtns { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 8px; }
+.ph-view .zbtns button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .35); background: rgba(8, 12, 28, .6); color: #fff; font: 600 20px Inter, sans-serif; line-height: 1; cursor: pointer; }
+.seg2 { display: flex; width: 100%; } .seg2 button { flex: 1; padding: 9px 10px; }
+#dsoPMBox { margin-top: 2px; }
+.dso-i { margin-left: 2px; }
+.fc-wrap { max-width: 100%; }
