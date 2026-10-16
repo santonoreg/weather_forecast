@@ -898,3 +898,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-key .k { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--d-muted); }
 .dp-key .k b { color: var(--d-text); font-weight: 700; font-variant-numeric: tabular-nums; }
 .dp-key .k i { margin-left: 0; }
+
+/* smaller Sun / Moon icons on the day-phases bar */
+.dp-ico svg { left: -9px; top: -9px; width: 18px; height: 18px; }

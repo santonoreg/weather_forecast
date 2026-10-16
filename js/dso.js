@@ -322,8 +322,8 @@ const Dso = (() => {
     const curves = `<svg class="dp-curves" viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${VB_W}" y1="${yv(0)}" y2="${yv(0)}" class="hz"/><polyline points="${line(d.moon)}" class="mo"/><polyline points="${line(d.sun)}" class="su"/></svg>`;
     const dotTop = (a) => `${((yv(a) / VB_H) * 100).toFixed(1)}%`, dotLeft = `${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%`;
     const bodyPos = (alt, az) => `${alt.toFixed(0)}° · ${az.toFixed(0)}° ${Astro.compass(az)}`;     // altitude · azimuth direction
-    const ico = (svg, a) => `<b class="dp-ico${a > 0 ? '' : ' below'}" style="left:clamp(14px, ${dotLeft}, calc(100% - 14px));top:clamp(14px, ${dotTop(a)}, calc(100% - 14px))">${svg}</b>`;
-    const dots = ico(Astro.moonIcon(d.now.phase, loc.lat, 26), d.now.moonAlt) + ico(Astro.sunIcon(), d.now.sunAlt);   // Moon with its phase, Sun with rays
+    const ico = (svg, a) => `<b class="dp-ico${a > 0 ? '' : ' below'}" style="left:${dotLeft};top:${dotTop(a)}">${svg}</b>`;
+    const dots = ico(Astro.moonIcon(d.now.phase, loc.lat, 18), d.now.moonAlt) + ico(Astro.sunIcon(), d.now.sunAlt);   // Moon with its phase, Sun with rays
     const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}</b>`).join('');
     const leg = (c, arr) => {
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
