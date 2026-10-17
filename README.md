@@ -172,7 +172,7 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 
 ### Sunset & sunrise colours (Forecast tab)
 
-The last icon of the *Hour by hour* switch (a half sun over the horizon, right after the meteogram) opens a seven-day outlook for **sunset** and **sunrise**: a 0–100 score per day (Weak / Low / Fair / Good / Spectacular), the time and direction of the Sun, the golden and blue hour windows, and the factors behind the score. It is an estimate: high and mid cloud catch the light (best at about 45 % cover), the horizon on the Sun's side has to be open (low cloud at 80–150 km along its azimuth hides it — `api/skypoints.php` forecasts points along that direction), a little aerosol deepens the reds, and rain or poor visibility spoil it. The *I saw it* stars are kept only in your browser.
+The last icon of the *Hour by hour* switch (a half sun over the horizon, right after the meteogram) opens a seven-day outlook for **sunset** and **sunrise**: a 0–100 score per day (Weak / Low / Fair / Good / Spectacular), the time and direction of the Sun, the golden and blue hour windows, and the factors behind the score. It is an estimate: high and mid cloud catch the light (best at about 45 % cover), the horizon on the Sun's side has to be open (low cloud at 80–150 km along its azimuth hides it — `api/skypoints.php` forecasts points along that direction), a little aerosol deepens the reds, and rain or poor visibility spoil it. For the events of the next 30 hours the low and mid cloud is also pulled towards **real airport data** along the Sun's direction (`api/aviation.php`: METAR observations of the last hours and TAF forecasts valid for about 9–30 h, from aviationweather.gov; the nearest station within 70 / 90 km of each horizon point; the TAF counts for 40–60 %, a METAR only for the next ~3 hours). Automatic stations only see cloud below ~12 000 ft, so they cannot see high cirrus: they tell whether the horizon will be blocked, not how much cloud there is to catch the light. The *I saw it* stars are kept only in your browser.
 
 ### DSO Explorer (open to everyone)
 
@@ -418,6 +418,7 @@ api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
 api/observed.php    latest METAR observation near the location
 api/astro.php       atmosphere inputs for the Sky Conditions tab (multi-model mean + aerosols), 30 min cache
+api/aviation.php    METAR / TAF of the airports near given points (aviationweather.gov), 15 min cache
 api/skypoints.php   cloud layers at points along the Sun's azimuth (Sunset & sunrise view), 30 min cache
 api/history.php     long-term daily history per saved location (download once, cached in SQLite)
 api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved locations (admin)
@@ -448,6 +449,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
 | `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
+| `GET api/aviation.php?pts=lat,lon;…` | for each point the nearest METAR (latest report) and TAF station with their cloud layers |
 | `GET api/skypoints.php?pts=lat,lon;lat,lon;…` | low/mid/high cloud (3-model mean) at up to 64 points, 7 days hourly, plus aerosol, visibility, humidity and rain at the first point |
 | `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Sky Conditions tab |
 | `GET api/history.php?id=ID[&refresh=1]` | history summary (records, monthly, annual) for a saved location; downloads and stores the data on first use |

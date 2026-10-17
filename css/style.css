@@ -951,3 +951,5 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .ss-top .seg2 { display: inline-flex; width: auto; } .ss-top .seg2 button { flex: none; padding: 8px 20px; }
 :root[data-theme="dark"] .seg2 button.on { color: #0b1220; }
 :root[data-theme="dark"] #view-dso .seg2 button.on { color: #fff; }
+
+.ss-obs { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); padding-top: 4px; border-top: 1px dashed var(--line); } .ss-obs b { color: var(--text); font-weight: 600; }

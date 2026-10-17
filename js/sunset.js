@@ -6,7 +6,7 @@
 const Sunset = (() => {
   const RAD = Math.PI / 180, EARTH = 6371, DIST = [30, 80, 150];
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
-  const S = { kind: 'set', key: null, ev: null, sky: null, err: null, loading: false };
+  const S = { kind: 'set', key: null, ev: null, sky: null, err: null, loading: false, av: null, avKey: null };
 
   /* ---------- the Sun at the horizon, day by day ---------- */
   function dest(lat, lon, azDeg, km) {                         // point `km` away along a bearing
@@ -44,11 +44,59 @@ const Sunset = (() => {
     if (b == null || i + 1 >= tm.length) return a;
     return a + (b - a) * clamp((t - tm[i]) / (tm[i + 1] - tm[i]), 0, 1);
   }
+  /* ---------- real airport data (METAR now, TAF for the next 9–30 h) along the Sun's direction ---------- */
+  const COVER = { FEW: 0.18, SCT: 0.44, BKN: 0.75, OVC: 1, VV: 1 };            // oktas -> fraction (centre of each class)
+  function layerPct(clouds) {                                                   // low = base <= 6500 ft, mid = 6500..20000 ft (stations do not see cirrus)
+    let lo = 1, mi = 1;
+    for (const [cv, base] of clouds || []) {
+      const f = COVER[cv]; if (!f) continue;
+      const b = base == null ? 0 : base;
+      if (b <= 6500) lo *= 1 - f; else if (b <= 20000) mi *= 1 - f;
+    }
+    return { low: Math.round((1 - lo) * 100), mid: Math.round((1 - mi) * 100) };
+  }
+  function tafAt(taf, tSec) {                                                   // the forecast group in force at an instant (TEMPO / PROB groups only mix in)
+    if (!taf || tSec < taf.from || tSec >= taf.to) return null;
+    const cov = taf.fcsts.filter((g) => g.from <= tSec && tSec < g.to);
+    const main = cov.filter((g) => g.change !== 'TEMPO' && !(g.change || '').startsWith('PROB')).sort((a, b) => b.from - a.from)[0] || taf.fcsts[0];
+    if (!main) return null;
+    let r = layerPct(main.clouds);
+    cov.filter((g) => g.change === 'TEMPO' || (g.change || '').startsWith('PROB')).forEach((g) => { const x = layerPct(g.clouds); r = { low: Math.round(0.7 * r.low + 0.3 * Math.max(r.low, x.low)), mid: Math.round(0.7 * r.mid + 0.3 * Math.max(r.mid, x.mid)) }; });
+    return r;
+  }
+  /* what the stations say for the sky point `ptIdx` at the event time, and how much it counts (0..1) */
+  function station(ptIdx, tMs) {
+    if (!S.av) return null;
+    const ap = S.av.points[S.av.map.get(ptIdx)];
+    if (!ap) return null;
+    const h = (tMs - Date.now()) / 3600e3;
+    if (h < -0.5 || h > 30) return null;
+    const m = ap.metar && S.av.data.metar[ap.metar.id], f = ap.taf && S.av.data.taf[ap.taf.id];
+    const metar = m && Date.now() / 1000 - m.time < 3 * 3600 ? (m.cavok ? { low: 0, mid: 0 } : layerPct(m.clouds)) : null;
+    const taf = f ? tafAt(f, tMs / 1000) : null;
+    const a = clamp((3 - h) / 3, 0, 1);                                         // a METAR says little about more than ~3 h ahead
+    const wTaf = taf ? (h <= 9 ? 0.6 : 0.4) : 0, wObs = metar ? a * 0.6 : 0;
+    let est = null, w = 0;
+    if (taf) { est = taf; w = wTaf; if (metar && a > 0) { est = { low: taf.low + (metar.low - taf.low) * a * 0.7, mid: taf.mid + (metar.mid - taf.mid) * a * 0.7 }; w = Math.max(wTaf, wObs); } }
+    else if (metar && wObs > 0) { est = metar; w = wObs; }
+    if (!est || w <= 0) return null;
+    return { low: est.low, mid: est.mid, w, metar: ap.metar && metar ? ap.metar : null, taf: ap.taf && taf ? ap.taf : null };
+  }
+
   const tri = (c) => Math.max(0.18, 1 - Math.abs(c - 45) / 45);        // light-catching cloud: best around 45 %, plain sky still gives some colour
   function score(ev, sky, tm) {
     const P = (j, name) => at(sky, tm, sky.points[ev.pi[j]][name], ev.t);
     const base = { low: at(sky, tm, sky.points[0].low, ev.t), mid: at(sky, tm, sky.points[0].mid, ev.t), high: at(sky, tm, sky.points[0].high, ev.t) };
-    const pts = [base, ...[0, 1, 2].map((j) => ({ low: P(j, 'low'), mid: P(j, 'mid'), high: P(j, 'high') }))];
+    const used = new Map();                                                     // stations that changed the picture
+    const pts = [base, ...[0, 1, 2].map((j) => {
+      const p = { low: P(j, 'low'), mid: P(j, 'mid'), high: P(j, 'high') };
+      const st = station(ev.pi[j], ev.t);
+      if (st) {
+        p.low = (1 - st.w) * (p.low ?? 0) + st.w * st.low; p.mid = (1 - st.w) * (p.mid ?? 0) + st.w * st.mid;
+        [['M', st.metar], ['T', st.taf]].forEach(([k, x]) => { if (x && !used.has(x.id + k)) used.set(x.id + k, { id: x.id, km: x.km, kind: k, low: Math.round(st.low), mid: Math.round(st.mid), w: st.w }); });
+      }
+      return p;
+    })];
     const nz = (v) => (v == null ? 0 : v);
     const canvas = pts.reduce((a, p) => a + Math.max(nz(p.high), nz(p.mid)), 0) / pts.length;             // cloud that can catch the light
     const hz = [pts[2], pts[3]];                                                                         // 80 and 150 km: the real horizon band
@@ -58,7 +106,7 @@ const Sunset = (() => {
     const fv = vis == null ? 1 : clamp(vis / 1000 / 20, 0.65, 1);
     const fr = rain != null && rain > 0.2 ? 0.5 : 1;
     const sc = clamp(Math.round(100 * tri(canvas) * (1 - Math.min(1, block / 70)) * fa * fv * fr), 0, 100);
-    return { score: sc, canvas: Math.round(canvas), block: Math.round(block), open: Math.round(100 - block), aod, vis: vis == null ? null : vis / 1000, rain };
+    return { score: sc, canvas: Math.round(canvas), block: Math.round(block), open: Math.round(100 - block), aod, vis: vis == null ? null : vis / 1000, rain, obs: [...used.values()] };
   }
   const tier = (s) => (s >= 70 ? 4 : s >= 50 ? 3 : s >= 30 ? 2 : s >= 12 ? 1 : 0);
 
@@ -108,6 +156,7 @@ const Sunset = (() => {
           <div><span>${esc(t('sun.f.open'))}</span><b>${e.open}%</b><i><u style="width:${clamp(e.open, 0, 100)}%"></u></i></div>
           <div class="sm"><span>${esc(t('sun.f.aod'))}</span><b>${e.aod == null ? '–' : e.aod.toFixed(2)}</b><span>${esc(t('sun.f.vis'))}</span><b>${e.vis == null ? '–' : Math.round(e.vis) + ' km'}</b>${e.rain > 0.2 ? `<span class="rn">☔ ${e.rain.toFixed(1)} mm</span>` : ''}</div>
         </div>
+        ${e.obs && e.obs.length ? `<div class="ss-obs" title="${esc(t('sun.obs.tip'))}">✈ <b>${esc(t('sun.obs'))}</b> ${e.obs.map((o) => `${esc(o.id)}${o.kind === 'M' ? ' METAR' : ' TAF'} (${Math.round(o.km)} km): ${esc(t('sun.obs.low'))} ${o.low}%`).join(' · ')}</div>` : ''}
         <div class="ss-times"><span>${esc(t(names[0]))} <b>${win(g[0][0], g[0][1], off)}</b></span><span>${esc(t(names[1]))} <b>${win(g[1][0], g[1][1], off)}</b></span></div>
         <button type="button" class="ss-seen${on ? ' on' : ''}" data-seen="${esc(key)}">${on ? '★' : '☆'} ${esc(t('sun.seen'))}</button>
       </article>`;
@@ -135,6 +184,22 @@ const Sunset = (() => {
     } catch (e) { S.err = e.message || String(e); S.sky = null; }
     finally { S.loading = false; S.pending = null; }
     if (state.orient === 's') { try { paint(); } catch (e) { S.err = e.message; $('sunsetBox').innerHTML = `<div class="notice error">${esc(e.message)}</div>`; } }
+    if (S.sky && S.key === key) loadAviation(key);
+  }
+  /* airport observations / forecasts for the horizon points of the events in the next 30 hours; failure just leaves the model forecast */
+  async function loadAviation(key) {
+    if (S.avKey === key) return;
+    S.avKey = key;
+    const now = Date.now(), idx = new Set();
+    S.ev.forEach((d) => ['set', 'rise'].forEach((k) => { const e = d[k]; if (e && e.t - now > -1800e3 && e.t - now < 30 * 3600e3) e.pi.forEach((i) => idx.add(i)); }));
+    const list = [...idx];
+    if (!list.length) return;
+    try {
+      const data = await withTimeout(api('api/aviation.php?pts=' + list.map((i) => S.sky.points[i].lat + ',' + S.sky.points[i].lon).join(';')), 20000);
+      if (S.key !== key) return;
+      S.av = { data, points: data.points, map: new Map(list.map((i, n) => [i, n])) };
+      if (state.orient === 's') paint();
+    } catch (e) { S.avKey = null; /* the model forecast stays as it is */ }
   }
 
   function init() {
@@ -146,6 +211,6 @@ const Sunset = (() => {
       const sn = e.target.closest('[data-seen]'); if (sn) { toggleSeen(sn.dataset.seen); paint(); }
     });
   }
-  return { init, render, paint, invalidate() { S.key = null; S.sky = null; } };
+  return { init, render, paint, invalidate() { S.key = null; S.sky = null; S.av = null; S.avKey = null; } };
 })();
 Sunset.init();
