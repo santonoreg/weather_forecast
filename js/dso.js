@@ -305,34 +305,64 @@ const Dso = (() => {
       push(segs, cls(a), m); push(gsegs, gb(a), m);
     }
     const sun = [], moon = [];
-    for (let m = 0; m <= 1440; m += 10) { const k = Astro.sky(t0 + m * 60e3, loc.lat, loc.lon); sun.push([m, k.sunAlt]); moon.push([m, k.moonAlt]); }
+    for (let m = 0; m <= 1440; m += 10) { const k = Astro.sky(t0 + m * 60e3, loc.lat, loc.lon); sun.push([m, k.sunAlt, k.sunAz]); moon.push([m, k.moonAlt, k.moonAz]); }
     const nowK = Astro.sky(Date.now(), loc.lat, loc.lon);
     return { segs, gsegs, sun, moon, now: nowK, nowMin: (Date.now() - t0) / 60e3, date: ln };
   }
   const fmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  /* Trajectory card of the Sun or the Moon for the local day: altitude (solid, shaded above the horizon), azimuth (dashed, right axis),
+     ↑ rise • transit ↓ set marks, and a "now" line with the current altitude · azimuth */
+  function trajCard(kind, d) {
+    const W = 560, H = 236, pl = 42, pr = 34, pt = 30, pb = 26, pw = W - pl - pr, ph = H - pt - pb;
+    const pts = kind === 'sun' ? d.sun : d.moon, now = kind === 'sun' ? { alt: d.now.sunAlt, az: d.now.sunAz } : { alt: d.now.moonAlt, az: d.now.moonAz };
+    const col = kind === 'sun' ? '#ffc933' : '#b9a9f6', azcol = kind === 'sun' ? '#9aa3c4' : '#a7b46e';
+    const X = (m) => pl + (m / 1440) * pw, Y = (a) => pt + ph * (1 - (clamp(a, -90, 90) + 90) / 180);
+    const hz = Y(0);
+    // azimuth drawn continuously: bottom = north (0°), east, south at the horizon line, west, top = north (360°)
+    let az0 = pts[0][2]; if (az0 > 180) az0 -= 360;
+    let prev = az0, off = 0;
+    const azs = pts.map(([m, , az]) => { let v = az + off; while (v - prev > 180) { off -= 360; v -= 360; } while (v - prev < -180) { off += 360; v += 360; } prev = v; return [m, v]; });
+    const Yaz = (az) => pt + ph * (1 - az / 360);
+    const id = 'tjc' + kind;
+    const altLine = pts.map(([m, a]) => `${X(m).toFixed(1)},${Y(a).toFixed(1)}`).join(' ');
+    const area = `${X(0).toFixed(1)},${hz.toFixed(1)} ` + pts.map(([m, a]) => `${X(m).toFixed(1)},${Math.min(Y(a), hz).toFixed(1)}`).join(' ') + ` ${X(1440).toFixed(1)},${hz.toFixed(1)}`;
+    const azLine = azs.map(([m, v]) => `${X(m).toFixed(1)},${Yaz(v).toFixed(1)}`).join(' ');
+    let g = `<defs><clipPath id="${id}"><rect x="${pl}" y="${pt}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+    for (const a of [60, 30, 0, -30, -60]) g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(a).toFixed(1)}" y2="${Y(a).toFixed(1)}" class="${a === 0 ? 'hz' : 'gl'}"/><text x="${pl - 6}" y="${(Y(a) + 3.5).toFixed(1)}" text-anchor="end" class="lb">${a > 0 ? '+' : ''}${a}°</text>`;
+    const dirs = LANG === 'el' ? ['Β', 'Δ', 'Ν', 'Α', 'Β'] : ['N', 'W', 'S', 'E', 'N'];
+    dirs.forEach((c, i) => { g += `<text x="${W - pr + 8}" y="${(pt + ph * (i / 4) + 3.5).toFixed(1)}" class="lb">${c}</text>`; });
+    for (const h of [0, 6, 12, 18, 24]) g += `<text x="${X(h * 60).toFixed(1)}" y="${H - 7}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" class="lb">${String(h).padStart(2, '0')}:00</text>`;
+    g += `<g clip-path="url(#${id})"><polygon points="${area}" fill="${col}" fill-opacity=".2"/><polyline points="${azLine}" fill="none" stroke="${azcol}" stroke-width="1.4" stroke-dasharray="4 3"/><polyline points="${altLine}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round"/></g>`;
+    // rise / transit / set
+    const cross = (dir) => { for (let i = 1; i < pts.length; i++) { const a = pts[i - 1][1], b = pts[i][1]; if (dir > 0 ? a < 0 && b >= 0 : a > 0 && b <= 0) return pts[i - 1][0] + ((pts[i][0] - pts[i - 1][0]) * (0 - a)) / (b - a); } return null; };
+    const top = pts.reduce((m, q) => (q[1] > m[1] ? q : m), pts[0]);
+    const mark = (m, glyph, label) => (m == null ? '' : `<text x="${X(m).toFixed(1)}" y="${pt - 9}" text-anchor="middle" class="mk"><title>${esc(label)} ${fmMin(m)}</title>${glyph}</text>`);
+    g += mark(cross(1), '↑', t('dso.tj.rise')) + (top[1] > 0 ? mark(top[0], '•', t('dso.tj.transit')) : '') + mark(cross(-1), '↓', t('dso.tj.set'));
+    // now
+    const nx = X(clamp(d.nowMin, 0, 1440)), ny = Y(now.alt);
+    g += `<line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="${pt}" y2="${pt + ph}" class="nw"/><circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="4.6" fill="${col}" stroke="#fff" stroke-width="1.6"/>`;
+    const lx = nx > W - pr - 90 ? nx - 8 : nx + 8, anc = nx > W - pr - 90 ? 'end' : 'start', ly = ny < pt + 22 ? ny + 16 : ny - 9;
+    g += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anc}" class="nl">${now.alt.toFixed(0)}° · ${now.az.toFixed(0)}°</text>`;
+    return `<section class="tj-card"><div class="tj-h"><b>${esc(t('dso.tj.' + kind))}</b><span class="tj-key"><i class="al" style="background:${col}"></i>${esc(t('dso.tj.alt'))}<i class="az" style="border-color:${azcol}"></i>${esc(t('dso.tj.az'))}</span></div>
+      <svg viewBox="0 0 ${W} ${H}" class="tj-svg" role="img" aria-label="${esc(t('dso.tj.' + kind))}">${g}</svg></section>`;
+  }
   function phasesHtml(loc, offSec) {
     const d = dayPhases(loc, offSec);
     const dateTxt = d.date.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', timeZone: 'UTC' });
     const w = (g) => ((g.b - g.a) / 1440) * 100;
     const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}">${w(g) > 9 ? `<span>${fmMin(g.a)}–${fmMin(g.b)}</span>` : ''}</i>`).join('');
     const gbar = d.gsegs.map((g) => `<i class="ph-${g.c}" style="left:${((g.a / 1440) * 100).toFixed(3)}%;width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
-    // trajectories drawn over the bar: the whole altitude range -90°..+90° (nothing is clipped), the solid line is the horizon
-    const VB_W = 1440, VB_H = 180, yv = (a) => ((90 - clamp(a, -90, 90)) / 180) * VB_H;
-    const line = (pts) => pts.map(([m, a]) => `${m},${yv(a).toFixed(1)}`).join(' ');
-    const curves = `<svg class="dp-curves" viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${VB_W}" y1="${yv(0)}" y2="${yv(0)}" class="hz"/><polyline points="${line(d.moon)}" class="mo"/><polyline points="${line(d.sun)}" class="su"/></svg>`;
-    const dotTop = (a) => `${((yv(a) / VB_H) * 100).toFixed(1)}%`, dotLeft = `${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%`;
     const bodyPos = (alt, az) => `${alt.toFixed(0)}° · ${az.toFixed(0)}° ${Astro.compass(az)}`;     // altitude · azimuth direction
-    const ico = (svg, a) => `<b class="dp-ico${a > 0 ? '' : ' below'}" style="left:${dotLeft};top:${dotTop(a)}">${svg}</b>`;
-    const dots = ico(Astro.moonIcon(d.now.phase, loc.lat, 18), d.now.moonAlt) + ico(Astro.sunIcon(), d.now.sunAlt);   // Moon with its phase, Sun with rays
     const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}</b>`).join('');
     const leg = (c, arr) => {
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
       return `<li><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
     };
-    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><span class="k"><i class="su"></i>${esc(t('dso.ph.sun'))} <b>${bodyPos(d.now.sunAlt, d.now.sunAz)}</b></span><span class="k"><i class="mo"></i>${esc(t('dso.ph.moon'))} <b>${bodyPos(d.now.moonAlt, d.now.moonAz)}</b></span></span></div>
-      <div class="dp-bar">${bar}${curves}${dots}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
+    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><span class="k">${esc(t('dso.ph.sun'))} <b>${bodyPos(d.now.sunAlt, d.now.sunAz)}</b></span><span class="k">${esc(t('dso.ph.moon'))} <b>${bodyPos(d.now.moonAlt, d.now.moonAz)}</b></span></span></div>
+      <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-axis">${axis}</div>
+      <div class="tj-grid">${trajCard('moon', d)}${trajCard('sun', d)}</div>
       <ul class="dp-leg">${PH_ORDER.map((c) => leg(c, d.segs)).join('')}${leg('golden', d.gsegs)}${leg('blue', d.gsegs)}</ul></div>`;
   }
 
