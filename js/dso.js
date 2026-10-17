@@ -337,7 +337,7 @@ const Dso = (() => {
       const altLine = b.pts.map(([m, a]) => `${X(m).toFixed(1)},${Y(a).toFixed(1)}`).join(' ');
       const area = `${X(0).toFixed(1)},${hz.toFixed(1)} ` + b.pts.map(([m, a]) => `${X(m).toFixed(1)},${Math.min(Y(a), hz).toFixed(1)}`).join(' ') + ` ${X(1440).toFixed(1)},${hz.toFixed(1)}`;
       const azLine = azs.map(([m, v]) => `${X(m).toFixed(1)},${Yaz(v).toFixed(1)}`).join(' ');
-      clipped += `<polygon points="${area}" fill="${b.col}" fill-opacity=".14"/><polyline points="${azLine}" fill="none" stroke="${b.col}" stroke-opacity=".6" stroke-width="0.9" stroke-dasharray="4 3"/><polyline points="${altLine}" fill="none" stroke="${b.col}" stroke-width="1.5" stroke-linejoin="round"/>`;
+      clipped += `<polygon points="${area}" fill="${b.col}" fill-opacity=".14"/><polyline points="${azLine}" fill="none" stroke="${b.col}" stroke-opacity=".6" stroke-width="0.7" stroke-dasharray="4 3"/><polyline points="${altLine}" fill="none" stroke="${b.col}" stroke-width="1" stroke-linejoin="round"/>`;
       const cross = (dir) => { for (let i = 1; i < b.pts.length; i++) { const a = b.pts[i - 1][1], c = b.pts[i][1]; if (dir > 0 ? a < 0 && c >= 0 : a > 0 && c <= 0) return b.pts[i - 1][0] + ((b.pts[i][0] - b.pts[i - 1][0]) * (0 - a)) / (c - a); } return null; };
       const top = b.pts.reduce((m, q) => (q[1] > m[1] ? q : m), b.pts[0]);
       // rise / set: a small triangle ON the horizon line with its time; highest point: a dot on the curve with the altitude
@@ -351,7 +351,7 @@ const Dso = (() => {
       marks += tri(cross(1), true, t('dso.tj.rise')) + tri(cross(-1), false, t('dso.tj.set'));
       if (top[1] > 0) marks += `<circle cx="${X(top[0]).toFixed(1)}" cy="${Y(top[1]).toFixed(1)}" r="2.6" fill="${b.col}"><title>${esc(t('dso.ph.' + b.kind))} · ${esc(t('dso.tj.transit'))} ${fmMin(top[0])} · ${top[1].toFixed(0)}°</title></circle><text x="${X(top[0]).toFixed(1)}" y="${(Y(top[1]) - 7).toFixed(1)}" text-anchor="middle" class="mt" style="fill:${b.col}">${top[1].toFixed(0)}°</text>`;
       const ny = ys[bi];
-      dots += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="4" fill="${b.col}" stroke="#fff" stroke-width="1.2"/>`;
+      dots += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="4" fill="${b.col}" stroke="#fff" stroke-width="1"/>`;
       const right = nx <= W - pr - 100, lx = right ? nx + 9 : nx - 9, anc = right ? 'start' : 'end';
       const ly = close && bi === 1 ? ny + 17 : ny < pt + 20 ? ny + 16 : ny - 9;
       labels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anc}" class="nl"><tspan fill="${b.col}">●</tspan> ${b.now.alt.toFixed(0)}° · ${b.now.az.toFixed(0)}°</text>`;

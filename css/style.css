@@ -1008,3 +1008,5 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-leg li b { font-size: 13px; font-weight: 600; }
 .dp-leg .rg { display: block; font-size: 11.5px; font-weight: 400; color: color-mix(in srgb, var(--d-muted) 85%, transparent); font-variant-numeric: tabular-nums; }
 .dp-leg .tot { font-size: 11px; font-weight: 600; color: var(--d-muted); margin-top: 2px; text-align: left; }
+
+.tj-svg .nw { stroke-width: .8; } .tj-svg .hz, .tj-svg .gl { stroke-width: .7; }
