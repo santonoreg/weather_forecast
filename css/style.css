@@ -975,3 +975,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .tj-grid.one { grid-template-columns: 1fr; }
 .tj-key .dotc { width: 9px; height: 9px; border-radius: 50%; margin-left: 8px; margin-right: -2px; } .tj-key .dotc:first-child { margin-left: 0; }
 .tj-key i.al { height: 2.5px; border-radius: 2px; background: var(--d-muted); } .tj-key i.az { height: 0; border-top: 2px dashed var(--d-muted); background: none; }
+
+/* thinner trajectory lines; the phases bar, the golden/blue strip and the hour axis span exactly the plot area of the chart below
+   (card border 1 + padding 14 + left axis 42 px = 57 px; right axis 34 px -> 49 px), so every hour lines up */
+.tj-svg .nw { stroke-width: 1; } .tj-svg .hz, .tj-svg .gl { stroke-width: .8; }
+.dp-bar, .dp-gb, .dp-axis { margin-left: 57px; margin-right: 49px; }
+@media (max-width: 900px) { .dp-bar, .dp-gb, .dp-axis { margin-left: 57px; margin-right: 49px; } }
