@@ -999,3 +999,12 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 /* rise / set triangles sit on the horizon, with their time under the line */
 .tj-svg .mt { font-size: 10.5px; font-weight: 700; paint-order: stroke; stroke: color-mix(in srgb, var(--d-card) 94%, var(--d-text) 6%); stroke-width: 3px; stroke-linejoin: round; }
 .tj-key .mkk { margin-left: 8px; font-size: 11px; }
+
+/* phases legend: colour bar (full height) | name, then every interval on its own line, then the total */
+.dp-leg { display: flex; flex-wrap: wrap; gap: 16px 34px; margin-top: 16px; padding: 0; }
+.dp-leg li { display: flex; align-items: stretch; gap: 10px; padding: 0; }
+.dp-leg .lgbar { flex: none; width: 7px; border-radius: 4px; display: block; min-height: 52px; }
+.dp-leg li > div { display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; }
+.dp-leg li b { font-size: 13px; font-weight: 600; }
+.dp-leg .rg { display: block; font-size: 11.5px; font-weight: 400; color: color-mix(in srgb, var(--d-muted) 85%, transparent); font-variant-numeric: tabular-nums; }
+.dp-leg .tot { font-size: 11px; font-weight: 600; color: var(--d-muted); margin-top: 2px; text-align: left; }

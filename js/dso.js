@@ -369,9 +369,9 @@ const Dso = (() => {
     const gbar = d.gsegs.map((g) => `<i class="ph-${g.c}" style="left:${((g.a / 1440) * 100).toFixed(3)}%;width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
     const bodyPos = (alt, az) => `${alt.toFixed(0)}° · ${az.toFixed(0)}° ${Astro.compass(az)}`;     // altitude · azimuth direction
     const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}:00</b>`).join('');
-    const leg = (c, arr) => {
+    const leg = (c, arr) => {                                    // a tall colour bar, then the phase name, each interval on its own line, and the total
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
-      return `<li title="${esc(t('dso.ph.total'))}"><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmDur(total) : '–'}</span></li>`;
+      return `<li title="${esc(t('dso.ph.total'))}"><i class="lgbar ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b>${parts.length ? parts.map((g) => `<span class="rg">${fmMin(g.a)}–${fmMin(g.b)}</span>`).join('') : '<span class="rg">–</span>'}<span class="tot">${total ? fmDur(total) : '–'}</span></div></li>`;
     };
     return `<div class="dp"><section class="tj-card ph-card"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small></div>
       <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
