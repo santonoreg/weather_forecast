@@ -363,10 +363,10 @@ const Dso = (() => {
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
       return `<li><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
     };
-    return `<div class="dp"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><span class="k">${esc(t('dso.ph.sun'))} <b>${bodyPos(d.now.sunAlt, d.now.sunAz)}</b></span><span class="k">${esc(t('dso.ph.moon'))} <b>${bodyPos(d.now.moonAlt, d.now.moonAz)}</b></span></span></div>
+    return `<div class="dp"><section class="tj-card ph-card"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><span class="k">${esc(t('dso.ph.sun'))} <b>${bodyPos(d.now.sunAlt, d.now.sunAz)}</b></span><span class="k">${esc(t('dso.ph.moon'))} <b>${bodyPos(d.now.moonAlt, d.now.moonAz)}</b></span></span></div>
       <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
-      <div class="dp-axis">${axis}</div>
+      <div class="dp-axis">${axis}</div></section>
       <div class="tj-grid one">${trajChart(d, Math.max(300, (S.chartW || 1000) - 30), (S.chartW || 1000) < 520 ? 240 : 270)}</div>
       <ul class="dp-leg">${PH_ORDER.map((c) => leg(c, d.segs)).join('')}${leg('golden', d.gsegs)}${leg('blue', d.gsegs)}</ul></div>`;
   }

@@ -981,3 +981,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .tj-svg .nw { stroke-width: 1; } .tj-svg .hz, .tj-svg .gl { stroke-width: .8; }
 .dp-bar, .dp-gb, .dp-axis { margin-left: 57px; margin-right: 49px; }
 @media (max-width: 900px) { .dp-bar, .dp-gb, .dp-axis { margin-left: 57px; margin-right: 49px; } }
+
+/* the phases bar lives in a card of its own, same fill and padding as the trajectory card below it: the bar then spans the chart's plot area
+   (left axis 42 px, right axis 34 px) */
+.dp-bar, .dp-gb, .dp-axis { margin-left: 42px; margin-right: 34px; }
+.ph-card { padding-bottom: 6px; } .ph-card .dp-h { margin-bottom: 10px; }
+.ph-card .dp-axis { height: 18px; }
