@@ -970,3 +970,8 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 @media (max-width: 900px) { .tj-grid { grid-template-columns: 1fr; } }
 .tj-card { background: color-mix(in srgb, var(--d-card) 94%, var(--d-text) 6%); }
 .tj-svg .gl { stroke: color-mix(in srgb, var(--d-muted) 35%, transparent); }
+
+/* one combined Sun + Moon trajectory chart */
+.tj-grid.one { grid-template-columns: 1fr; }
+.tj-key .dotc { width: 9px; height: 9px; border-radius: 50%; margin-left: 8px; margin-right: -2px; } .tj-key .dotc:first-child { margin-left: 0; }
+.tj-key i.al { height: 2.5px; border-radius: 2px; background: var(--d-muted); } .tj-key i.az { height: 0; border-top: 2px dashed var(--d-muted); background: none; }

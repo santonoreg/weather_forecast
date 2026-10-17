@@ -310,41 +310,46 @@ const Dso = (() => {
     return { segs, gsegs, sun, moon, now: nowK, nowMin: (Date.now() - t0) / 60e3, date: ln };
   }
   const fmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
-  /* Trajectory card of the Sun or the Moon for the local day: altitude (solid, shaded above the horizon), azimuth (dashed, right axis),
-     ↑ rise • transit ↓ set marks, and a "now" line with the current altitude · azimuth */
-  function trajCard(kind, d) {
-    const W = 560, H = 236, pl = 42, pr = 34, pt = 30, pb = 26, pw = W - pl - pr, ph = H - pt - pb;
-    const pts = kind === 'sun' ? d.sun : d.moon, now = kind === 'sun' ? { alt: d.now.sunAlt, az: d.now.sunAz } : { alt: d.now.moonAlt, az: d.now.moonAz };
-    const col = kind === 'sun' ? '#ffc933' : '#b9a9f6', azcol = kind === 'sun' ? '#9aa3c4' : '#a7b46e';
-    const X = (m) => pl + (m / 1440) * pw, Y = (a) => pt + ph * (1 - (clamp(a, -90, 90) + 90) / 180);
-    const hz = Y(0);
-    // azimuth drawn continuously: bottom = north (0°), east, south at the horizon line, west, top = north (360°)
-    let az0 = pts[0][2]; if (az0 > 180) az0 -= 360;
-    let prev = az0, off = 0;
-    const azs = pts.map(([m, , az]) => { let v = az + off; while (v - prev > 180) { off -= 360; v -= 360; } while (v - prev < -180) { off += 360; v += 360; } prev = v; return [m, v]; });
-    const Yaz = (az) => pt + ph * (1 - az / 360);
-    const id = 'tjc' + kind;
-    const altLine = pts.map(([m, a]) => `${X(m).toFixed(1)},${Y(a).toFixed(1)}`).join(' ');
-    const area = `${X(0).toFixed(1)},${hz.toFixed(1)} ` + pts.map(([m, a]) => `${X(m).toFixed(1)},${Math.min(Y(a), hz).toFixed(1)}`).join(' ') + ` ${X(1440).toFixed(1)},${hz.toFixed(1)}`;
-    const azLine = azs.map(([m, v]) => `${X(m).toFixed(1)},${Yaz(v).toFixed(1)}`).join(' ');
-    let g = `<defs><clipPath id="${id}"><rect x="${pl}" y="${pt}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+  /* One chart for the local day with the Sun AND the Moon: altitude (solid, shaded above the horizon), azimuth (dashed, right axis), ↑ rise • highest ↓ set
+     marks (Sun row above the Moon row) and a "now" line with each body's altitude · azimuth */
+  function trajChart(d, W, H) {
+    const pl = 42, pr = 34, pt = 46, pb = 26, pw = W - pl - pr, ph = H - pt - pb;
+    const X = (m) => pl + (m / 1440) * pw, Y = (a) => pt + ph * (1 - (clamp(a, -90, 90) + 90) / 180), Yaz = (az) => pt + ph * (1 - az / 360);
+    const hz = Y(0), bodies = [
+      { kind: 'sun', pts: d.sun, col: '#f5b800', now: { alt: d.now.sunAlt, az: d.now.sunAz }, mrow: pt - 30 },
+      { kind: 'moon', pts: d.moon, col: '#9d86f0', now: { alt: d.now.moonAlt, az: d.now.moonAz }, mrow: pt - 14 },
+    ];
+    let g = `<defs><clipPath id="tjc"><rect x="${pl}" y="${pt}" width="${pw}" height="${ph}"/></clipPath></defs>`;
     for (const a of [60, 30, 0, -30, -60]) g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(a).toFixed(1)}" y2="${Y(a).toFixed(1)}" class="${a === 0 ? 'hz' : 'gl'}"/><text x="${pl - 6}" y="${(Y(a) + 3.5).toFixed(1)}" text-anchor="end" class="lb">${a > 0 ? '+' : ''}${a}°</text>`;
     const dirs = LANG === 'el' ? ['Β', 'Δ', 'Ν', 'Α', 'Β'] : ['N', 'W', 'S', 'E', 'N'];
     dirs.forEach((c, i) => { g += `<text x="${W - pr + 8}" y="${(pt + ph * (i / 4) + 3.5).toFixed(1)}" class="lb">${c}</text>`; });
-    for (const h of [0, 6, 12, 18, 24]) g += `<text x="${X(h * 60).toFixed(1)}" y="${H - 7}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" class="lb">${String(h).padStart(2, '0')}:00</text>`;
-    g += `<g clip-path="url(#${id})"><polygon points="${area}" fill="${col}" fill-opacity=".2"/><polyline points="${azLine}" fill="none" stroke="${azcol}" stroke-width="1.4" stroke-dasharray="4 3"/><polyline points="${altLine}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round"/></g>`;
-    // rise / transit / set
-    const cross = (dir) => { for (let i = 1; i < pts.length; i++) { const a = pts[i - 1][1], b = pts[i][1]; if (dir > 0 ? a < 0 && b >= 0 : a > 0 && b <= 0) return pts[i - 1][0] + ((pts[i][0] - pts[i - 1][0]) * (0 - a)) / (b - a); } return null; };
-    const top = pts.reduce((m, q) => (q[1] > m[1] ? q : m), pts[0]);
-    const mark = (m, glyph, label) => (m == null ? '' : `<text x="${X(m).toFixed(1)}" y="${pt - 9}" text-anchor="middle" class="mk"><title>${esc(label)} ${fmMin(m)}</title>${glyph}</text>`);
-    g += mark(cross(1), '↑', t('dso.tj.rise')) + (top[1] > 0 ? mark(top[0], '•', t('dso.tj.transit')) : '') + mark(cross(-1), '↓', t('dso.tj.set'));
-    // now
-    const nx = X(clamp(d.nowMin, 0, 1440)), ny = Y(now.alt);
-    g += `<line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="${pt}" y2="${pt + ph}" class="nw"/><circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="4.6" fill="${col}" stroke="#fff" stroke-width="1.6"/>`;
-    const lx = nx > W - pr - 90 ? nx - 8 : nx + 8, anc = nx > W - pr - 90 ? 'end' : 'start', ly = ny < pt + 22 ? ny + 16 : ny - 9;
-    g += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anc}" class="nl">${now.alt.toFixed(0)}° · ${now.az.toFixed(0)}°</text>`;
-    return `<section class="tj-card"><div class="tj-h"><b>${esc(t('dso.tj.' + kind))}</b><span class="tj-key"><i class="al" style="background:${col}"></i>${esc(t('dso.tj.alt'))}<i class="az" style="border-color:${azcol}"></i>${esc(t('dso.tj.az'))}</span></div>
-      <svg viewBox="0 0 ${W} ${H}" class="tj-svg" role="img" aria-label="${esc(t('dso.tj.' + kind))}">${g}</svg></section>`;
+    for (const h of [0, 3, 6, 9, 12, 15, 18, 21, 24]) g += `<text x="${X(h * 60).toFixed(1)}" y="${H - 7}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" class="lb">${String(h).padStart(2, '0')}:00</text>`;
+    let clipped = '', marks = '', dots = '', labels = '';
+    const nx = X(clamp(d.nowMin, 0, 1440));
+    const ys = bodies.map((b) => Y(b.now.alt));
+    const close = Math.abs(ys[0] - ys[1]) < 18;
+    bodies.forEach((b, bi) => {
+      let az0 = b.pts[0][2]; if (az0 > 180) az0 -= 360;                         // azimuth drawn continuously across north
+      let prev = az0, off = 0;
+      const azs = b.pts.map(([m, , az]) => { let v = az + off; while (v - prev > 180) { off -= 360; v -= 360; } while (v - prev < -180) { off += 360; v += 360; } prev = v; return [m, v]; });
+      const altLine = b.pts.map(([m, a]) => `${X(m).toFixed(1)},${Y(a).toFixed(1)}`).join(' ');
+      const area = `${X(0).toFixed(1)},${hz.toFixed(1)} ` + b.pts.map(([m, a]) => `${X(m).toFixed(1)},${Math.min(Y(a), hz).toFixed(1)}`).join(' ') + ` ${X(1440).toFixed(1)},${hz.toFixed(1)}`;
+      const azLine = azs.map(([m, v]) => `${X(m).toFixed(1)},${Yaz(v).toFixed(1)}`).join(' ');
+      clipped += `<polygon points="${area}" fill="${b.col}" fill-opacity=".14"/><polyline points="${azLine}" fill="none" stroke="${b.col}" stroke-opacity=".6" stroke-width="1.3" stroke-dasharray="4 3"/><polyline points="${altLine}" fill="none" stroke="${b.col}" stroke-width="2.4" stroke-linejoin="round"/>`;
+      const cross = (dir) => { for (let i = 1; i < b.pts.length; i++) { const a = b.pts[i - 1][1], c = b.pts[i][1]; if (dir > 0 ? a < 0 && c >= 0 : a > 0 && c <= 0) return b.pts[i - 1][0] + ((b.pts[i][0] - b.pts[i - 1][0]) * (0 - a)) / (c - a); } return null; };
+      const top = b.pts.reduce((m, q) => (q[1] > m[1] ? q : m), b.pts[0]);
+      const mk = (m, glyph, label) => (m == null ? '' : `<text x="${X(m).toFixed(1)}" y="${b.mrow}" text-anchor="middle" class="mk" style="fill:${b.col}"><title>${esc(t('dso.ph.' + b.kind))} · ${esc(label)} ${fmMin(m)}</title>${glyph}</text>`);
+      marks += mk(cross(1), '↑', t('dso.tj.rise')) + (top[1] > 0 ? mk(top[0], '•', t('dso.tj.transit')) : '') + mk(cross(-1), '↓', t('dso.tj.set'));
+      const ny = ys[bi];
+      dots += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="4.6" fill="${b.col}" stroke="#fff" stroke-width="1.6"/>`;
+      const right = nx <= W - pr - 100, lx = right ? nx + 9 : nx - 9, anc = right ? 'start' : 'end';
+      const ly = close && bi === 1 ? ny + 17 : ny < pt + 20 ? ny + 16 : ny - 9;
+      labels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anc}" class="nl"><tspan fill="${b.col}">●</tspan> ${b.now.alt.toFixed(0)}° · ${b.now.az.toFixed(0)}°</text>`;
+    });
+    g += `<g clip-path="url(#tjc)">${clipped}</g>${marks}<line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="${pt}" y2="${pt + ph}" class="nw"/>${dots}${labels}`;
+    const chip = (b) => `<i class="dotc" style="background:${b.col}"></i>${esc(t('dso.ph.' + b.kind))}`;
+    return `<section class="tj-card"><div class="tj-h"><b>${esc(t('dso.tj.both'))}</b><span class="tj-key">${chip(bodies[0])}${chip(bodies[1])}<i class="al"></i>${esc(t('dso.tj.alt'))}<i class="az"></i>${esc(t('dso.tj.az'))}</span></div>
+      <svg viewBox="0 0 ${W} ${H}" class="tj-svg" role="img" aria-label="${esc(t('dso.tj.both'))}">${g}</svg></section>`;
   }
   function phasesHtml(loc, offSec) {
     const d = dayPhases(loc, offSec);
@@ -362,7 +367,7 @@ const Dso = (() => {
       <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-axis">${axis}</div>
-      <div class="tj-grid">${trajCard('moon', d)}${trajCard('sun', d)}</div>
+      <div class="tj-grid one">${trajChart(d, Math.max(320, S.chartW || 1000), (S.chartW || 1000) < 520 ? 240 : 270)}</div>
       <ul class="dp-leg">${PH_ORDER.map((c) => leg(c, d.segs)).join('')}${leg('golden', d.gsegs)}${leg('blue', d.gsegs)}</ul></div>`;
   }
 
