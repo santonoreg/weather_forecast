@@ -309,6 +309,7 @@ const Dso = (() => {
     const nowK = Astro.sky(Date.now(), loc.lat, loc.lon);
     return { segs, gsegs, sun, moon, now: nowK, nowMin: (Date.now() - t0) / 60e3, date: ln };
   }
+  const fmDur = (m) => (m >= 60 ? t('dso.dur.hm', { h: Math.floor(m / 60), m: Math.round(m % 60) }) : t('dso.dur.m', { m: Math.round(m) }));
   const fmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
   /* One chart for the local day with the Sun AND the Moon: altitude (solid, shaded above the horizon), azimuth (dashed, right axis), ↑ rise • highest ↓ set
      marks (Sun row above the Moon row) and a "now" line with each body's altitude · azimuth */
@@ -358,12 +359,12 @@ const Dso = (() => {
     const bar = d.segs.map((g, i) => `<i class="ph-${g.c}${i ? ' sep' : ''}" style="width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}">${w(g) > 9 ? `<span>${fmMin(g.a)}–${fmMin(g.b)}</span>` : ''}</i>`).join('');
     const gbar = d.gsegs.map((g) => `<i class="ph-${g.c}" style="left:${((g.a / 1440) * 100).toFixed(3)}%;width:${w(g).toFixed(3)}%" title="${esc(t('dso.ph.' + g.c))} ${fmMin(g.a)}–${fmMin(g.b)}"></i>`).join('');
     const bodyPos = (alt, az) => `${alt.toFixed(0)}° · ${az.toFixed(0)}° ${Astro.compass(az)}`;     // altitude · azimuth direction
-    const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}</b>`).join('');
+    const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => `<b style="left:${((h / 24) * 100).toFixed(2)}%">${String(h).padStart(2, '0')}:00</b>`).join('');
     const leg = (c, arr) => {
       const parts = arr.filter((g) => g.c === c), total = parts.reduce((a, g) => a + (g.b - g.a), 0);
-      return `<li><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmMin(total) : '–'}</span></li>`;
+      return `<li title="${esc(t('dso.ph.total'))}"><i class="dot ph-${c}"></i><div><b>${esc(t('dso.ph.' + c))}</b><span class="rg">${parts.length ? parts.map((g) => `${fmMin(g.a)}–${fmMin(g.b)}`).join(' · ') : '–'}</span></div><span class="tot">${total ? fmDur(total) : '–'}</span></li>`;
     };
-    return `<div class="dp"><section class="tj-card ph-card"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small><span class="dp-key"><span class="k">${esc(t('dso.ph.sun'))} <b>${bodyPos(d.now.sunAlt, d.now.sunAz)}</b></span><span class="k">${esc(t('dso.ph.moon'))} <b>${bodyPos(d.now.moonAlt, d.now.moonAz)}</b></span></span></div>
+    return `<div class="dp"><section class="tj-card ph-card"><div class="dp-h"><span class="dp-date">${esc(dateTxt)}</span><small>${esc(t('dso.ph.title'))}</small></div>
       <div class="dp-bar">${bar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-gb">${gbar}<u class="now" style="left:${clamp((d.nowMin / 1440) * 100, 0, 100).toFixed(2)}%"></u></div>
       <div class="dp-axis">${axis}</div></section>

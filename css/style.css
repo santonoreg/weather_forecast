@@ -987,3 +987,11 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .dp-bar, .dp-gb, .dp-axis { margin-left: 42px; margin-right: 34px; }
 .ph-card { padding-bottom: 6px; } .ph-card .dp-h { margin-bottom: 10px; }
 .ph-card .dp-axis { height: 18px; }
+
+/* phases: hour labels like the chart's, a lighter and centred legend */
+.dp-axis b { font-size: 10.5px; font-weight: 400; color: var(--d-muted); }
+.dp-leg li { grid-template-columns: 14px minmax(0, 1fr) auto; }
+.dp-leg li > div { text-align: center; }
+.dp-leg b { font-weight: 500; }
+.dp-leg .rg { font-weight: 400; font-size: 11px; color: color-mix(in srgb, var(--d-muted) 80%, transparent); }
+.dp-leg .tot { font-weight: 600; font-size: 12px; color: var(--d-muted); white-space: nowrap; }
