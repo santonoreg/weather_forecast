@@ -314,11 +314,11 @@ const Dso = (() => {
   /* One chart for the local day with the Sun AND the Moon: altitude (solid, shaded above the horizon), azimuth (dashed, right axis), ↑ rise • highest ↓ set
      marks (Sun row above the Moon row) and a "now" line with each body's altitude · azimuth */
   function trajChart(d, W, H) {
-    const pl = 42, pr = 34, pt = 46, pb = 26, pw = W - pl - pr, ph = H - pt - pb;
+    const pl = 42, pr = 34, pt = 30, pb = 26, pw = W - pl - pr, ph = H - pt - pb;
     const X = (m) => pl + (m / 1440) * pw, Y = (a) => pt + ph * (1 - (clamp(a, -90, 90) + 90) / 180), Yaz = (az) => pt + ph * (1 - az / 360);
     const hz = Y(0), bodies = [
-      { kind: 'sun', pts: d.sun, col: '#f5b800', now: { alt: d.now.sunAlt, az: d.now.sunAz }, mrow: pt - 30 },
-      { kind: 'moon', pts: d.moon, col: '#9d86f0', now: { alt: d.now.moonAlt, az: d.now.moonAz }, mrow: pt - 14 },
+      { kind: 'sun', pts: d.sun, col: '#f5b800', now: { alt: d.now.sunAlt, az: d.now.sunAz }, },
+      { kind: 'moon', pts: d.moon, col: '#9d86f0', now: { alt: d.now.moonAlt, az: d.now.moonAz }, },
     ];
     let g = `<defs><clipPath id="tjc"><rect x="${pl}" y="${pt}" width="${pw}" height="${ph}"/></clipPath></defs>`;
     for (const a of [60, 30, 0, -30, -60]) g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(a).toFixed(1)}" y2="${Y(a).toFixed(1)}" class="${a === 0 ? 'hz' : 'gl'}"/><text x="${pl - 6}" y="${(Y(a) + 3.5).toFixed(1)}" text-anchor="end" class="lb">${a > 0 ? '+' : ''}${a}°</text>`;
@@ -326,6 +326,7 @@ const Dso = (() => {
     dirs.forEach((c, i) => { g += `<text x="${W - pr + 8}" y="${(pt + ph * (i / 4) + 3.5).toFixed(1)}" class="lb">${c}</text>`; });
     for (const h of [0, 3, 6, 9, 12, 15, 18, 21, 24]) g += `<text x="${X(h * 60).toFixed(1)}" y="${H - 7}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" class="lb">${String(h).padStart(2, '0')}:00</text>`;
     let clipped = '', marks = '', dots = '', labels = '';
+    const usedX = [];                                                           // x of the rise / set labels already drawn (the Moon's move down a line when they would collide)
     const nx = X(clamp(d.nowMin, 0, 1440));
     const ys = bodies.map((b) => Y(b.now.alt));
     const close = Math.abs(ys[0] - ys[1]) < 18;
@@ -339,8 +340,16 @@ const Dso = (() => {
       clipped += `<polygon points="${area}" fill="${b.col}" fill-opacity=".14"/><polyline points="${azLine}" fill="none" stroke="${b.col}" stroke-opacity=".6" stroke-width="0.9" stroke-dasharray="4 3"/><polyline points="${altLine}" fill="none" stroke="${b.col}" stroke-width="1.5" stroke-linejoin="round"/>`;
       const cross = (dir) => { for (let i = 1; i < b.pts.length; i++) { const a = b.pts[i - 1][1], c = b.pts[i][1]; if (dir > 0 ? a < 0 && c >= 0 : a > 0 && c <= 0) return b.pts[i - 1][0] + ((b.pts[i][0] - b.pts[i - 1][0]) * (0 - a)) / (c - a); } return null; };
       const top = b.pts.reduce((m, q) => (q[1] > m[1] ? q : m), b.pts[0]);
-      const mk = (m, glyph, label) => (m == null ? '' : `<text x="${X(m).toFixed(1)}" y="${b.mrow}" text-anchor="middle" class="mk" style="fill:${b.col}"><title>${esc(t('dso.ph.' + b.kind))} · ${esc(label)} ${fmMin(m)}</title>${glyph}</text>`);
-      marks += mk(cross(1), '↑', t('dso.tj.rise')) + (top[1] > 0 ? mk(top[0], '•', t('dso.tj.transit')) : '') + mk(cross(-1), '↓', t('dso.tj.set'));
+      // rise / set: a small triangle ON the horizon line with its time; highest point: a dot on the curve with the altitude
+      const tri = (m, up, label) => {
+        if (m == null) return '';
+        const x = X(m), clash = usedX.some((u) => Math.abs(u - x) < 40), ty = hz + 16 + (clash ? 12 : 0);
+        usedX.push(x);
+        return `<path d="${up ? `M${x - 4.5},${hz + 4} L${x + 4.5},${hz + 4} L${x},${hz - 5}` : `M${x - 4.5},${hz - 4} L${x + 4.5},${hz - 4} L${x},${hz + 5}`} Z" fill="${b.col}"><title>${esc(t('dso.ph.' + b.kind))} · ${esc(label)} ${fmMin(m)}</title></path>`
+          + `<text x="${x.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" class="mt" style="fill:${b.col}">${fmMin(m)}</text>`;
+      };
+      marks += tri(cross(1), true, t('dso.tj.rise')) + tri(cross(-1), false, t('dso.tj.set'));
+      if (top[1] > 0) marks += `<circle cx="${X(top[0]).toFixed(1)}" cy="${Y(top[1]).toFixed(1)}" r="2.6" fill="${b.col}"><title>${esc(t('dso.ph.' + b.kind))} · ${esc(t('dso.tj.transit'))} ${fmMin(top[0])} · ${top[1].toFixed(0)}°</title></circle><text x="${X(top[0]).toFixed(1)}" y="${(Y(top[1]) - 7).toFixed(1)}" text-anchor="middle" class="mt" style="fill:${b.col}">${top[1].toFixed(0)}°</text>`;
       const ny = ys[bi];
       dots += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="4" fill="${b.col}" stroke="#fff" stroke-width="1.2"/>`;
       const right = nx <= W - pr - 100, lx = right ? nx + 9 : nx - 9, anc = right ? 'start' : 'end';
@@ -349,7 +358,7 @@ const Dso = (() => {
     });
     g += `<g clip-path="url(#tjc)">${clipped}</g>${marks}<line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="${pt}" y2="${pt + ph}" class="nw"/>${dots}${labels}`;
     const chip = (b) => `<i class="dotc" style="background:${b.col}"></i>${esc(t('dso.ph.' + b.kind))}`;
-    return `<section class="tj-card"><div class="tj-h"><b>${esc(t('dso.tj.both'))}</b><span class="tj-key">${chip(bodies[0])}${chip(bodies[1])}<i class="al"></i>${esc(t('dso.tj.alt'))}<i class="az"></i>${esc(t('dso.tj.az'))}</span></div>
+    return `<section class="tj-card"><div class="tj-h"><b>${esc(t('dso.tj.both'))}</b><span class="tj-key">${chip(bodies[0])}${chip(bodies[1])}<i class="al"></i>${esc(t('dso.tj.alt'))}<i class="az"></i>${esc(t('dso.tj.az'))}<span class="mkk">▲▼ ${esc(t('dso.tj.riseset'))}</span></span></div>
       <svg viewBox="0 0 ${W} ${H}" class="tj-svg" role="img" aria-label="${esc(t('dso.tj.both'))}">${g}</svg></section>`;
   }
   function phasesHtml(loc, offSec) {
