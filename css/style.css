@@ -1039,3 +1039,13 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .sum-info .si-moon { align-items: flex-start; } .si-moon .mw-cv { width: 58px; height: 58px; margin-top: 2px; }
 @media (max-width: 900px) { .sum-info { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .sum-info { grid-template-columns: 1fr; } }
+
+/* Tonight: title left, the Moon alone at the top right, the other facts in a row below */
+.sum-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.sum-head .si-moon { display: flex; align-items: flex-start; gap: 12px; max-width: 460px; }
+.sum-head .si-moon span { display: block; font-size: 11.5px; color: var(--d-muted); margin-bottom: 3px; } .sum-head .si-moon b { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+.sum-head .mw-cv { width: 58px; height: 58px; flex: none; }
+.sum-head .mw-st { display: block; margin-top: 3px; font-size: 11.5px; color: var(--d-muted); }
+.sum-info { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
+@media (max-width: 700px) { .sum-info { grid-template-columns: 1fr; } .sum-head .si-moon { max-width: none; } }
+.sum-head .mw-st { text-transform: none; letter-spacing: 0; justify-content: flex-start; width: auto; }
