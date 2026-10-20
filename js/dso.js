@@ -371,7 +371,7 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
       const tx = tc.getContext('2d', { willReadFrequently: true }); tx.drawImage(img, 0, 0);
       const T = tx.getImageData(0, 0, img.width, img.height).data;
       const ctx = cv.getContext('2d'), out = ctx.createImageData(W, W), cosI = 2 * v.lit - 1, sinI = Math.sqrt(Math.max(0, 1 - cosI * cosI));
-      const cs = (getComputedStyle(cv.closest('.card') || document.body).backgroundColor.match(/[0-9]+/g) || [255, 255, 255]).map(Number), bg = [14, 20, 40], mix = (cs[0] + cs[1] + cs[2]) / 3 > 128 ? 0.85 : 0;   // light theme: the night side gets a dark backing so it looks like on the dark theme
+      const bg = [0, 0, 0], mix = 0;                                                     // identical, fully opaque pixels on both themes
       const sx = -Math.sin(v.chi) * sinI, sy = Math.cos(v.chi) * sinI, sz = cosI;       // direction of the Sun in the disc frame (x right, y up, z towards us)
       for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
         const x = (i + 0.5) / W * 2 - 1, y = 1 - (j + 0.5) / W * 2, r2 = x * x + y * y, o = (j * W + i) * 4;
