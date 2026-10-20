@@ -1035,3 +1035,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .sum-info .si-moon { display: flex; align-items: center; gap: 12px; }
 .si-moon .mw-cv { width: 52px; height: 52px; flex: none; }
 .sum-info .mw-st { display: block; margin-top: 3px; font-size: 11.5px; letter-spacing: 0; text-transform: none; color: var(--d-muted); } .mw-st em { font-style: normal; font-weight: 700; color: var(--d-text, var(--text)); }
+.sum-info { grid-template-columns: 1.7fr 1fr 1fr 1.25fr; align-items: start; }
+.sum-info .si-moon { align-items: flex-start; } .si-moon .mw-cv { width: 58px; height: 58px; margin-top: 2px; }
+@media (max-width: 900px) { .sum-info { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .sum-info { grid-template-columns: 1fr; } }
