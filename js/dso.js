@@ -248,12 +248,12 @@ const Dso = (() => {
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
 <div class="sum-top"><div class="mw">${moonWidget(loc)}</div>
-        <dl>
-          <dt>${esc(t('dso.night.sunlbl'))}</dt><dd>${hm(n.sunset)} → ${hm(n.sunrise)}</dd>
-          <dt>${esc(t(n.partial ? 'dso.night.darkpartial' : 'dso.night.dark'))}</dt><dd>${hm(n.darkStart)} → ${hm(n.darkEnd)} <small>(${((n.darkEnd - n.darkStart) / 3600e3).toFixed(1)} h)</small></dd>
-          <dt>${esc(t('dso.night.moonlbl'))}</dt><dd>${esc(moon)}</dd>
-          <dt>${esc(t('dso.cloudlbl'))}</dt><dd>${esc(cloudTxt)}</dd>
-        </dl></div>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
+        <div class="sum-info">
+          <div><span>${esc(t('dso.night.sunlbl'))}</span><b>${hm(n.sunset)} → ${hm(n.sunrise)}</b></div>
+          <div><span>${esc(t(n.partial ? 'dso.night.darkpartial' : 'dso.night.dark'))}</span><b>${hm(n.darkStart)} → ${hm(n.darkEnd)} <small>(${((n.darkEnd - n.darkStart) / 3600e3).toFixed(1)} h)</small></b></div>
+          <div><span>${esc(t('dso.night.moonlbl'))}</span><b>${esc(moon)}</b></div>
+          <div><span>${esc(t('dso.cloudlbl'))}</span><b>${esc(cloudTxt)}</b></div>
+        </div></div>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-bar"><div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
         <div class="dso-sort"><label><span>${esc(t('dso.sort'))}</span><select id="dsoSort" title="${esc(t('dso.sort.help'))}">${['score', 'now', 'alt', 'size', 'mag'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('')}</select></label>
           <button type="button" id="dsoRev" class="chip" title="${esc(t('dso.sort.rev'))}" aria-label="${esc(t('dso.sort.rev'))}">${S.rev ? '↑' : '↓'}</button></div></div>
