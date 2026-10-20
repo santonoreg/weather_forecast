@@ -377,9 +377,9 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
         if (r2 > 1.02) continue;
         const z = Math.sqrt(Math.max(0, 1 - r2)), lon = Math.atan2(x, z), lat = Math.asin(Math.max(-1, Math.min(1, y)));
         const u = Math.min(img.width - 1, Math.max(0, Math.floor((lon / Math.PI + 1) / 2 * img.width))), w = Math.min(img.height - 1, Math.max(0, Math.floor((0.5 - lat / Math.PI) * img.height))), k = (w * img.width + u) * 4;
-        const dI = x * sx + y * sy + z * sz, f = Math.min(1, Math.max(0, (dI + 0.04) / 0.16)), b = 0.12 + 0.88 * f;   // soft terminator + faint earthshine
+        const dI = x * sx + y * sy + z * sz, f = Math.min(1, Math.max(0, (dI + 0.04) / 0.16)), b = 0.24 + 0.76 * f;   // soft terminator + faint earthshine
         const edge = Math.min(1, (1.02 - r2) / 0.03);
-        out.data[o] = T[k] * b * 1.12; out.data[o + 1] = T[k + 1] * b * 1.12; out.data[o + 2] = T[k + 2] * b * 1.12; out.data[o + 3] = 255 * edge * (0.3 + 0.7 * f);
+        out.data[o] = T[k] * b * 1.12; out.data[o + 1] = T[k + 1] * b * 1.12; out.data[o + 2] = T[k + 2] * b * 1.12; out.data[o + 3] = 255 * edge;
       }
       ctx.putImageData(out, 0, 0);
       cv.style.transform = `rotate(${(v.q * 180 / Math.PI).toFixed(1)}deg)`;
