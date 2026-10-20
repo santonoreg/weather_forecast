@@ -247,11 +247,11 @@ const Dso = (() => {
         <section class="dl-chart"><h5>${esc(t('dso.d.altchart'))}</h5>${altChart(o, loc, n, cw, ch)}</section></article>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
-<div class="sum-top"><div class="mw">${moonWidget(loc)}</div>
+<div class="sum-top">
         <div class="sum-info">
           <div><span>${esc(t('dso.night.sunlbl'))}</span><b>${hm(n.sunset)} → ${hm(n.sunrise)}</b></div>
           <div><span>${esc(t(n.partial ? 'dso.night.darkpartial' : 'dso.night.dark'))}</span><b>${hm(n.darkStart)} → ${hm(n.darkEnd)} <small>(${((n.darkEnd - n.darkStart) / 3600e3).toFixed(1)} h)</small></b></div>
-          <div><span>${esc(t('dso.night.moonlbl'))}</span><b>${esc(moon)}</b></div>
+          <div class="si-moon">${moonWidget(loc)}<div><span>${esc(t('dso.night.moonlbl'))}</span><b>${esc(moon)}</b><small class="mw-st">${esc(t('dso.mw.lit'))} <em>${(S.mv.lit * 100).toFixed(1)}%</em> · ${esc(t('dso.mw.age'))} <em>${S.mv.age.toFixed(1)} ${esc(t('dso.mw.d'))}</em></small></div></div>
           <div><span>${esc(t('dso.cloudlbl'))}</span><b>${esc(cloudTxt)}</b></div>
         </div></div>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-bar"><div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
@@ -367,9 +367,7 @@ const Dso = (() => {
   function moonWidget(loc) {
     const v = Astro.moonView(Date.now(), loc.lat, loc.lon);
     S.mv = v;
-    return `<canvas id="moonCv" class="mw-cv" width="260" height="260" aria-label="${esc(t('dso.mw.lit'))}"></canvas>
-      <div class="mw-st"><span>${esc(t('dso.mw.lit'))} <b>${(v.lit * 100).toFixed(1)}%</b></span><span>${esc(t('dso.mw.age'))} <b>${v.age.toFixed(1)} ${esc(t('dso.mw.d'))}</b></span></div>
-      <div class="mw-bar"><i style="width:${(v.lit * 100).toFixed(1)}%"></i></div>`;
+    return `<canvas id="moonCv" class="mw-cv" width="260" height="260" aria-label="${esc(t('dso.mw.lit'))}"></canvas>`;
   }
   function paintMoon() {
     const cv = $d('moonCv'), v = S.mv;
