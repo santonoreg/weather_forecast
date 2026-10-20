@@ -1049,3 +1049,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .sum-info { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
 @media (max-width: 700px) { .sum-info { grid-template-columns: 1fr; } .sum-head .si-moon { max-width: none; } }
 .sum-head .mw-st { text-transform: none; letter-spacing: 0; justify-content: flex-start; width: auto; }
+
+.sum-head { align-items: center; } .sum-head .si-moon { flex: 1; max-width: none; justify-content: flex-end; }
+@media (max-width: 700px) { .sum-head .si-moon { justify-content: flex-start; } }

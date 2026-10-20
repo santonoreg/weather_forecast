@@ -247,12 +247,7 @@ const Dso = (() => {
         <section class="dl-chart"><h5>${esc(t('dso.d.altchart'))}</h5>${altChart(o, loc, n, cw, ch)}</section></article>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="sum-head"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div><div class="si-moon">${moonWidget(loc)}<div><span>${esc(t('dso.night.moonlbl'))}</span><b>${esc(moon)}</b><small class="mw-st">${esc(t('dso.mw.lit'))} <em>${(S.mv.lit * 100).toFixed(1)}%</em> · ${esc(t('dso.mw.age'))} <em>${S.mv.age.toFixed(1)} ${esc(t('dso.mw.d'))}</em></small></div></div></div>
-<div class="sum-top">
-        <div class="sum-info">
-          <div><span>${esc(t('dso.night.sunlbl'))}</span><b>${hm(n.sunset)} → ${hm(n.sunrise)}</b></div>
-          <div><span>${esc(t(n.partial ? 'dso.night.darkpartial' : 'dso.night.dark'))}</span><b>${hm(n.darkStart)} → ${hm(n.darkEnd)} <small>(${((n.darkEnd - n.darkStart) / 3600e3).toFixed(1)} h)</small></b></div>
-          <div><span>${esc(t('dso.cloudlbl'))}</span><b>${esc(cloudTxt)}</b></div>
-        </div></div>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
+${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-bar"><div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
         <div class="dso-sort"><label><span>${esc(t('dso.sort'))}</span><select id="dsoSort" title="${esc(t('dso.sort.help'))}">${['score', 'now', 'alt', 'size', 'mag'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('')}</select></label>
           <button type="button" id="dsoRev" class="chip" title="${esc(t('dso.sort.rev'))}" aria-label="${esc(t('dso.sort.rev'))}">${S.rev ? '↑' : '↓'}</button></div></div>
