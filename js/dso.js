@@ -247,18 +247,20 @@ const Dso = (() => {
         <section class="dl-chart"><h5>${esc(t('dso.d.altchart'))}</h5>${altChart(o, loc, n, cw, ch)}</section></article>`;
     }).join('');
     box.innerHTML = `<section class="card dso-sum"><div class="dso-h"><h2>${esc(t('dso.night.title'))}</h2>${infoBtn('night')}</div>
+<div class="sum-top"><div class="mw">${moonWidget(loc)}</div>
         <dl>
           <dt>${esc(t('dso.night.sunlbl'))}</dt><dd>${hm(n.sunset)} → ${hm(n.sunrise)}</dd>
           <dt>${esc(t(n.partial ? 'dso.night.darkpartial' : 'dso.night.dark'))}</dt><dd>${hm(n.darkStart)} → ${hm(n.darkEnd)} <small>(${((n.darkEnd - n.darkStart) / 3600e3).toFixed(1)} h)</small></dd>
           <dt>${esc(t('dso.night.moonlbl'))}</dt><dd>${esc(moon)}</dd>
           <dt>${esc(t('dso.cloudlbl'))}</dt><dd>${esc(cloudTxt)}</dd>
-        </dl>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
+        </dl></div>${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.night.note')}</p></section>
       <div class="dso-bar"><div class="dso-cats" id="dsoCats">${cats.map((k) => `<button type="button" class="chip${S.cat === k ? ' on' : ''}" data-cat="${k}">${esc(t('dso.cat.' + k))}</button>`).join('')}</div>
         <div class="dso-sort"><label><span>${esc(t('dso.sort'))}</span><select id="dsoSort" title="${esc(t('dso.sort.help'))}">${['score', 'now', 'alt', 'size', 'mag'].map((k) => `<option value="${k}"${S.sort === k ? ' selected' : ''}>${esc(t('dso.sort.' + k))}</option>`).join('')}</select></label>
           <button type="button" id="dsoRev" class="chip" title="${esc(t('dso.sort.rev'))}" aria-label="${esc(t('dso.sort.rev'))}">${S.rev ? '↑' : '↓'}</button></div></div>
       <div class="dso-h2"><h3>${esc(t('dso.cand.title'))} <span class="cnt">(${c.length})</span></h3>${infoBtn('cand')}</div>
       <p class="dso-note" data-note="cand" hidden>${t('dso.cand.note')} ${t('dso.vis.note')} ${t('dso.strip.moon.note')}</p>
       ${c.length ? `<div class="dso-cards">${cards}</div>${c.length > S.shown ? `<button type="button" class="btn ghost" id="dsoMore">${esc(t('dso.more'))}</button>` : ''}` : `<div class="notice">${esc(t('dso.cand.none'))}</div>`}`;
+    paintMoon();
     fitPhotos();
     document.querySelectorAll('#dsoNight .ln-photo img').forEach((im) => { if (!im.complete) im.addEventListener('load', fitPhotos, { once: true }); });
   }
@@ -360,6 +362,38 @@ const Dso = (() => {
     const chip = (b) => `<i class="dotc" style="background:${b.col}"></i>${esc(t('dso.ph.' + b.kind))}`;
     return `<section class="tj-card"><div class="tj-h"><b>${esc(t('dso.tj.both'))}</b><span class="tj-key">${chip(bodies[0])}${chip(bodies[1])}<i class="al"></i>${esc(t('dso.tj.alt'))}<i class="az"></i>${esc(t('dso.tj.az'))}<span class="mkk">▲▼ ${esc(t('dso.tj.riseset'))}</span></span></div>
       <svg viewBox="0 0 ${W} ${H}" class="tj-svg" role="img" aria-label="${esc(t('dso.tj.both'))}">${g}</svg></section>`;
+  }
+  /* Moon widget: the real disc (LRO colour map) lit with the true phase, turned so the bright limb points where it does in the sky */
+  function moonWidget(loc) {
+    const v = Astro.moonView(Date.now(), loc.lat, loc.lon);
+    S.mv = v;
+    return `<canvas id="moonCv" class="mw-cv" width="260" height="260" aria-label="${esc(t('dso.mw.lit'))}"></canvas>
+      <div class="mw-st"><span>${esc(t('dso.mw.lit'))} <b>${(v.lit * 100).toFixed(1)}%</b></span><span>${esc(t('dso.mw.age'))} <b>${v.age.toFixed(1)} ${esc(t('dso.mw.d'))}</b></span></div>
+      <div class="mw-bar"><i style="width:${(v.lit * 100).toFixed(1)}%"></i></div>`;
+  }
+  function paintMoon() {
+    const cv = $d('moonCv'), v = S.mv;
+    if (!cv || !v) return;
+    const draw = (img) => {
+      const W = 260, tc = document.createElement('canvas'); tc.width = img.width; tc.height = img.height;
+      const tx = tc.getContext('2d', { willReadFrequently: true }); tx.drawImage(img, 0, 0);
+      const T = tx.getImageData(0, 0, img.width, img.height).data;
+      const ctx = cv.getContext('2d'), out = ctx.createImageData(W, W), cosI = 2 * v.lit - 1, sinI = Math.sqrt(Math.max(0, 1 - cosI * cosI));
+      const sx = -Math.sin(v.chi) * sinI, sy = Math.cos(v.chi) * sinI, sz = cosI;       // direction of the Sun in the disc frame (x right, y up, z towards us)
+      for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
+        const x = (i + 0.5) / W * 2 - 1, y = 1 - (j + 0.5) / W * 2, r2 = x * x + y * y, o = (j * W + i) * 4;
+        if (r2 > 1.02) continue;
+        const z = Math.sqrt(Math.max(0, 1 - r2)), lon = Math.atan2(x, z), lat = Math.asin(Math.max(-1, Math.min(1, y)));
+        const u = Math.min(img.width - 1, Math.max(0, Math.floor((lon / Math.PI + 1) / 2 * img.width))), w = Math.min(img.height - 1, Math.max(0, Math.floor((0.5 - lat / Math.PI) * img.height))), k = (w * img.width + u) * 4;
+        const dI = x * sx + y * sy + z * sz, f = Math.min(1, Math.max(0, (dI + 0.04) / 0.16)), b = 0.035 + 0.965 * f;   // soft terminator + faint earthshine
+        const edge = Math.min(1, (1.02 - r2) / 0.03);
+        out.data[o] = T[k] * b * 1.12; out.data[o + 1] = T[k + 1] * b * 1.12; out.data[o + 2] = T[k + 2] * b * 1.12; out.data[o + 3] = 255 * edge;
+      }
+      ctx.putImageData(out, 0, 0);
+      cv.style.transform = `rotate(${(v.q * 180 / Math.PI).toFixed(1)}deg)`;
+    };
+    if (S.moonImg) { draw(S.moonImg); return; }
+    const im = new Image(); im.onload = () => { S.moonImg = im; draw(im); }; im.src = 'assets/moon.jpg';
   }
   function phasesHtml(loc, offSec) {
     const d = dayPhases(loc, offSec);

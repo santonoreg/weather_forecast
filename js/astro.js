@@ -43,6 +43,15 @@ const Astro = (() => {
     const ang = Math.atan2(Math.cos(s.dec) * Math.sin(dRa), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(dRa));
     return { sunAlt, sunAz, moonAz, moonAlt: h / RAD, lit: (1 + Math.cos(inc)) / 2, phase: 0.5 + (0.5 * inc * (ang < 0 ? -1 : 1)) / Math.PI };
   }
+  /* the Moon as seen from a place: lit fraction, age, and the screen tilt of the bright limb (direction on a zenith-up view, degrees clockwise from up) and of the disc itself */
+  function moonView(ms, lat, lon) {
+    const d = toDays(ms), lw = RAD * -lon, phi = RAD * lat, s = sunCoords(d), m = moonCoords(d);
+    const k = sky(ms, lat, lon), H = sidereal(d, lw) - m.ra;
+    const q = Math.atan2(Math.sin(H), Math.tan(phi) * Math.cos(m.dec) - Math.sin(m.dec) * Math.cos(H));
+    const dRa = s.ra - m.ra;
+    const chi = Math.atan2(Math.cos(s.dec) * Math.sin(dRa), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(dRa));
+    return { lit: k.lit, phase: k.phase, age: k.phase * 29.530588, chi, q };
+  }
   const PHASE_ICON = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
   const phaseIdx = (p) => Math.floor(((p % 1) * 8 + 0.5) % 8);
 
@@ -462,7 +471,7 @@ const Astro = (() => {
     if (!S.atlas || S.atlas.key !== key) { try { const a = await atlasAt(loc.lat, loc.lon); if (a) S.atlas = { ...a, key }; } catch (e) { /* atlas unreachable: stored/seeded value */ } }
     return bortleOf(loc).v;
   }
-  return { load, render, setBortle, bortleFor, sunIcon, moonIcon, crossing, buildModel: build, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
+  return { load, render, setBortle, bortleFor, sunIcon, moonIcon, moonView, crossing, buildModel: build, eq2hor, moonEq, lstRad, compass, get models() { return S.models; }, get aerosols() { return S.aerosols; }, sky, invalidate() { S.key = null; } };
 })();
 
 $('astroRefresh').addEventListener('click', () => Astro.load(true));
