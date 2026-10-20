@@ -1052,3 +1052,10 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 .sum-head { align-items: center; } .sum-head .si-moon { flex: 1; max-width: none; justify-content: flex-end; }
 @media (max-width: 700px) { .sum-head .si-moon { justify-content: flex-start; } }
+.sum-head { display: block; }
+.sum-head .si-moon { display: flex; align-items: center; gap: 16px; width: 100%; max-width: none; justify-content: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--d-line); }
+.sum-head .si-moon > div { flex: 1; min-width: 0; }
+.sum-head .mw-cv { width: 64px; height: 64px; }
+.sum-head .si-moon > div { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 20px; }
+.sum-head .si-moon > div .mw-st { grid-column: 2; grid-row: 1 / span 2; margin: 0; font-size: 13px; text-align: right; }
+@media (max-width: 700px) { .sum-head .si-moon > div { grid-template-columns: 1fr; } .sum-head .si-moon > div .mw-st { grid-column: 1; grid-row: auto; text-align: left; } }
