@@ -371,7 +371,7 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
       const tx = tc.getContext('2d', { willReadFrequently: true }); tx.drawImage(img, 0, 0);
       const T = tx.getImageData(0, 0, img.width, img.height).data;
       const ctx = cv.getContext('2d'), out = ctx.createImageData(W, W), cosI = 2 * v.lit - 1, sinI = Math.sqrt(Math.max(0, 1 - cosI * cosI));
-      const cs = (getComputedStyle(cv.closest('.card') || document.body).backgroundColor.match(/\d+/g) || [255, 255, 255]).map(Number), bg = cs, mix = (cs[0] + cs[1] + cs[2]) / 3 > 128 ? 0.8 : 0;
+      const bg = [19, 26, 49], mix = 0.8;                                                // the night side always melts into the dark-theme card colour, so it looks the same on both themes
       const sx = -Math.sin(v.chi) * sinI, sy = Math.cos(v.chi) * sinI, sz = cosI;       // direction of the Sun in the disc frame (x right, y up, z towards us)
       for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
         const x = (i + 0.5) / W * 2 - 1, y = 1 - (j + 0.5) / W * 2, r2 = x * x + y * y, o = (j * W + i) * 4;
@@ -380,7 +380,7 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
         const u = Math.min(img.width - 1, Math.max(0, Math.floor((lon / Math.PI + 1) / 2 * img.width))), w = Math.min(img.height - 1, Math.max(0, Math.floor((0.5 - lat / Math.PI) * img.height))), k = (w * img.width + u) * 4;
         const dI = x * sx + y * sy + z * sz, f = Math.min(1, Math.max(0, (dI + 0.04) / 0.16)), b = 0.24 + 0.76 * f;   // soft terminator + faint earthshine
         const edge = Math.min(1, (1.02 - r2) / 0.03);
-        const m = (1 - f) * mix;                                                           // light theme: the night side melts towards the card colour, like it does on the dark one
+        const m = (1 - f) * mix;                                                           // night side towards the dark card colour
         out.data[o] = T[k] * b * 1.12 * (1 - m) + bg[0] * m; out.data[o + 1] = T[k + 1] * b * 1.12 * (1 - m) + bg[1] * m; out.data[o + 2] = T[k + 2] * b * 1.12 * (1 - m) + bg[2] * m; out.data[o + 3] = 255 * edge;
       }
       ctx.putImageData(out, 0, 0);
