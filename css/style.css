@@ -1128,3 +1128,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .tr-tolls i { font-style: normal; font-weight: 800; color: #f59e0b; width: 16px; text-align: center; }
 .tr-tolls span { flex: 1; min-width: 0; } .tr-tolls b { display: block; font-size: 13px; } .tr-tolls small { color: var(--muted); font-size: 11.5px; }
 .tr-tolls em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.tr-fuel { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px; background: var(--bg); border-left: 3px solid #0ea5e9; }
+.tr-fuel-in { display: flex; gap: 8px; } .tr-fuel-in label { font-size: 11px; } .tr-fuel-in input { width: 74px; padding: 5px 7px; font-size: 13px; }
+.tr-fuel-out b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; } .tr-fuel-out small { color: var(--muted); font-size: 12px; }

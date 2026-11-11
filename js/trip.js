@@ -10,6 +10,10 @@ const Trip = (() => {
   const SEV_COL = ['#16a34a', '#d9a406', '#ea7a14', '#dc2626'];
   const MODEL_IDS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];
   const clampN = (x, a, b) => Math.min(b, Math.max(a, x));
+  /* petrol car estimate: litres = distance × consumption + 0.15 L per 100 m of climb; defaults: 7 L/100 km, 2.05 €/L (Greek 95-octane average, 11 Nov 2026) */
+  const FUEL = { cons: 7, price: 2.05 };
+  try { const f = JSON.parse(localStorage.getItem('wefo.trip.fuel') || 'null'); if (f && f.cons > 0 && f.price > 0) { FUEL.cons = f.cons; FUEL.price = f.price; } } catch (e) { /* ignore */ }
+  const fuelOf = (r) => { const l = (r.km * FUEL.cons) / 100 + ((r.ascent || 0) / 100) * 0.15; return { l, c: l * FUEL.price }; };
   const inGreece = (p) => p && p.lat >= 34.5 && p.lat <= 42 && p.lon >= 19 && p.lon <= 30;      // the route search and the toll table cover Greece only
   const timeStr = (ms) => new Date(ms).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
   const dayStr = (ms) => new Date(ms).toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
@@ -188,7 +192,7 @@ const Trip = (() => {
   function tollList(r, unknownToll) {
     const tl = r.tolls || [];
     if (!tl.length) return `<p class="hint">${esc(t(unknownToll ? 'trip.tolls.unknown' : 'trip.tolls.none'))}</p>`;
-    return `<ul class="tr-tolls">${tl.map((x) => `<li><i>€</i><span><b>${esc(x.n)}</b><small>${esc(x.r ? x.r + ' · ' : '')}${esc(t('trip.km', { n: Math.round(x.km) }))} · ${esc(when(T.dep + r.timeAt(x.km)))}</small></span><em>${x.p != null ? esc(money(x.p, x.c)) : esc(t('trip.tolls.noprice'))}</em></li>`).join('')}</ul>`;
+    return `<ul class="tr-tolls">${tl.map((x) => `<li><i>€</i><span><b>${esc(x.n)}</b><small>${esc(x.r ? x.r + ' · ' : '')}${x.km != null ? `${esc(t('trip.km', { n: Math.round(x.km) }))} · ${esc(when(T.dep + r.timeAt(x.km)))}` : ''}</small></span><em>${x.p != null ? esc(money(x.p, x.c)) : esc(t('trip.tolls.noprice'))}</em></li>`).join('')}</ul>`;
   }
 
   function summaryCards() {
@@ -288,6 +292,7 @@ const Trip = (() => {
           <div class="tr-k"><span>${esc(t('trip.arrive'))}</span><b>${when(arr)}</b></div>
           ${r.ascent != null ? `<div class="tr-k"><span>${esc(t('trip.climb'))}</span><b>↑ ${r.ascent} m · ↓ ${r.descent} m</b></div>` : ''}
           ${tolls}
+          <div class="tr-k"><span>${esc(t('trip.fuel.kpi'))}</span><b id="trFuelKpi">${esc(money(fuelOf(r).c, 'EUR'))}</b></div>
           <div class="tr-k"><span>${esc(t('trip.cost'))}${nT ? ` · ${esc(t('trip.tollpts', { n: nT }))}` : ''}</span><b${nT && !unknownToll ? '' : ' class="na"'}>${esc(cost)}</b></div>
         </div>
         ${T.routes.length > 1 ? `<div class="tr-rcs">${summaryCards()}</div>` : ''}
@@ -298,6 +303,11 @@ const Trip = (() => {
           <div class="tr-verdict v${v}"><b>${esc(t('trip.v.' + v))}</b><span>${esc(t('trip.vd.' + v))}</span></div>
           <h3>${esc(t('trip.tolls'))}${nT ? ` <span class="tr-tt">${esc(cost)}</span>` : ''}</h3>
           ${tollList(r, unknownToll)}
+          <h3>${esc(t('trip.fuel'))}</h3>
+          <div class="tr-fuel"><div class="tr-fuel-in"><label><span>${esc(t('trip.fuel.cons'))}</span><input id="trCons" type="number" min="3" max="20" step="0.1" value="${FUEL.cons}"></label>
+            <label><span>${esc(t('trip.fuel.price'))}</span><input id="trPrice" type="number" min="0.5" max="4" step="0.01" value="${FUEL.price}"></label></div>
+            <div class="tr-fuel-out" id="trFuelOut"></div></div>
+          <p class="hint">${esc(t('trip.fuel.note'))}</p>
           <h3>${esc(t('trip.warnings'))}</h3>
           ${r.warn.length ? `<ul class="tr-warn">${r.warn.slice(0, 9).map((w) => `<li class="s${Math.min(3, Math.round(w.sev))}"><i>${WARN_ICON[w.kind] || '•'}</i><span>${esc(warnText(w))}</span></li>`).join('')}</ul>` : `<p class="hint">${esc(t('trip.nowarn'))}</p>`}
           <p class="hint">${esc(t('trip.basis', { n: r.wx.find((x) => x) ? r.wx.find((x) => x).n : 0 }))}</p>
@@ -310,6 +320,27 @@ const Trip = (() => {
     box.querySelectorAll('.tr-rc').forEach((b) => b.addEventListener('click', () => { T.sel = +b.dataset.r; T.mapFitted = false; render(); }));
     drawMap();
     bindChart(r);
+    bindFuel(r);
+  }
+
+  /* ---------- fuel estimate (updates in place, no redraw of the map) ---------- */
+  function showFuel(r) {
+    const out = $t('trFuelOut'), f = fuelOf(r), tolls = r.tollCost || 0;
+    if (!out) return;
+    out.innerHTML = `<b>≈ ${f.l.toFixed(1)} L · ${esc(money(f.c, 'EUR'))}</b>${tolls ? `<small>${esc(t('trip.fuel.total', { c: money(f.c + tolls, 'EUR') }))}</small>` : ''}`;
+    const k = $t('trFuelKpi');
+    if (k) k.textContent = money(f.c, 'EUR');
+  }
+  function bindFuel(r) {
+    const a = $t('trCons'), b = $t('trPrice');
+    if (!a || !b) return;
+    const upd = () => {
+      const c = parseFloat(a.value), p = parseFloat(b.value);
+      if (c > 0 && p > 0) { FUEL.cons = c; FUEL.price = p; try { localStorage.setItem('wefo.trip.fuel', JSON.stringify(FUEL)); } catch (e) { /* ignore */ } }
+      showFuel(r);
+    };
+    a.addEventListener('input', upd); b.addEventListener('input', upd);
+    showFuel(r);
   }
 
   /* ---------- map ---------- */
