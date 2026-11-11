@@ -195,6 +195,25 @@ const Trip = (() => {
     return `<ul class="tr-tolls">${tl.map((x) => `<li><i>€</i><span><b>${esc(x.n)}</b><small>${esc(x.r ? x.r + ' · ' : '')}${x.km != null ? `${esc(t('trip.km', { n: Math.round(x.km) }))} · ${esc(when(T.dep + r.timeAt(x.km)))}` : ''}</small></span><em>${x.p != null ? esc(money(x.p, x.c)) : esc(t('trip.tolls.noprice'))}</em></li>`).join('')}</ul>`;
   }
 
+  /* the sentence under the verdict: only what the forecast really shows along this route (no snow mentioned unless snow is forecast) */
+  function verdictText(r) {
+    const ok = r.wx.filter(Boolean), n = ok.length;
+    if (!n) return t('trip.vd.0');
+    const pct = (f) => Math.round((100 * ok.filter(f).length) / n);
+    const facts = [];
+    const rain = pct((a) => a.cat === 'rain' || a.cat === 'drizzle'), snow = pct((a) => a.cat === 'snow'), fog = pct((a) => a.cat === 'fog'), th = pct((a) => a.cat === 'thunder'), ice = pct((a) => a.flags.ice);
+    if (th) facts.push(t('trip.vf.thunder', { p: th }));
+    if (snow) facts.push(t('trip.vf.snow', { p: snow }));
+    if (ice) facts.push(t('trip.vf.ice', { p: ice }));
+    if (rain) facts.push(t('trip.vf.rain', { p: rain }));
+    if (fog) facts.push(t('trip.vf.fog', { p: fog }));
+    const g = Math.max(...ok.map((a) => a.gust || 0));
+    if (g >= 40) facts.push(t('trip.vf.wind', { v: Math.round(g) }));
+    if (!facts.length) return t('trip.vd.0');
+    const adv = r.verdict >= 3 ? ' ' + t('trip.vd.adv3') : r.verdict === 2 ? ' ' + t('trip.vd.adv2') : '';
+    return facts.join(' · ') + '.' + adv;
+  }
+
   function summaryCards() {
     return T.routes.map((r, i) => {
       const arr = T.dep + r.sec * 1000, nW = r.warn ? r.warn.filter((w) => w.sev >= 2).length : 0;
@@ -300,7 +319,7 @@ const Trip = (() => {
       <div class="tr-grid">
         <section class="card tr-mapc"><div id="tripMap" class="tr-map"></div></section>
         <section class="card tr-wx">
-          <div class="tr-verdict v${v}"><b>${esc(t('trip.v.' + v))}</b><span>${esc(t('trip.vd.' + v))}</span></div>
+          <div class="tr-verdict v${v}"><b>${esc(t('trip.v.' + v))}</b><span>${esc(verdictText(r))}</span></div>
           <h3>${esc(t('trip.tolls'))}${nT ? ` <span class="tr-tt">${esc(cost)}</span>` : ''}</h3>
           ${tollList(r, unknownToll)}
           <h3>${esc(t('trip.fuel'))}</h3>
