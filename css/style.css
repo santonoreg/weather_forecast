@@ -1118,3 +1118,5 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 @media (max-width: 900px) { .tr-grid { grid-template-columns: 1fr; } .tr-map { height: 340px; } }
 @media (max-width: 700px) { .tr-sh { display: none; } .tr-st { grid-template-columns: 1fr; gap: 6px; } .tr-c1 { display: flex; gap: 10px; align-items: baseline; } }
 @media (max-width: 700px) { .tr-chart { overflow-x: auto; } .tr-chart svg { min-width: 760px; } }
+
+.tr-toll { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #f59e0b; color: #fff; font-weight: 800; font-size: 12px; border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .45); }

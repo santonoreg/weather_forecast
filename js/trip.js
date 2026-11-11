@@ -10,11 +10,13 @@ const Trip = (() => {
   const SEV_COL = ['#16a34a', '#d9a406', '#ea7a14', '#dc2626'];
   const MODEL_IDS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];
   const clampN = (x, a, b) => Math.min(b, Math.max(a, x));
+  const inGreece = (p) => p && p.lat >= 34.5 && p.lat <= 42 && p.lon >= 19 && p.lon <= 30;      // the route search and the toll table cover Greece only
   const timeStr = (ms) => new Date(ms).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
   const dayStr = (ms) => new Date(ms).toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
   const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
   const when = (ms) => (sameDay(ms, T.dep) ? timeStr(ms) : `${dayStr(ms)} ${timeStr(ms)}`);
   const durStr = (sec) => { const m = Math.round(sec / 60), h = Math.floor(m / 60); return h ? `${h} ${t('trip.h')} ${String(m % 60).padStart(2, '0')} ${t('trip.min')}` : `${m} ${t('trip.min')}`; };
+  const money = (v, cur) => new Intl.NumberFormat(dateLocale(), { style: 'currency', currency: cur || 'EUR' }).format(v);
   const kmStr = (km) => Number(km).toLocaleString(dateLocale(), { maximumFractionDigits: km < 100 ? 1 : 0 });
   const sevCol = (s) => { const i = clampN(s, 0, 3), a = Math.floor(i), b = Math.min(3, a + 1), f = i - a; return mixCol(SEV_COL[a], SEV_COL[b], f); };
   const mixCol = (a, b, f) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const x = p(a), y = p(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * f).toString(16).padStart(2, '0')).join(''); };
@@ -140,15 +142,16 @@ const Trip = (() => {
   /* ---------- data loading ---------- */
   async function plan() {
     if (!T.from || !T.to) { T.error = { text: t('trip.need') }; render(); return; }
+    if (!inGreece(T.from) || !inGreece(T.to)) { T.error = { text: t('trip.err.notgr') }; render(); return; }
     const token = ++T.token;
     T.error = null; T.routes = []; T.sel = 0;
     T.dep = T.when === 'now' ? Date.now() : (Date.parse($t('tripAt').value) || Date.now());
     T.loading = 'route'; render();
     try { localStorage.setItem('wefo.trip', JSON.stringify({ from: T.from, to: T.to })); } catch (e) { /* ignore */ }
     try {
-      const d = await api(`api/route.php?from=${T.from.lat},${T.from.lon}&to=${T.to.lat},${T.to.lon}`);
+      const d = await api(`api/route.php?from=${T.from.lat},${T.from.lon}&to=${T.to.lat},${T.to.lon}` + (T.when === 'now' ? '' : `&dep=${Math.round(T.dep / 1000)}`));
       if (token !== T.token) return;
-      T.routes = d.routes;
+      T.routes = d.routes; T.tollAsOf = d.tollAsOf || '';
       T.routes.forEach(prepRoute);
       T.loading = 'weather'; render();
       await Promise.all(T.routes.map(async (r) => {
@@ -167,7 +170,7 @@ const Trip = (() => {
     } catch (e) {
       if (token !== T.token) return;
       T.loading = ''; T.routes = [];
-      const known = { no_key: 'trip.err.nokey', bad_key: 'trip.err.badkey', quota: 'trip.err.quota', no_route: 'trip.err.noroute', same_point: 'trip.err.same', too_far: 'trip.err.toofar' };
+      const known = { not_greece: 'trip.err.notgr', no_key: 'trip.err.nokey', bad_key: 'trip.err.badkey', quota: 'trip.err.quota', no_route: 'trip.err.noroute', same_point: 'trip.err.same', too_far: 'trip.err.toofar' };
       T.error = { text: t(known[e.message] || 'trip.err.generic', { m: e.message }), setup: e.message === 'no_key' };
       render();
     }
@@ -266,6 +269,9 @@ const Trip = (() => {
     if (!T.routes.length) { box.innerHTML = ''; return; }
     const r = T.routes[T.sel], arr = T.dep + r.sec * 1000, v = r.verdict;
     const tolls = r.tollKm >= 0.5 ? `<div class="tr-k"><span>${esc(t('trip.toll'))}</span><b>${t('trip.tollkm', { n: kmStr(r.tollKm) })}</b></div>` : '';
+    const nT = (r.tolls || []).length, priced = (r.tolls || []).filter((x) => x.p != null).length;
+    const unknownToll = !nT && r.tollKm >= 0.5;                  // toll road, but none of our plazas on the way (e.g. Attiki Odos)
+    const cost = nT ? (priced ? money(r.tollCost, r.tollCur) + (priced < nT ? ' +' : '') : '–') : t(unknownToll ? 'trip.cost.unknown' : 'trip.cost.none');
     box.innerHTML = `
       <section class="card tr-sum">
         <div class="tr-title"><h2>${esc(T.from.name)} <span>→</span> ${esc(T.to.name)}</h2><span class="meta">${esc(T.when === 'now' ? t('trip.now') + ' · ' + timeStr(T.dep) : when(T.dep))}</span></div>
@@ -275,7 +281,7 @@ const Trip = (() => {
           <div class="tr-k"><span>${esc(t('trip.arrive'))}</span><b>${when(arr)}</b></div>
           ${r.ascent != null ? `<div class="tr-k"><span>${esc(t('trip.climb'))}</span><b>↑ ${r.ascent} m · ↓ ${r.descent} m</b></div>` : ''}
           ${tolls}
-          <div class="tr-k"><span>${esc(t('trip.cost'))}</span><b class="na">${esc(t('trip.cost.na'))}</b></div>
+          <div class="tr-k"><span>${esc(t('trip.cost'))}${nT ? ` · ${esc(t('trip.tollpts', { n: nT }))}` : ''}</span><b${nT && !unknownToll ? '' : ' class="na"'}>${esc(cost)}</b></div>
         </div>
         ${T.routes.length > 1 ? `<div class="tr-rcs">${summaryCards()}</div>` : ''}
       </section>
@@ -291,7 +297,7 @@ const Trip = (() => {
       <section class="card tr-tl"><h3>${esc(t('trip.timeline'))}</h3>${chart(r)}
         <p class="hint">${esc(t('trip.chart.note'))}</p></section>
       <section class="card tr-stages"><h3>${esc(t('trip.stages'))}</h3><div class="tr-sh"><span>${esc(t('trip.col.when'))}</span><span>${esc(t('trip.col.wx'))}</span><span>${esc(t('trip.col.nums'))}</span><span></span></div>${stages(r)}
-        <p class="hint">${t('trip.note')}</p></section>`;
+        <p class="hint">${t('trip.note', { asof: esc(T.tollAsOf || '–') })}</p></section>`;
     box.querySelectorAll('.tr-rc').forEach((b) => b.addEventListener('click', () => { T.sel = +b.dataset.r; T.mapFitted = false; render(); }));
     drawMap();
     bindChart(r);
@@ -321,6 +327,11 @@ const Trip = (() => {
     }
     const mk = (ll, txt, c) => L.marker(ll, { icon: L.divIcon({ className: '', html: `<span class="tr-pin" style="background:${c}">${txt}</span>`, iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(grp);
     mk(r.pts[0], 'A', '#2563eb'); mk(r.pts[r.pts.length - 1], 'B', '#dc2626');
+    (r.tolls || []).forEach((x) => {
+      if (x.lat == null) return;
+      L.marker([x.lat, x.lon], { icon: L.divIcon({ className: '', html: '<span class="tr-toll">€</span>', iconSize: [20, 20], iconAnchor: [10, 10] }) })
+        .bindTooltip(`${x.n ? x.n + ' · ' : ''}${x.p != null ? money(x.p, x.c) : t('trip.cost.none')}`).addTo(grp);
+    });
     const every = Math.ceil(r.sampleKm.length / 9);
     r.sampleKm.forEach((km, i) => {
       const a = r.wx[i];
@@ -363,7 +374,7 @@ const Trip = (() => {
     const set = (loc) => { T[key] = loc; inp.value = loc ? loc.name : ''; box.hidden = true; };
     const local = (q) => {
       const ql = q.toLowerCase();
-      return (typeof allLocations === 'function' ? allLocations() : []).filter((l) => l.lat != null && (locName(l).toLowerCase().includes(ql) || (l.name || '').toLowerCase().includes(ql))).slice(0, 4).map((l) => ({ name: locName(l), lat: +l.lat, lon: +l.lon }));
+      return (typeof allLocations === 'function' ? allLocations() : []).filter((l) => l.lat != null && inGreece({ lat: +l.lat, lon: +l.lon }) && (locName(l).toLowerCase().includes(ql) || (l.name || '').toLowerCase().includes(ql))).slice(0, 4).map((l) => ({ name: locName(l), lat: +l.lat, lon: +l.lon }));
     };
     const show = (res) => {
       box._res = res;
@@ -378,7 +389,7 @@ const Trip = (() => {
       timer = setTimeout(async () => {
         const loc = local(q);
         try {
-          const res = await api(`api/geocode.php?lang=${LANG}&q=` + encodeURIComponent(q));
+          const res = await api(`api/geocode.php?lang=${LANG}&cc=GR&q=` + encodeURIComponent(q));
           if (inp.value.trim() !== q) return;
           const seen = new Set(loc.map((l) => l.name));
           show([...loc, ...res.filter((r) => !seen.has(r.name)).map((r) => ({ name: r.name.split(',').slice(0, 2).join(',').trim(), lat: +r.lat, lon: +r.lon }))]);
@@ -401,6 +412,7 @@ const Trip = (() => {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(async (p) => {
         const lat = +p.coords.latitude.toFixed(4), lon = +p.coords.longitude.toFixed(4);
+        if (!inGreece({ lat, lon })) { T.error = { text: t('trip.err.notgr') }; T.routes = []; render(); return; }
         let name = t('trip.myloc');
         try { const r = await api(`api/geocode.php?lat=${lat}&lon=${lon}&lang=${LANG}`); if (r.name) name = r.name.split(',')[0]; } catch (e) { /* ignore */ }
         setFrom({ name, lat, lon });

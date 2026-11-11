@@ -1,0 +1,902 @@
+{
+"asof": "2026-11",
+"note": "Class 1 (passenger car) toll per plaza, EUR. Positions from OpenStreetMap (barrier=toll_booth); prices compiled from the operators' 2026 tariffs as listed by fuel-prices.eu (checked April-November 2026). Attiki Odos (Nea Attiki Odos) is not included. Check the operators for the current tariff.",
+"plazas": [
+{
+"name": "Afidnes",
+"lat": 38.17626,
+"lon": 23.85455,
+"price": 3.9,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Agia Marina (ramp)",
+"lat": 38.90339,
+"lon": 22.56988,
+"price": 1.4,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Agia Triada",
+"lat": 38.80851,
+"lon": 22.60264,
+"price": 2.1,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Evaggelismos (ramp)",
+"lat": 39.82933,
+"lon": 22.51244,
+"price": 1.4,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Evzoni (MK border)",
+"lat": 41.1087,
+"lon": 22.55859,
+"price": 2.95,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Glyfa (ramp)",
+"lat": 38.94867,
+"lon": 22.87614,
+"price": 3.0,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Gyrtoni (ramp)",
+"lat": 39.74423,
+"lon": 22.47564,
+"price": 0.8,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Kapandriti (ramp)",
+"lat": 38.2027,
+"lon": 23.85433,
+"price": 2.35,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Kileler (ramp)",
+"lat": 39.4946,
+"lon": 22.62613,
+"price": 2.8,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Kileler (ramp)",
+"lat": 39.49344,
+"lon": 22.61893,
+"price": 2.8,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Kleidi",
+"lat": 40.51958,
+"lon": 22.57269,
+"price": 2.6,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Leptokarya",
+"lat": 40.03572,
+"lon": 22.56983,
+"price": 3.8,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Leptokarya (ramp)",
+"lat": 40.04503,
+"lon": 22.56466,
+"price": 2.1,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Makrychori",
+"lat": 39.80451,
+"lon": 22.50256,
+"price": 3.0,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Makrychori (ramp)",
+"lat": 39.79687,
+"lon": 22.49913,
+"price": 1.3,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Malakasa (ramp)",
+"lat": 38.23692,
+"lon": 23.78325,
+"price": 1.65,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Mavromantila",
+"lat": 38.90411,
+"lon": 22.5277,
+"price": 2.25,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Molos (ramp)",
+"lat": 38.80277,
+"lon": 22.64949,
+"price": 0.4,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Monastiri (ramp)",
+"lat": 39.44176,
+"lon": 22.68802,
+"price": 2.2,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Moschochori",
+"lat": 39.52295,
+"lon": 22.55684,
+"price": 4.7,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Oinofyta (ramp)",
+"lat": 38.29067,
+"lon": 23.67527,
+"price": 0.8,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Pelasgia",
+"lat": 38.9203,
+"lon": 22.84637,
+"price": 4.1,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Platamonas (ramp)",
+"lat": 39.98168,
+"lon": 22.62505,
+"price": 0.8,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Pyrgetos (ramp)",
+"lat": 39.90908,
+"lon": 22.62439,
+"price": 2.0,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Stylida (ramp)",
+"lat": 38.91363,
+"lon": 22.65839,
+"price": 0.75,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Thermopyles (Bralos)",
+"lat": 38.79944,
+"lon": 22.51019,
+"price": 0.7,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Thiva",
+"lat": 38.37085,
+"lon": 23.28692,
+"price": 4.55,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Thiva (ramp)",
+"lat": 38.36525,
+"lon": 23.32333,
+"price": 1.8,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Tragana",
+"lat": 38.6176,
+"lon": 23.14358,
+"price": 4.55,
+"road": "A1",
+"kind": "m"
+},
+{
+"name": "Tragana (ramp)",
+"lat": 38.62225,
+"lon": 23.12366,
+"price": 3.65,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Velestino (ramp)",
+"lat": 39.38939,
+"lon": 22.76597,
+"price": 1.4,
+"road": "A1",
+"kind": "r"
+},
+{
+"name": "Malgara",
+"lat": 40.60237,
+"lon": 22.69819,
+"price": 1.15,
+"road": "A2 / A1",
+"kind": "m"
+},
+{
+"name": "Agios Andreas (ramp)",
+"lat": 40.87364,
+"lon": 24.29761,
+"price": null,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Analipsi",
+"lat": 40.70685,
+"lon": 23.19152,
+"price": 2.9,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Ardanio",
+"lat": 40.94456,
+"lon": 26.20514,
+"price": 2.0,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Aspra Chomata (ramp)",
+"lat": 40.95541,
+"lon": 24.46414,
+"price": null,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Asprovalta",
+"lat": 40.72646,
+"lon": 23.69375,
+"price": 1.4,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Asprovalta (ramp)",
+"lat": 40.70957,
+"lon": 23.6813,
+"price": 0.45,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Eleftheroupoli",
+"lat": 40.88535,
+"lon": 24.23539,
+"price": 0.85,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Galipsos",
+"lat": 40.78511,
+"lon": 23.95694,
+"price": 0.45,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Iasmos",
+"lat": 41.11642,
+"lon": 25.18442,
+"price": 0.75,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Ieropigi (AL border)",
+"lat": 40.57451,
+"lon": 21.06143,
+"price": 2.3,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Kalamia",
+"lat": 40.29785,
+"lon": 21.68062,
+"price": 0.6,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Kalamia",
+"lat": 40.30231,
+"lon": 21.69025,
+"price": 0.6,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Kavala",
+"lat": 40.95984,
+"lon": 24.47239,
+"price": 2.3,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Komotini industrial area",
+"lat": 41.06051,
+"lon": 25.47601,
+"price": 0.55,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Lagkadas (ramp)",
+"lat": 40.73913,
+"lon": 23.00929,
+"price": null,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Malakasi",
+"lat": 39.78961,
+"lon": 21.26653,
+"price": 2.35,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Mesti",
+"lat": 41.01345,
+"lon": 25.53351,
+"price": 2.75,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Mesti (ramp)",
+"lat": 40.96149,
+"lon": 25.64309,
+"price": 1.25,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Moustheni",
+"lat": 40.8582,
+"lon": 24.16235,
+"price": 2.65,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Moustheni (ramp)",
+"lat": 40.83982,
+"lon": 24.11583,
+"price": null,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Pamvotida",
+"lat": 39.61875,
+"lon": 20.94802,
+"price": 1.95,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Panagia (ramp)",
+"lat": 39.78577,
+"lon": 21.29494,
+"price": 1.75,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Polymylos",
+"lat": 40.36722,
+"lon": 22.06023,
+"price": 2.35,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Profitis",
+"lat": 40.68391,
+"lon": 23.25875,
+"price": 1.4,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Siatista",
+"lat": 40.25656,
+"lon": 21.63296,
+"price": 2.4,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Siatista East (ramp)",
+"lat": 40.23658,
+"lon": 21.57984,
+"price": 1.2,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Strymoniko",
+"lat": 41.04371,
+"lon": 23.29518,
+"price": 2.35,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Thessaloniki",
+"lat": 40.69613,
+"lon": 22.89579,
+"price": 0.65,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Tyria",
+"lat": 39.54018,
+"lon": 20.6744,
+"price": 3.35,
+"road": "A2 Egnatia",
+"kind": "m"
+},
+{
+"name": "Vafeika",
+"lat": 41.09655,
+"lon": 24.94546,
+"price": 0.45,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Vafeika",
+"lat": 41.09481,
+"lon": 24.93719,
+"price": 0.45,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Vagiochori",
+"lat": 40.70075,
+"lon": 23.3708,
+"price": 0.95,
+"road": "A2 Egnatia",
+"kind": "r"
+},
+{
+"name": "Promachonas (BG border)",
+"lat": 41.36426,
+"lon": 23.35678,
+"price": 2.35,
+"road": "A25 / E79",
+"kind": "m"
+},
+{
+"name": "Aggelokastro",
+"lat": 38.54939,
+"lon": 21.2723,
+"price": 4.2,
+"road": "A5 Ionia Odos",
+"kind": "m"
+},
+{
+"name": "Arta (ramp)",
+"lat": 39.16051,
+"lon": 21.01145,
+"price": 0.9,
+"road": "A5 Ionia Odos",
+"kind": "r"
+},
+{
+"name": "Gavrolimni (ramp)",
+"lat": 38.37378,
+"lon": 21.62492,
+"price": 2.5,
+"road": "A5 Ionia Odos",
+"kind": "r"
+},
+{
+"name": "Gorgomylos (ramp)",
+"lat": 39.33182,
+"lon": 20.91494,
+"price": 1.2,
+"road": "A5 Ionia Odos",
+"kind": "r"
+},
+{
+"name": "Klokova",
+"lat": 38.35925,
+"lon": 21.65661,
+"price": 3.55,
+"road": "A5 Ionia Odos",
+"kind": "m"
+},
+{
+"name": "Kouvaras (ramp)",
+"lat": 38.69995,
+"lon": 21.21492,
+"price": 1.95,
+"road": "A5 Ionia Odos",
+"kind": "r"
+},
+{
+"name": "Menidi",
+"lat": 38.98987,
+"lon": 21.17095,
+"price": 3.55,
+"road": "A5 Ionia Odos",
+"kind": "m"
+},
+{
+"name": "Messolonghi (ramp)",
+"lat": 38.37946,
+"lon": 21.49512,
+"price": 1.5,
+"road": "A5 Ionia Odos",
+"kind": "r"
+},
+{
+"name": "Terovo",
+"lat": 39.42548,
+"lon": 20.90525,
+"price": 3.7,
+"road": "A5 Ionia Odos",
+"kind": "m"
+},
+{
+"name": "Arfara (ramp)",
+"lat": 37.153,
+"lon": 22.02588,
+"price": 0.9,
+"road": "A7 Moreas",
+"kind": "r"
+},
+{
+"name": "Kalamata",
+"lat": 37.13683,
+"lon": 22.03794,
+"price": 2.25,
+"road": "A7 Moreas",
+"kind": "m"
+},
+{
+"name": "Manari bridge",
+"lat": 37.41235,
+"lon": 22.30774,
+"price": 2.3,
+"road": "A7 Moreas",
+"kind": "m"
+},
+{
+"name": "Nestani",
+"lat": 37.60078,
+"lon": 22.44644,
+"price": 2.8,
+"road": "A7 Moreas",
+"kind": "m"
+},
+{
+"name": "Paradisia (ramp)",
+"lat": 37.33119,
+"lon": 22.07802,
+"price": 0.9,
+"road": "A7 Moreas",
+"kind": "r"
+},
+{
+"name": "Petrina",
+"lat": 37.29873,
+"lon": 22.21025,
+"price": 3.45,
+"road": "A7 Moreas",
+"kind": "m"
+},
+{
+"name": "Spathovouni",
+"lat": 37.83583,
+"lon": 22.80801,
+"price": 2.95,
+"road": "A7 Moreas",
+"kind": "m"
+},
+{
+"name": "Thouria (ramp)",
+"lat": 37.07182,
+"lon": 22.0477,
+"price": 0.55,
+"road": "A7 Moreas",
+"kind": "r"
+},
+{
+"name": "Veligosti",
+"lat": 37.345,
+"lon": 22.11027,
+"price": 1.45,
+"road": "A7 Moreas",
+"kind": "m"
+},
+{
+"name": "Agioi Theodoroi (ramp)",
+"lat": 37.92187,
+"lon": 23.11952,
+"price": 0.6,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Akrata (ramp)",
+"lat": 38.15698,
+"lon": 22.34251,
+"price": 2.0,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Amaliada (ramp)",
+"lat": 37.80003,
+"lon": 21.37492,
+"price": 1.3,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Derveni (ramp)",
+"lat": 38.13194,
+"lon": 22.405,
+"price": 1.6,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Drepano (ramp)",
+"lat": 38.32506,
+"lon": 21.85802,
+"price": 2.0,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Elefsina",
+"lat": 38.04224,
+"lon": 23.4957,
+"price": 2.5,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Eleonas",
+"lat": 38.19074,
+"lon": 22.16539,
+"price": 3.8,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Isthmos",
+"lat": 37.92514,
+"lon": 23.03246,
+"price": 2.1,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Kalavryta (ramp)",
+"lat": 38.17471,
+"lon": 22.23949,
+"price": 2.8,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Kato Achaia (ramp)",
+"lat": 38.11462,
+"lon": 21.5272,
+"price": 2.2,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Kiato",
+"lat": 37.9967,
+"lon": 22.73546,
+"price": 2.7,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Kiato (ramp)",
+"lat": 38.00781,
+"lon": 22.73343,
+"price": 1.0,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Nea Peramos (ramp)",
+"lat": 38.01977,
+"lon": 23.42757,
+"price": 1.7,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Pachi (ramp)",
+"lat": 37.9854,
+"lon": 23.34955,
+"price": 1.1,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Patras",
+"lat": 38.14509,
+"lon": 21.61901,
+"price": 3.6,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Pyrgos",
+"lat": 37.7526,
+"lon": 21.3588,
+"price": 2.1,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Rio",
+"lat": 38.31644,
+"lon": 21.83017,
+"price": 2.7,
+"road": "A8 Olympia Odos",
+"kind": "m"
+},
+{
+"name": "Zevgolatio (ramp)",
+"lat": 37.93136,
+"lon": 22.78797,
+"price": 0.9,
+"road": "A8 Olympia Odos",
+"kind": "r"
+},
+{
+"name": "Rio–Antirrio bridge",
+"lat": 38.33384,
+"lon": 21.76595,
+"price": 15.9,
+"road": "Bridge",
+"kind": "m"
+},
+{
+"name": "Agiofyllo (ramp)",
+"lat": 39.87742,
+"lon": 21.56142,
+"price": null,
+"road": "E65",
+"kind": "r"
+},
+{
+"name": "Anavra (ramp)",
+"lat": 39.21037,
+"lon": 22.06918,
+"price": 2.15,
+"road": "E65",
+"kind": "r"
+},
+{
+"name": "Kalambaka",
+"lat": 39.70002,
+"lon": 21.6097,
+"price": 0.95,
+"road": "E65",
+"kind": "r"
+},
+{
+"name": "Lianokladi",
+"lat": 38.91501,
+"lon": 22.34888,
+"price": 2.05,
+"road": "E65",
+"kind": "m"
+},
+{
+"name": "Oxyneia",
+"lat": 39.80702,
+"lon": 21.53525,
+"price": null,
+"road": "E65",
+"kind": "m"
+},
+{
+"name": "Proastio (ramp)",
+"lat": 39.47459,
+"lon": 21.90318,
+"price": 1.25,
+"road": "E65",
+"kind": "r"
+},
+{
+"name": "Sofades",
+"lat": 39.25706,
+"lon": 22.08311,
+"price": 3.7,
+"road": "E65",
+"kind": "m"
+},
+{
+"name": "Trikala",
+"lat": 39.5202,
+"lon": 21.83236,
+"price": 3.25,
+"road": "E65",
+"kind": "m"
+},
+{
+"name": "Trikala (ramp)",
+"lat": 39.56888,
+"lon": 21.81824,
+"price": null,
+"road": "E65",
+"kind": "r"
+},
+{
+"name": "Aktio–Preveza tunnel",
+"lat": 38.94009,
+"lon": 20.76619,
+"price": 3.0,
+"road": "Tunnel",
+"kind": "m"
+}
+]
+}

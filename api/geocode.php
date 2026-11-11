@@ -8,7 +8,8 @@ $lang = (($_GET['lang'] ?? 'en') === 'el') ? 'el' : 'en';
 if (isset($_GET['q'])) {
     $q = trim((string)$_GET['q']);
     if ((function_exists('mb_strlen') ? mb_strlen($q) : strlen($q)) < 2) json_out([]);
-    $body = http_get('https://geocoding-api.open-meteo.com/v1/search?count=8&language=' . $lang . '&name=' . rawurlencode($q));
+    $cc = (($_GET['cc'] ?? '') === 'GR') ? '&countryCode=GR' : '';                      // the Trip tab only covers Greece
+    $body = http_get('https://geocoding-api.open-meteo.com/v1/search?count=8&language=' . $lang . $cc . '&name=' . rawurlencode($q));
     $res = $body ? (json_decode($body, true)['results'] ?? []) : [];
     json_out(array_map(fn($r) => [
         'name' => trim($r['name'] . (isset($r['admin1']) ? ', ' . $r['admin1'] : '') . (isset($r['country']) ? ', ' . $r['country'] : '')),
