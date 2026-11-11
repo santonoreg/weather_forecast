@@ -1117,3 +1117,4 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .tr-wxi .wi { width: 24px; height: 24px; margin-top: 1px; } .tr-wxi small { font-size: 10px; font-weight: 700; line-height: 1; color: var(--text); }
 @media (max-width: 900px) { .tr-grid { grid-template-columns: 1fr; } .tr-map { height: 340px; } }
 @media (max-width: 700px) { .tr-sh { display: none; } .tr-st { grid-template-columns: 1fr; gap: 6px; } .tr-c1 { display: flex; gap: 10px; align-items: baseline; } }
+@media (max-width: 700px) { .tr-chart { overflow-x: auto; } .tr-chart svg { min-width: 760px; } }
