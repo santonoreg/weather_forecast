@@ -1247,6 +1247,7 @@ function showView(name) {
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   if (name === 'astro') Astro.load();
   if (name === 'dso') Dso.show();
+  if (name === 'trip') Trip.show();
   if (name === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
 }
 document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -1409,6 +1410,7 @@ function onLangChange() {
   if (state.data) renderAll();
   Astro.render();
   Dso.render();
+  Trip.render();
 }
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
 applyStaticI18n();
@@ -1427,7 +1429,7 @@ if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', sync
 syncThemeBtn();
 
 $('brandIcon').innerHTML = WI.svg(2, false);
-loadAuth().then(() => loadLocations()).then(() => { const v = location.hash.slice(1); if (v === 'astro' || v === 'dso' || v === 'places') showView(v); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
+loadAuth().then(() => loadLocations()).then(() => { const v = location.hash.slice(1); if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'places') showView(v); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
 
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(centerNow, 50));
 window.addEventListener('load', () => setTimeout(centerNow, 100));

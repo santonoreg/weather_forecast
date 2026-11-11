@@ -35,6 +35,13 @@ return [
     //   2. paste the user name and that hash below, or set the env vars instead
     //   Env vars: WEFO_ADMIN_USER, WEFO_ADMIN_PASSWORD_HASH (take priority over the lines below)
     // Changing the hash logs every existing session out. Wrong guesses are throttled (5 per IP per 15 min).
+    // OpenRouteService key for the "Trip" tab (routes, distance, elevation, which stretches are toll roads).
+    //   Env var: WEFO_ORS_API_KEY (takes priority over the line below if set)
+    //   Get a key: https://openrouteservice.org/dev/#/signup -> create a token (free plan: 2,000 route requests a day,
+    //              40 a minute). Routes are cached for 6 hours, so repeated searches do not use the quota.
+    //   Leave empty to disable the Trip tab route search - nothing else in the app is affected.
+    'ors_api_key' => '',
+
     'admin_user' => '',
     'admin_password_hash' => '',
 

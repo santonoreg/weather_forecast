@@ -8,7 +8,7 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 - Frontend: plain **HTML / CSS / JavaScript** (no build step), [Leaflet](https://leafletjs.com/) for the map
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
 - **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
-- No API keys needed. Everything is open to visitors except the *Locations & Map* manager, which sits behind a single optional [admin login](#admin-login)
+- No API keys needed for the forecast, Sky Conditions or DSO Explorer (only the optional **Trip** route search needs a free OpenRouteService key). Everything is open to visitors except the *Locations & Map* manager, which sits behind a single optional [admin login](#admin-login)
 - Beyond the forecast: a [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
@@ -173,6 +173,10 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 ### Sunset & sunrise colours (Forecast tab)
 
 The last icon of the *Hour by hour* switch (a half sun over the horizon, right after the meteogram) opens a seven-day outlook for **sunset** and **sunrise**: a 0–100 score per day (Weak / Low / Fair / Good / Spectacular), the time and direction of the Sun, the golden and blue hour windows, and the factors behind the score. It is an estimate: high and mid cloud catch the light (best at about 45 % cover), the horizon on the Sun's side has to be open (low cloud at 80–150 km along its azimuth hides it — `api/skypoints.php` forecasts points along that direction), a little aerosol deepens the reds, and rain or poor visibility spoil it. For the events of the next 30 hours the low and mid cloud is also pulled towards **real airport data** along the Sun's direction (`api/aviation.php`: METAR observations of the last hours and TAF forecasts valid for about 9–30 h, from aviationweather.gov; the nearest station within 70 / 90 km of each horizon point; the TAF counts for 40–60 %, a METAR only for the next ~3 hours). Automatic stations only see cloud below ~12 000 ft, so they cannot see high cirrus: they tell whether the horizon will be blocked, not how much cloud there is to catch the light. The *I saw it* stars are kept only in your browser.
+
+### Trip (open to everyone, needs a free OpenRouteService key)
+
+A tab next to *Forecast*: pick a start and a destination (and "now" or a departure time within the next 6 days) and it shows up to three driving routes with distance, driving time, arrival, climb and the length on toll roads, a map coloured by how bad the weather is along the way, the "what to expect" warnings, a chart of temperature / rain / elevation and a stage-by-stage table. The weather is the **multi-model consensus**: `api/tripweather.php` reads ECMWF IFS and AIFS, GFS, ICON, Météo-France, UK Met Office and GEM at points about every 20 km, each at the time you will really be there (the route's own timetable), and shows the weather most models agree on with the share that agrees. "Slippery", fog and gust notes are estimates from the forecast, not road-authority reports. Routes come from OpenRouteService through `api/route.php` (cached for 6 hours); put a free key in `api/config.php` (`ors_api_key`) or the `WEFO_ORS_API_KEY` environment variable. Toll prices are not calculated yet.
 
 ### DSO Explorer (open to everyone)
 
