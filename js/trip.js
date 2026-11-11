@@ -184,6 +184,13 @@ const Trip = (() => {
   };
   const WARN_ICON = { thunder: '⚡', snow: '❄', ice: '🧊', heavy: '🌧', rain: '☔', fog: '🌫', wind: '💨' };
 
+  /* the toll plazas on the chosen route, in driving order, with the price at each */
+  function tollList(r, unknownToll) {
+    const tl = r.tolls || [];
+    if (!tl.length) return `<p class="hint">${esc(t(unknownToll ? 'trip.tolls.unknown' : 'trip.tolls.none'))}</p>`;
+    return `<ul class="tr-tolls">${tl.map((x) => `<li><i>€</i><span><b>${esc(x.n)}</b><small>${esc(x.r ? x.r + ' · ' : '')}${esc(t('trip.km', { n: Math.round(x.km) }))} · ${esc(when(T.dep + r.timeAt(x.km)))}</small></span><em>${x.p != null ? esc(money(x.p, x.c)) : esc(t('trip.tolls.noprice'))}</em></li>`).join('')}</ul>`;
+  }
+
   function summaryCards() {
     return T.routes.map((r, i) => {
       const arr = T.dep + r.sec * 1000, nW = r.warn ? r.warn.filter((w) => w.sev >= 2).length : 0;
@@ -289,6 +296,8 @@ const Trip = (() => {
         <section class="card tr-mapc"><div id="tripMap" class="tr-map"></div></section>
         <section class="card tr-wx">
           <div class="tr-verdict v${v}"><b>${esc(t('trip.v.' + v))}</b><span>${esc(t('trip.vd.' + v))}</span></div>
+          <h3>${esc(t('trip.tolls'))}${nT ? ` <span class="tr-tt">${esc(cost)}</span>` : ''}</h3>
+          ${tollList(r, unknownToll)}
           <h3>${esc(t('trip.warnings'))}</h3>
           ${r.warn.length ? `<ul class="tr-warn">${r.warn.slice(0, 9).map((w) => `<li class="s${Math.min(3, Math.round(w.sev))}"><i>${WARN_ICON[w.kind] || '•'}</i><span>${esc(warnText(w))}</span></li>`).join('')}</ul>` : `<p class="hint">${esc(t('trip.nowarn'))}</p>`}
           <p class="hint">${esc(t('trip.basis', { n: r.wx.find((x) => x) ? r.wx.find((x) => x).n : 0 }))}</p>
