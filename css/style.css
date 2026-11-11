@@ -1132,3 +1132,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .tr-fuel { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px; background: var(--bg); border-left: 3px solid #0ea5e9; }
 .tr-fuel-in { display: flex; gap: 8px; } .tr-fuel-in label { font-size: 11px; } .tr-fuel-in input { width: 74px; padding: 5px 7px; font-size: 13px; }
 .tr-fuel-out b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; } .tr-fuel-out small { color: var(--muted); font-size: 12px; }
+/* the map fills its whole card, however tall the right-hand column gets */
+.tr-mapc { position: relative; min-height: 480px; } .tr-map { position: absolute; inset: 0; height: auto; }
+@media (max-width: 900px) { .tr-mapc { min-height: 340px; } }
