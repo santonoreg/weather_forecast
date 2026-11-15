@@ -62,9 +62,6 @@ const want = (n) => !only || only.includes(n);
   if (want('forecast')) {
   console.log('forecast');
   await shot('forecast-weather', { from: '.toolbar', to: '#forecastBody .hours' });
-  await js("document.getElementById('expert').open = true"); await sleep(600);
-  await shot('forecast-expert', { from: '#legend', to: '#expert', pad: 30 });
-  await js("document.getElementById('expert').open = false");
   // the reliability weighting + models drop-down
   await js("document.getElementById('models').open = true"); await sleep(500);
   await shot('models-dropdown', { top: 0, to: '#models .mdl-panel', pad: 40 });

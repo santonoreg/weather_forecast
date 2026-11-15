@@ -112,6 +112,7 @@ const bgRain = (v, step) => (v == null || v < 0.05 ? '' : `hsla(215,85%,50%,${0.
 // Solid (opaque) versions of the same scales, for the Meteogram's point markers/bars rather than a cell background.
 const heatTemp = (v) => (v == null ? 'var(--muted)' : heat((v + 5) / 45, 220, 0, 0.95));
 const heatWind = (v) => (v == null ? 'var(--muted)' : heat(v / 60, 170, 10, 0.95));
+const heatCloud = (v) => (v == null ? 'var(--muted)' : `hsl(215,20%,${72 - clamp(v / 100) * 38}%)`);
 const heatRain = (v) => (v == null ? 'var(--muted)' : `hsla(215,85%,50%,${0.35 + clamp(v / 4) * 0.6})`);
 
 /* ================= Παράμετροι ================= */
@@ -564,13 +565,14 @@ document.addEventListener('click', (e) => {
 /* A small hourly line/bar chart for the meteogram: x = hour of the selected day. `band` (optional) shades
    the min–max spread between providers behind the average line; `nowI` (optional) draws a dashed marker
    at the current hour. Deliberately independent of the Step selector — a meteogram is always hourly. */
-function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, heat = null }) {
+function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, heat = null, fixed = null }) {
   const n = points.length;
   if (n < 2) return '';
   const W = 1200, H = kind === 'bar' ? 110 : 170, pl = 40, pr = 12, pt = 10, pb = 22;
   const vals = nn(points.map((p) => p.v).concat(band ? band.flat() : []));
   let lo, hi;
   if (kind === 'bar') { lo = 0; hi = Math.max(2, (vals.length ? Math.max(...vals) : 0) * 1.25); }
+  else if (fixed) { [lo, hi] = fixed; }
   else { lo = vals.length ? Math.min(...vals) : 0; hi = vals.length ? Math.max(...vals) : 1; const pad = (hi - lo) * 0.15 || 1; lo -= pad; hi += pad; }
   const x = (i) => pl + (i * (W - pl - pr)) / (n - 1);
   const y = (v) => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo || 1));
@@ -600,7 +602,7 @@ function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, h
 
 /* Meteogram: temperature (with model-spread band), precipitation and wind for the selected day, all 24
    hours at once — independent of the current parameter tab and step. */
-function renderMeteogram() {
+function meteoHtml() {
   const { data } = state;
   const a = state.day * 24, b = Math.min(a + 24, data.time.length);
   const idx = []; for (let i = a; i < b; i++) idx.push(i);
@@ -613,11 +615,14 @@ function renderMeteogram() {
   const precs = idx.map((i) => ({ v: wmean(wpairs('precip', (p) => agg(p, 'precip', i, i + 1))), label: label(i) }));
   const winds = idx.map((i) => ({ v: wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', i, i + 1))), label: label(i) }));
 
-  $('meteo').innerHTML = `
+  const clouds = idx.map((i) => ({ v: wmean(wpairs('cloud_cover', (p) => agg(p, 'cloud_cover', i, i + 1))), label: label(i) }));
+  return `
     <div class="mg-lane"><b>${t('mg.temp')}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, nowI, heat: heatTemp })}</div>
     <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI, heat: heatRain })}</div>
-    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, heat: heatWind })}</div>`;
+    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, heat: heatWind })}</div>
+    <div class="mg-lane"><b>${t('mg.cloud')}</b>${hourChart(clouds, { kind: 'line', color: 'var(--muted)', unit: '%', d: 0, nowI, fixed: [0, 100], heat: heatCloud })}</div>`;
 }
+function renderMeteogram() { $('meteo').innerHTML = meteoHtml(); }
 
 /* Weather tab only, "time across" mode: instead of one summary/prob pair, show every key metric as its
    own row at once (weather, agreement, temperature, rain, wind) — a compact dashboard, with the
@@ -672,12 +677,12 @@ function renderGrid() {
   renderSegKey();
   // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
   const sun = state.orient === 's';
-  document.querySelector('.hours .tabsrow').hidden = sun; $('legend').hidden = sun; $('expert').hidden = sun; $('sunsetBox').hidden = !sun;
-  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('meteo').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
+  document.querySelector('.hours .tabsrow').hidden = sun; $('legend').hidden = sun; $('sunsetBox').hidden = !sun;
+  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('meteo').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
 
   if (state.orient === 'm') {
     $('grid').classList.remove('vert', 'lanes');
-    $('modelsToggle').hidden = true; $('vFooter').hidden = true;
+    $('modelsToggle').hidden = true; $('chartsToggle').hidden = true; $('hcharts').hidden = true; $('vFooter').hidden = true;
     $('grid').hidden = true; $('meteo').hidden = false;
     renderMeteogram();
     return;
@@ -690,7 +695,7 @@ function renderGrid() {
 
   if (state.orient === 'v') {
     $('grid').classList.remove('lanes');
-    $('grid').hidden = false; $('meteo').hidden = true;
+    $('grid').hidden = false; $('meteo').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true;
     renderGridVertical(cols, builts);
     $('modelsToggle').hidden = true;   // the models are always listed in this layout
     setModelsToggle(rows.length + (extraRows || []).length);
@@ -721,7 +726,10 @@ function renderGrid() {
     $('grid').innerHTML = html;
     centerNow();
     requestAnimationFrame(() => requestAnimationFrame(centerNow));
-    $('modelsToggle').hidden = false;
+    $('modelsToggle').hidden = false; $('chartsToggle').hidden = false;
+    $('chartsToggle').classList.toggle('active', state.chartsOpen);
+    $('hcharts').hidden = !state.chartsOpen;
+    if (state.chartsOpen) $('hcharts').innerHTML = meteoHtml();
     setModelsToggle(rows.length + (extraRows || []).length);
   }
   const compareNote = state.modelsOpen && extraRows && extraRows.length ? t('lg.compare') : '';
@@ -732,6 +740,12 @@ function setModelsToggle(n) {
   const b = $('modelsToggle'), txt = state.modelsOpen ? t('m.hideall') : t('m.showall', { n });
   b.title = txt; b.setAttribute('aria-label', txt); b.querySelector('span').textContent = txt; b.classList.toggle('active', !!state.modelsOpen);
 }
+state.chartsOpen = (() => { try { return localStorage.getItem('wefo.chartsOpen') === '1'; } catch (e) { return false; } })();
+$('chartsToggle').addEventListener('click', () => {
+  state.chartsOpen = !state.chartsOpen;
+  try { localStorage.setItem('wefo.chartsOpen', state.chartsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
+  renderGrid();
+});
 $('modelsToggle').addEventListener('click', () => {
   state.modelsOpen = !state.modelsOpen;
   try { localStorage.setItem('wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
@@ -822,80 +836,8 @@ $('relSave').addEventListener('click', () => {
   state.disabled = new Set(relDraft); saveDisabled(); renderAll();
 });
 
-/* "See what the models say": every active provider's own temperature line (thin) plus the weighted
-   average (highlighted), and a precipitation bars pair (model average vs the single wettest model) — the
-   next 48 hours from now, independent of the selected day/tab/step. */
-function spaghettiChart(lines, avg, dayMarks) {
-  const n = avg.length;
-  if (n < 2) return '';
-  const W = 1200, H = 220, pl = 40, pr = 12, pt = 12, pb = 22;
-  const allV = nn(lines.flat().concat(avg));
-  let lo = allV.length ? Math.min(...allV) : 0, hi = allV.length ? Math.max(...allV) : 1;
-  const pad = (hi - lo) * 0.1 || 1; lo -= pad; hi += pad;
-  const x = (i) => pl + (i * (W - pl - pr)) / (n - 1);
-  const y = (v) => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
-  let g = '';
-  for (let i = 0; i <= 3; i++) { const v = lo + ((hi - lo) * i) / 3; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="gl"/><text x="${pl - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="tx">${Math.round(v)}°</text>`; }
-  dayMarks.forEach((dm) => { g += `<line x1="${x(dm.i).toFixed(1)}" x2="${x(dm.i).toFixed(1)}" y1="${pt}" y2="${H - pb}" class="gl" stroke-dasharray="2 3"/><text x="${(x(dm.i) + 4).toFixed(1)}" y="${pt + 10}" class="tx">${dm.label}</text>`; });
-  const path = (arr) => arr.map((v, i) => (v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`)).filter(Boolean).join(' ');
-  let body = lines.map((line) => `<polyline points="${path(line)}" class="ex-model"/>`).join('');
-  body += `<polyline points="${path(avg)}" class="ex-avg"/>`;
-  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${body}</svg>`;
-}
-function dualBarChart(back, front, dayMarks) {
-  const n = front.length;
-  if (n < 2) return '';
-  const W = 1200, H = 130, pl = 40, pr = 12, pt = 10, pb = 22;
-  const vals = nn(back);
-  const hi = Math.max(2, (vals.length ? Math.max(...vals) : 0) * 1.2);
-  const x = (i) => pl + (i * (W - pl - pr)) / (n - 1);
-  const y = (v) => pt + (H - pt - pb) * (1 - v / hi);
-  let g = '';
-  for (let i = 0; i <= 2; i++) { const v = (hi * i) / 2; g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="gl"/><text x="${pl - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="tx">${v.toFixed(1)}</text>`; }
-  dayMarks.forEach((dm) => { g += `<line x1="${x(dm.i).toFixed(1)}" x2="${x(dm.i).toFixed(1)}" y1="${pt}" y2="${H - pb}" class="gl" stroke-dasharray="2 3"/>`; });
-  const bw = Math.max(2, (W - pl - pr) / n - 2);
-  const bars = (arr, cls) => arr.map((v, i) => (v == null || v <= 0.01 ? '' : `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" class="${cls}"><title>${v.toFixed(1)} mm</title></rect>`)).join('');
-  return `<svg class="hchart" viewBox="0 0 ${W} ${H}" role="img">${g}${bars(back, 'bar-wet')}${bars(front, 'bar-avg')}</svg>`;
-}
-function expertDayMarks(idx) {
-  const { data } = state;
-  const marks = []; let prevDate = null;
-  idx.forEach((ti, i) => {
-    const dte = data.time[ti].slice(0, 10);
-    if (dte !== prevDate) {
-      const dayIdx = data.dates.indexOf(dte), dt = new Date(dte + 'T12:00:00');
-      const label = dayIdx === 0 ? t('today') : dayIdx === 1 ? t('tomorrow') : dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
-      marks.push({ i, label: `${label} ${dt.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}` });
-      prevDate = dte;
-    }
-  });
-  return marks;
-}
-function renderExpert() {
-  if (!state.data) return;
-  const { data } = state;
-  const c0 = nowColumn();
-  const end = Math.min(c0.a + 48, data.time.length);
-  const idx = []; for (let i = c0.a; i < end; i++) idx.push(i);
-  if (idx.length < 2) { $('expertBody').innerHTML = ''; return; }
-  const dayMarks = expertDayMarks(idx);
-  const P = activeProviders();
-  const tempLines = P.map((p) => idx.map((i) => agg(p, 'temperature_2m', i, i + 1)));
-  const tempAvg = idx.map((i) => wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', i, i + 1))));
-  const precAvg = idx.map((i) => wmean(wpairs('precip', (p) => agg(p, 'precip', i, i + 1))));
-  const precMax = idx.map((i) => { const v = nn(P.map((p) => agg(p, 'precip', i, i + 1))); return v.length ? Math.max(...v) : null; });
-  $('expertBody').innerHTML = `
-    <p class="hint">${t('ex.hint')}</p>
-    <b>${t('ex.temp')}</b>
-    <div class="exlegend"><span><i class="sw l-model"></i>${t('ex.line.model')}</span><span><i class="sw l-wefo"></i>${t('ex.line.wefo')}</span></div>
-    ${spaghettiChart(tempLines, tempAvg, dayMarks)}
-    <b>${t('ex.precip')}</b>
-    <div class="exlegend"><span><i class="sw b-avg"></i>${t('ex.bar.avg')}</span><span><i class="sw b-wet"></i>${t('ex.bar.wet')}</span></div>
-    ${dualBarChart(precMax, precAvg, dayMarks)}`;
-}
-
 function renderAll() {
-  renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid(); renderExpert();
+  renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid();
   const d = state.data, loc = state.current;
   $('meta').textContent = t('meta', { name: locName(loc), lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
 }
