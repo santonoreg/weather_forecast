@@ -252,7 +252,7 @@ const Trip = (() => {
   }
 
   function chart(r) {
-    const W = 1000, H = 330, pl = 46, pr = 46, pw = W - pl - pr, top = 20, iconY = 28, plotT = 66, plotB = 232, barT = 244, barB = 292;
+    const W = 1000, H = 330, pl = 46, pr = 70, pw = W - pl - pr, top = 20, iconY = 28, plotT = 66, plotB = 232, barT = 244, barB = 292;
     const X = (km) => pl + (km / r.km) * pw;
     const ws = r.wx.map((a, i) => ({ a, km: r.sampleKm[i] }));
     const temps = ws.filter((w) => w.a).flatMap((w) => [w.a.tmin, w.a.tmax]);
@@ -273,7 +273,7 @@ const Trip = (() => {
     // elevation (background)
     if (eles) {
       const pts = r.cum.map((km, i) => `${X(km).toFixed(1)},${(plotB - (eles[i] / eMax) * (plotB - plotT) * 0.55).toFixed(1)}`);
-      g += `<polygon points="${X(0).toFixed(1)},${plotB} ${pts.join(' ')} ${X(r.km).toFixed(1)},${plotB}" class="elev"/><text x="${W - pr + 6}" y="${plotB - 2}" class="lb">0 m</text><text x="${W - pr + 6}" y="${(plotB - (plotB - plotT) * 0.55 + 4).toFixed(1)}" class="lb">${Math.round(eMax)} m</text>`;
+      g += `<polygon points="${X(0).toFixed(1)},${plotB} ${pts.join(' ')} ${X(r.km).toFixed(1)},${plotB}" class="elev"/><text x="${W - pr + 6}" y="${plotB - 2}" class="lb">0 m</text><text x="${W - pr + 6}" y="${(plotB - (plotB - plotT) * 0.55 + 4).toFixed(1)}" class="lb">${Math.round(eMax)} m</text><text x="${W - pr + 6}" y="${(plotB - (plotB - plotT) * 0.55 - 9).toFixed(1)}" class="lb ec">${esc(t('trip.elev'))}</text>`;
     }
     // temperature: spread between models + mean
     const okp = ws.filter((w) => w.a);
@@ -475,7 +475,7 @@ const Trip = (() => {
   function bindChart(r) {
     const svg = $t('trSvg'), hit = $t('trHit'), tip = $t('trTip'), cur = $t('trCur');
     if (!svg || !hit) return;
-    const W = 1000, pl = 46, pr = 46, pw = W - pl - pr;
+    const W = 1000, pl = 46, pr = 70, pw = W - pl - pr;
     const move = (e) => {
       const rc = svg.getBoundingClientRect(), x = ((e.clientX - rc.left) / rc.width) * W;
       const km = clampN(((x - pl) / pw) * r.km, 0, r.km);
