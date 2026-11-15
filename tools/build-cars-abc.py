@@ -41,7 +41,7 @@ for i, l in enumerate(L):
         continue
     val = nums[1] if len(nums) > 1 else nums[0]
     kind = 'd' if L[i + 1] == 'Diesel' else 'p'
-    label = re.sub(r's+', ' ', f'{model} {name}'.replace(' ', ' '))
+    label = re.sub(r'\s+', ' ', f'{model} {name}'.replace('Â ', ' '))
     k = (label, kind)
     if k in rows:
         rows[k][0] = min(rows[k][0], year); rows[k][1] = max(rows[k][1], year); rows[k][2].append(val)
