@@ -496,30 +496,52 @@ const tempWindRainCell = (c) => {
   const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
   const mm = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
   const rain = pr != null ? `<small class="rn${Math.round(pr * 100) === 0 ? ' dim' : ''}">${Math.round(pr * 100)}%${mm != null && mm >= 0.05 ? ` · ${fmt(mm, 1)} mm` : ''}</small>` : '';
-  return cell(`${m != null ? `<b>${fmt(m)}°</b>` : ''}${wind}${rain}`, '', 'summary');
+  const avg = (k) => wmean(wpairs(k, (p) => agg(p, k, c.a, c.b)));
+  const cl = avg('cloud_cover'), hu = avg('relative_humidity_2m'), pr2 = avg('pressure_msl');
+  const more = [cl != null ? `☁ ${fmt(cl)}%` : '', hu != null ? `💧 ${fmt(hu)}%` : '', pr2 != null ? `${fmt(pr2)} hPa` : ''].filter(Boolean);
+  return cell(`${m != null ? `<b>${fmt(m)}°</b>` : ''}${wind}${rain}${more.length ? `<small class="mre">${more.join(' · ')}</small>` : ''}`, '', 'summary');
 };
 
-function renderGridVertical(cols, built) {
-  const { summary, prob, summaryLabel, probLabel, rows, extraRows } = built;
-  const weather = state.param === 'weather';
+/* The "Weather" tab is the overview: every parameter, for the models too. Any other tab keeps the full
+   weighted summary but lists the individual models for that one parameter only. */
+const ALL_SECTIONS = ['weather', 'temperature_2m', 'precip', 'wind', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl'];
+const LANE_OF = { temperature_2m: 'temp', precip: 'rain', wind: 'wind', cloud_cover: 'cloud', relative_humidity_2m: 'hum', pressure_msl: 'press' };
+/* One cell per model for the vertical table's "all parameters" view: icon + temperature, then wind,
+   rain, cloud, humidity and pressure, each from the same per-parameter rows the horizontal view uses. */
+function compositeCell(builts, id, i) {
+  const rowOf = (b) => [...(b.extraRows || []), ...b.rows].find((r) => r.id === id);
+  let html = '';
+  builts.forEach(({ key, built }) => {
+    const r = rowOf(built), c = r && r.cells[i];
+    if (!c || !c.has) return;
+    const line = { weather: c.html, wind: c.html, precip: `${c.html}<small> mm</small>`, cloud_cover: `☁ ${c.html}%`, relative_humidity_2m: `💧 ${c.html}%`, pressure_msl: c.html }[key];
+    if (line) html += `<div class="cm">${line}</div>`;
+  });
+  return html;
+}
+
+function renderGridVertical(cols, builts) {
+  const { rows, extraRows } = builts[0].built;
+  const all = builts.length > 1;   // Weather tab: each model column carries every parameter
   const cls = (c) => (c.now ? ' now' : '');
   // the AI columns are individual models too: shown only with "Show all N models"
   const providerCols = state.modelsOpen ? [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...rows.map((r) => ({ ...r, cls: 'model' }))] : [];
+  if (all) providerCols.forEach((r) => { r.cells = cols.map((c, i) => ({ html: compositeCell(builts, r.id, i), bg: '' })); r.cls += ' multi'; });
   const colspan = 3 + providerCols.length;
-  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${probLabel}${weather ? `<small class="hint2">${t('g.prob_weather.sub')}</small>` : ''}</th><th class="summary">${weather ? t('g.twr') : summaryLabel}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${t('g.prob_weather')}<small class="hint2">${t('g.prob_weather.sub')}</small></th><th class="summary">${t('g.twr')}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
   let prevDate = -1;
   cols.forEach((c, i) => {
     if (c.dateIdx !== prevDate) { html += `<tr class="dayrow"><th class="dh" colspan="${colspan}"><span>${dayLabelFor(c.dateIdx)}</span></th></tr>`; prevDate = c.dateIdx; }
     // Non-weather tabs: agreement first, then the average (swapped from summary-then-prob).
-    const left = weather ? weatherAgreeCell(c) : prob[i];
-    const right = weather ? tempWindRainCell(c) : summary[i];
+    const left = weatherAgreeCell(c);
+    const right = tempWindRainCell(c);
     const provCells = providerCols.map((r) => { const pc = r.cells[i]; return `<td class="${r.cls}" style="background:${pc && pc.bg || ''}">${pc ? pc.html : ''}</td>`; }).join('');
     html += `<tr class="hr${cls(c)}"><th class="rowh">${c.label}</th><td class="${left.cls || ''}" style="background:${left.bg || ''}">${left.html}</td><td class="${right.cls || ''}" style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
   });
   html += '</tbody>';
   $('grid').innerHTML = html;
   $('grid').classList.add('vert');
-  $('grid').classList.toggle('weather-cols', weather);
+  $('grid').classList.add('weather-cols');
   $('grid').classList.toggle('solo', !providerCols.length);   // only the weighted columns: let their bars use the free width
   const more = hasMoreVerticalHours(state.vHours);
   $('vFooter').hidden = false;
@@ -629,9 +651,15 @@ function buildWeatherLanes(cols) {
     const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
     return cell(`${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`);
   });
+  const plain = (key, d, suffix = '') => cols.map((c) => {
+    const m = wmean(wpairs(key, (p) => agg(p, key, c.a, c.b)));
+    return m == null ? cell('–') : cell(`${fmt(m, d)}${suffix}`);
+  });
   return [
     lane(t('lane.weather'), wx, 'wx'), lane(t('lane.agree'), agree, 'agree'), lane(t('lane.temp'), temp, 'temp'),
     lane(t('lane.rain'), rain, 'rain'), lane(t('lane.wind'), wind, 'wind'),
+    lane(t('lane.cloud'), plain('cloud_cover', 0, '%'), 'cloud'), lane(t('lane.hum'), plain('relative_humidity_2m', 0, '%'), 'hum'),
+    lane(t('lane.press'), plain('pressure_msl', 0), 'press'),
   ];
 }
 
@@ -656,18 +684,19 @@ function renderGrid() {
   }
 
   const cols = state.orient === 'v' ? verticalColumns(state.vHours) : columns();
-  const built = buildRows(param, cols);
-  const { rows, summary, prob, summaryLabel, probLabel, extraRows } = built;
+  // Weather = overview: the models are listed for every parameter; any other tab lists them for that one only
+  const builts = (param === 'weather' ? ALL_SECTIONS : [param]).map((key) => ({ key, built: buildRows(key, cols) }));
+  const { rows, extraRows } = builts[0].built;
 
   if (state.orient === 'v') {
     $('grid').classList.remove('lanes');
     $('grid').hidden = false; $('meteo').hidden = true;
-    renderGridVertical(cols, built);
+    renderGridVertical(cols, builts);
     $('modelsToggle').hidden = false;
     setModelsToggle(rows.length + (extraRows || []).length);
   } else {
     $('grid').classList.remove('vert');
-    $('grid').classList.toggle('lanes', param === 'weather');
+    $('grid').classList.add('lanes');
     $('vFooter').hidden = true;
     $('grid').hidden = false; $('meteo').hidden = true;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
@@ -675,17 +704,19 @@ function renderGrid() {
     let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
     // Consensus-first, matching Glett: the weighted answer (lanes / summary+prob) comes first, then the
     // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
-    if (param === 'weather') {
-      buildWeatherLanes(cols).forEach((l) => {
-        html += `<tr class="lane ${l.cls}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    // the full weighted summary on every tab; the tab's own parameter is highlighted
+    buildWeatherLanes(cols).forEach((l) => {
+      html += `<tr class="lane ${l.cls}${LANE_OF[param] === l.cls ? ' sel' : ''}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    });
+    // the individual models (AI ones first), one block per parameter: shown only with "Show all N models"
+    if (state.modelsOpen) {
+      builts.forEach(({ key, built: b }) => {
+        const list = [...(b.extraRows || []).map((r) => [r, 'ai']), ...b.rows.map((r) => [r, ''])];
+        if (!list.length) return;
+        html += `<tr class="sect"><th colspan="${cols.length + 1}">${t('p.' + key)}</th></tr>`;
+        list.forEach(([r, c]) => { html += rowHtml(r, c); });
       });
-    } else {
-      html += `<tr class="summary"><th class="rowh">${summaryLabel}</th>${summary.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-      html += `<tr class="prob"><th class="rowh">${probLabel}</th>${prob.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     }
-    // the AI rows are individual models too: shown only together with the rest ("Show all N models")
-    if (state.modelsOpen && extraRows && extraRows.length) { html += extraRows.map((r) => rowHtml(r, 'ai')).join(''); }
-    if (state.modelsOpen) rows.forEach((r) => { html += rowHtml(r); });
     html += '</tbody>';
     $('grid').innerHTML = html;
     centerNow();

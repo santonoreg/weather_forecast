@@ -236,7 +236,14 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid.lanes tr.lane td .pct.dim, .grid.lanes tr.lane td.dim { color: var(--muted); font-weight: 400; }
 .grid.lanes tr.lane.rain td small, .grid.lanes tr.lane.wind td small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
 .grid.lanes tr.lane.wind td { font-size: 13.5px; font-weight: 500; }
-.grid.lanes tr.lane.wind td, .grid.lanes tr.lane.wind .rowh { border-bottom: 2px solid var(--line); }
+.grid.lanes tr.lane.cloud td, .grid.lanes tr.lane.hum td, .grid.lanes tr.lane.press td { font-size: 13px; font-weight: 500; }
+.grid.lanes tr.lane.press td, .grid.lanes tr.lane.press .rowh { border-bottom: 2px solid var(--line); }
+.grid.lanes tr.lane.sel .rowh { color: var(--accent); font-weight: 700; }
+.grid tr.sect th { position: static; text-align: left; padding: 8px 10px 4px; font-size: 12px; font-weight: 700; color: var(--accent-2); background: var(--bg); border-bottom: 1px solid var(--line); }
+.grid.vert td.summary small.mre { color: var(--muted); font-weight: 400; font-size: 11px; }
+.grid.vert th.multi, .grid.vert td.multi { width: 92px; }
+.grid.vert td.multi { white-space: normal; line-height: 1.25; vertical-align: top; }
+.grid.vert td.multi .cm { font-size: 12px; } .grid.vert td.multi .cm small { font-size: 10.5px; display: inline; }
 .grid.lanes tr.ai td, .grid.lanes tr.ai .rowh { border-top: 0; }
 .grid td.past, .grid th.past { opacity: .9; }
 .grid th.now { color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
