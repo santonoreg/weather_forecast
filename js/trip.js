@@ -25,6 +25,8 @@ const Trip = (() => {
   } catch (e) { /* ignore */ }
   const saveFuel = () => { try { localStorage.setItem('wefo.trip.fuel', JSON.stringify(FUEL)); } catch (e) { /* ignore */ } };
   const fuelOf = (r) => { const u = (r.km * FUEL.cons) / 100 + ((r.ascent || 0) / 100) * (FUEL.type === 'e' ? 0.1 : 0.15); return { l: u, c: u * FUEL.prices[FUEL.type] }; };
+  const tollsIncomplete = (r) => { const tl = r.tolls || []; return tl.some((x) => x.p == null) || (!tl.length && r.tollKm >= 0.5); };
+  const totalTxt = (r) => money(fuelOf(r).c + (r.tollCost || 0), 'EUR') + (tollsIncomplete(r) ? ' +' : '');
   const unitOf = () => (FUEL.type === 'e' ? 'kWh' : 'L');
   const inGreece = (p) => p && p.lat >= 34.5 && p.lat <= 42 && p.lon >= 19 && p.lon <= 30;      // the route search and the toll table cover Greece only
   const timeStr = (ms) => new Date(ms).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
@@ -348,6 +350,7 @@ const Trip = (() => {
           ${r.ascent != null ? `<div class="tr-k"><span>${esc(t('trip.climb'))}</span><b>↑ ${r.ascent} m · ↓ ${r.descent} m</b></div>` : ''}
           ${tolls}
           <div class="tr-k"><span>${esc(t('trip.fuel.kpi'))}</span><b id="trFuelKpi">${esc(money(fuelOf(r).c, 'EUR'))}</b></div>
+          <div class="tr-k tr-kt"><span>${esc(t('trip.total'))}</span><b id="trTotalKpi">${esc(totalTxt(r))}</b></div>
           <div class="tr-k"><span>${esc(t('trip.cost'))}${nT ? ` · ${esc(t('trip.tollpts', { n: nT }))}` : ''}</span><b${nT && !unknownToll ? '' : ' class="na"'}>${esc(cost)}</b></div>
         </div>
         ${T.routes.length > 1 ? `<div class="tr-rcs">${summaryCards()}</div>` : ''}
@@ -366,6 +369,7 @@ const Trip = (() => {
             <div class="tr-fuel-row"><div class="tr-fuel-in"><label><span id="trConsLbl"></span><input id="trCons" type="number" min="1" max="60" step="0.1" value="${FUEL.cons}"></label>
               <label><span id="trPriceLbl"></span><input id="trPrice" type="number" min="0.01" max="5" step="0.01" value="${FUEL.prices[FUEL.type]}"></label></div>
               <div class="tr-fuel-out" id="trFuelOut"></div></div></div>
+          <div class="tr-total"><span>${esc(t('trip.total'))}<small>${esc(t('trip.total.sub'))}</small></span><b id="trTotal">${esc(totalTxt(r))}</b></div>
           <p class="hint">${esc(t('trip.fuel.note'))}</p>
           <h3>${esc(t('trip.warnings'))}</h3>
           ${r.warn.length ? `<ul class="tr-warn">${r.warn.slice(0, 9).map((w) => `<li class="s${Math.min(3, Math.round(w.sev))}"><i>${WARN_ICON[w.kind] || '•'}</i><span>${esc(warnText(w))}</span></li>`).join('')}</ul>` : `<p class="hint">${esc(t('trip.nowarn'))}</p>`}
@@ -393,9 +397,10 @@ const Trip = (() => {
 
   /* ---------- fuel estimate (updates in place, no redraw of the map) ---------- */
   function showFuel(r) {
-    const out = $t('trFuelOut'), f = fuelOf(r), tolls = r.tollCost || 0;
+    const out = $t('trFuelOut'), f = fuelOf(r);
     if (!out) return;
-    out.innerHTML = `<b>≈ ${f.l.toFixed(1)} ${unitOf()} · ${esc(money(f.c, 'EUR'))}</b>${tolls ? `<small>${esc(t('trip.fuel.total', { c: money(f.c + tolls, 'EUR') }))}</small>` : ''}`;
+    out.innerHTML = `<b>≈ ${f.l.toFixed(1)} ${unitOf()} · ${esc(money(f.c, 'EUR'))}</b>`;
+    ['trTotal', 'trTotalKpi'].forEach((id) => { const el = $t(id); if (el) el.textContent = totalTxt(r); });
     const kp = $t('trFuelKpi');
     if (kp) kp.textContent = money(f.c, 'EUR');
     const cl = $t('trConsLbl'), pl = $t('trPriceLbl');

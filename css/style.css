@@ -1178,3 +1178,9 @@ body.tr-fs-on { overflow: hidden; }
 .cb { position: relative; } .cb input { width: 100%; padding: 6px 8px; font-size: 13px; }
 .cb-list { max-height: 260px; z-index: 1500; }
 .cb-list li.on { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); } .cb-list li.more { color: var(--muted); font-size: 12px; cursor: default; }
+
+/* total cost: tolls + fuel / energy */
+.tr-kt b { color: var(--accent-2); }
+.tr-total { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 11%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.tr-total span { font-weight: 700; font-size: 14px; } .tr-total small { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.tr-total b { font-size: 20px; font-variant-numeric: tabular-nums; }
