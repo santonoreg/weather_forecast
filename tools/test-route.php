@@ -54,4 +54,8 @@ $main = [[38.0007, 22.99], [38.0007, 23.01]];
 check('a ramp 80 m off the motorway is not charged', route_tolls($main, [0.0, 1.8], $rp) === []);
 $thru = [[38.0, 22.99], [38.0, 23.01]];
 check('a ramp the route runs through is charged', count(route_tolls($thru, [0.0, 1.8], $rp)) === 1);
+// a ramp the route runs through in the middle of a motorway stretch (not where it joins or leaves it) is not charged
+$long = [[38.0, 22.0], [38.0, 23.0], [38.0, 24.0]];
+check('a ramp mid-motorway is not charged', route_tolls($long, [0.0, 90.0, 180.0], $rp, 0.12, [[0.0, 180.0]]) === []);
+check('a ramp where the route joins the motorway is charged', count(route_tolls($long, [0.0, 1.0, 180.0], $rp, 0.12, [[0.0, 180.0]])) === 1);
 exit($fail ? 1 : 0);

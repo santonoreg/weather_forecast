@@ -76,7 +76,7 @@ if (!$routes) {
 }
 $plazas = $tollData['plazas'] ?? [];
 foreach ($routes as &$r) {
-    $r['tolls'] = route_tolls($r['pts'], $r['cum'], $plazas);
+    $r['tolls'] = route_tolls($r['pts'], $r['cum'], $plazas, 0.12, $r['toll'] ?? []);
     $priced = array_filter($r['tolls'], fn($t) => $t['p'] !== null);
     $r['tollCost'] = round(array_sum(array_column($priced, 'p')), 2);
     $r['tollCur'] = 'EUR';

@@ -40,8 +40,10 @@ function seg_dist_km(float $la, float $lo, float $la1, float $lo1, float $la2, f
 /* The toll plazas on a route. $plazas = [{name, lat, lon, price, road}]; a plaza counts when the route passes within $maxKm of it
    (once, however many route points are near it), and is placed at its distance along the route. */
 /* Ramp plazas sit on a slip road a stone's throw from the main carriageway: they only count when the route itself runs through them (35 m), not when it passes by on the motorway. */
-function route_tolls(array $pts, array $cum, array $plazas, float $maxKm = 0.12): array
+function route_tolls(array $pts, array $cum, array $plazas, float $maxKm = 0.12, ?array $toll = null): array
 {
+    $ends = [0.0, (float)end($cum)];                              // where you get on / off: the route's ends and the edges of the toll-road stretches
+    foreach ($toll ?? [] as $s) { $ends[] = (float)$s[0]; $ends[] = (float)$s[1]; }
     $found = [];
     $n = count($pts);
     foreach ($plazas as $p) {
@@ -51,6 +53,11 @@ function route_tolls(array $pts, array $cum, array $plazas, float $maxKm = 0.12)
             if (abs($pts[$i][0] - $p['lat']) > 0.02 && abs($pts[$i - 1][0] - $p['lat']) > 0.02) continue;
             $d = seg_dist_km((float)$p['lat'], (float)$p['lon'], $pts[$i - 1][0], $pts[$i - 1][1], $pts[$i][0], $pts[$i][1]);
             if ($d <= (($p['kind'] ?? '') === 'r' ? min($maxKm, 0.035) : $maxKm) && ($best === null || $d < $best[0])) $best = [$d, $cum[$i]];
+        }
+        if ($best && ($p['kind'] ?? '') === 'r') {                    // a ramp is paid only where you actually join or leave the motorway
+            $near = false;
+            foreach ($ends as $e) if (abs($e - $best[1]) <= 4.0) { $near = true; break; }
+            if (!$near) $best = null;
         }
         if ($best) $found[] = ['n' => (string)$p['name'], 'lat' => (float)$p['lat'], 'lon' => (float)$p['lon'], 'p' => isset($p['price']) ? (float)$p['price'] : null, 'c' => 'EUR', 'r' => (string)($p['road'] ?? ''), 'km' => $best[1]];
     }
