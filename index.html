@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261175">
+<link rel="stylesheet" href="css/style.css?v=20261176">
 </head>
 <body>
 <header class="topbar">
@@ -20,10 +20,8 @@
       <button class="nav-btn" data-view="trip" data-i18n="nav.trip">Trip</button>
       <button class="nav-btn" data-view="astro" data-i18n="nav.astro">Sky Conditions</button>
       <button class="nav-btn" data-view="dso" data-i18n="nav.dso">DSO Explorer</button>
-      <button class="nav-btn" data-view="places" data-i18n="nav.places">Locations &amp; Map</button>
-      <button class="nav-btn" data-view="users" data-i18n="nav.users" hidden>Users</button>
     </nav>
-    <button id="userBtn" class="auth-btn" type="button" data-i18n-title="acc.title" title="Account" hidden></button>
+    <button id="userBtn" class="auth-btn userbtn" type="button" data-i18n-title="acc.title" title="My account" hidden></button>
     <button id="logoutBtn" class="auth-btn" type="button" data-i18n="auth.logout" hidden>Log out</button>
     <div class="lang" role="group" aria-label="Language">
       <button data-lang="en" class="active">EN</button><button data-lang="el">ΕΛ</button>
@@ -208,24 +206,16 @@
     </div>
   </section>
 
-  <!-- ============ USERS (administrator) ============ -->
-  <section id="view-users" class="view">
-    <div class="panel users-panel">
-      <h2 data-i18n="usr.title">Users</h2>
-      <div id="usersList"></div>
-      <h3 data-i18n="usr.new">New user</h3>
-      <form id="userForm" class="user-form" autocomplete="off">
-        <label><span data-i18n="auth.user">User name</span><input id="nuName" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
-        <label><span data-i18n="auth.pass">Password</span><input id="nuPass" type="text" autocomplete="new-password" minlength="8" required></label>
-        <label><span data-i18n="usr.role">Role</span><select id="nuRole"><option value="user" data-i18n="usr.role.user">User</option><option value="admin" data-i18n="usr.role.admin">Administrator</option></select></label>
-        <button type="submit" class="btn primary" data-i18n="usr.create">Create user</button>
-      </form>
-      <p id="usersMsg" class="hint" role="status"></p>
+  <!-- ============ MY ACCOUNT: locations, cars, users (administrator), password ============ -->
+  <section id="view-account" class="view">
+    <div class="acc-head"><h2 id="accName"></h2><span id="accInfo" class="acc-info"></span></div>
+    <div class="acc-tabs" role="tablist">
+      <button type="button" class="acc-tab" data-tab="places" data-i18n="nav.places">Locations &amp; Map</button>
+      <button type="button" class="acc-tab" data-tab="cars" data-i18n="acc.cars.tab">Cars</button>
+      <button type="button" class="acc-tab" data-tab="users" id="tabUsers" data-i18n="nav.users" hidden>Users</button>
+      <button type="button" class="acc-tab" data-tab="password" data-i18n="acc.pw.tab">Password</button>
     </div>
-  </section>
-
-  <!-- ============ LOCATIONS ============ -->
-  <section id="view-places" class="view">
+    <div class="acc-pane" id="pane-places">
     <div class="places-layout">
       <div class="panel">
         <h2 data-i18n="pl.pick">Select an area</h2>
@@ -251,6 +241,43 @@
       </div>
       <div id="map" class="map"></div>
     </div>
+    </div>
+    <div class="acc-pane" id="pane-cars" hidden>
+      <div class="panel acc-narrow">
+        <h2 data-i18n="acc.cars">My cars</h2>
+        <p class="hint" data-i18n="acc.cars.hint">They appear first in the Trip tab's car list.</p>
+        <ul id="accCars" class="acc-cars"></ul>
+        <div class="acc-addcar">
+          <input id="acName" type="text" maxlength="80" autocomplete="off" data-i18n-ph="trip.mycar.name" placeholder="Name of this car">
+          <select id="acKind"><option value="p" data-i18n="trip.ft.p">Petrol</option><option value="d" data-i18n="trip.ft.d">Diesel</option><option value="h" data-i18n="trip.ft.h">Hybrid (petrol)</option><option value="e" data-i18n="trip.ft.e">Electric</option></select>
+          <input id="acCons" type="number" min="1" max="100" step="0.1" placeholder="L / 100 km">
+          <button type="button" class="btn ghost small" id="acAdd" data-i18n="acc.addcar">Add car</button>
+        </div>
+        <p id="acMsg" class="hint" role="status"></p>
+      </div>
+    </div>
+    <div class="acc-pane" id="pane-users" hidden>
+    <div class="panel users-panel">
+      <div id="usersList"></div>
+      <h3 data-i18n="usr.new">New user</h3>
+      <form id="userForm" class="user-form" autocomplete="off">
+        <label><span data-i18n="auth.user">User name</span><input id="nuName" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
+        <label><span data-i18n="auth.pass">Password</span><input id="nuPass" type="text" autocomplete="new-password" minlength="8" required></label>
+        <label><span data-i18n="usr.role">Role</span><select id="nuRole"><option value="user" data-i18n="usr.role.user">User</option><option value="admin" data-i18n="usr.role.admin">Administrator</option></select></label>
+        <button type="submit" class="btn primary" data-i18n="usr.create">Create user</button>
+      </form>
+      <p id="usersMsg" class="hint" role="status"></p>
+    </div>
+    </div>
+    <div class="acc-pane" id="pane-password" hidden>
+      <form class="panel acc-narrow acc-pw" id="accForm">
+        <h2 data-i18n="acc.change">Change password</h2>
+        <label><span data-i18n="acc.old">Current password</span><input id="accOld" type="password" autocomplete="current-password" required></label>
+        <label><span data-i18n="acc.new">New password (8+ characters)</span><input id="accNew" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button type="submit" class="btn primary" data-i18n="acc.save">Save new password</button>
+        <p id="accMsg" class="hint" role="status"></p>
+      </form>
+    </div>
   </section>
 
   <!-- Climate history of the chosen location: lives outside the views so it opens under whichever one
@@ -260,32 +287,6 @@
     <div id="histBody"></div>
   </section>
 </main>
-
-<!-- Account: change my password -->
-<div id="accModal" class="modal" hidden>
-  <form class="modal-card" id="accForm">
-    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
-    <h2 id="accName"></h2>
-    <p id="accInfo" class="acc-info"></p>
-    <button type="button" class="btn ghost" id="accPwToggle" data-i18n="acc.change">Change password</button>
-    <div id="accPwBox" class="acc-pw" hidden>
-      <label><span data-i18n="acc.old">Current password</span><input id="accOld" type="password" autocomplete="current-password" required></label>
-      <label><span data-i18n="acc.new">New password (8+ characters)</span><input id="accNew" type="password" autocomplete="new-password" minlength="8" required></label>
-      <button type="submit" class="btn primary" data-i18n="acc.save">Save new password</button>
-    </div>
-    <p id="accMsg" class="hint" role="status"></p>
-    <h3 class="acc-h" data-i18n="acc.cars">My cars</h3>
-    <ul id="accCars" class="acc-cars"></ul>
-    <div class="acc-addcar">
-      <input id="acName" type="text" maxlength="80" autocomplete="off" data-i18n-ph="trip.mycar.name" placeholder="Name of this car">
-      <select id="acKind"><option value="p" data-i18n="trip.ft.p">Petrol</option><option value="d" data-i18n="trip.ft.d">Diesel</option><option value="h" data-i18n="trip.ft.h">Hybrid (petrol)</option><option value="e" data-i18n="trip.ft.e">Electric</option></select>
-      <input id="acCons" type="number" min="1" max="100" step="0.1" placeholder="L / 100 km">
-      <button type="button" class="btn ghost small" id="acAdd" data-i18n="acc.addcar">Add car</button>
-    </div>
-    <p id="acMsg" class="hint" role="status"></p>
-    <button type="button" class="btn ghost" id="accLogout" data-i18n="auth.logout">Log out</button>
-  </form>
-</div>
 
 <!-- Choose a place on the map -->
 <div id="mapModal" class="modal" hidden>
@@ -315,12 +316,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261175"></script>
-<script src="js/icons.js?v=20261175"></script>
-<script src="js/app.js?v=20261175"></script>
-<script src="js/astro.js?v=20261175"></script>
-<script src="js/sunset.js?v=20261175"></script>
-<script src="js/dso.js?v=20261175"></script>
-<script src="js/trip.js?v=20261175"></script>
+<script src="js/i18n.js?v=20261176"></script>
+<script src="js/icons.js?v=20261176"></script>
+<script src="js/app.js?v=20261176"></script>
+<script src="js/astro.js?v=20261176"></script>
+<script src="js/sunset.js?v=20261176"></script>
+<script src="js/dso.js?v=20261176"></script>
+<script src="js/trip.js?v=20261176"></script>
 </body>
 </html>

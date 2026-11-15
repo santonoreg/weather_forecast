@@ -368,8 +368,8 @@ Then hard-refresh the browser (Ctrl+F5). The CSS/JS URLs carry a `?v=` version p
 
 The whole app sits behind a login: until you are logged in you see only the login screen, and every API endpoint (except `api/auth.php`) answers `401`. There are two roles:
 
-- **User** – everything in the app, plus their own saved locations (*Locations & Map*) and their own cars with fuel / energy consumption (profile → *My cars*, listed first in the Trip tab). Saved locations and cars are private to each user.
-- **Administrator** – everything a user can, plus the **Users** page (create users with a password, change a user's password or role, delete a user together with their locations and cars), forcing a climate-history refresh and setting the dark-sky class of the built-in cities. There is always at least one administrator; you cannot delete yourself.
+- **User** – everything in the app. Clicking their **name** in the header opens *My account*, with tabs for *Locations & Map* (their own saved locations), *Cars* (their cars with fuel / energy consumption, listed first in the Trip tab) and *Password*. Saved locations and cars are private to each user.
+- **Administrator** – everything a user can, plus a **Users** tab on the same page (create users with a password, change a user's password or role, delete a user together with their locations and cars), forcing a climate-history refresh and setting the dark-sky class of the built-in cities. There is always at least one administrator; you cannot delete yourself.
 
 *Keep me logged in for 30 days* (ticked by default) gives a persistent cookie; unticked, the session ends when the browser closes. Sessions are stored on the server (`sessions` table, only the SHA-256 of the random cookie token), so deleting a user or changing their password ends their sessions at once. The cookie is HttpOnly, `SameSite=Lax` and `Secure` over HTTPS. Failed logins are throttled (5 per IP / 40 total per 15 minutes, then HTTP 429). Everyone can change their own password from the user-name button in the header.
 

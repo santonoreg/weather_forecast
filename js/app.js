@@ -1081,7 +1081,7 @@ function updateAuthUI() {
   $('userBtn').hidden = !state.user;
   $('userBtn').textContent = state.user ? state.user.name : '';
   $('logoutBtn').hidden = !state.user;
-  document.querySelector('.nav-btn[data-view="users"]').hidden = !state.admin;
+  $('tabUsers').hidden = !state.admin;
 }
 function setUser(u) { state.user = u || null; state.admin = !!(u && u.role === 'admin'); updateAuthUI(); }
 async function loadAuth() {
@@ -1119,15 +1119,7 @@ $('logoutBtn').addEventListener('click', async () => {
   state.current = null; state.data = null;
   setUser(null); showGate();
 });
-// Account: change my password
-$('userBtn').addEventListener('click', async () => {
-  $('accName').textContent = state.user.name;
-  $('accInfo').textContent = t(state.admin ? 'usr.role.admin' : 'usr.role.user') + ' · ' + t('acc.locs', { n: state.locations.length });
-  $('accPwBox').hidden = true; $('accPwToggle').hidden = false;
-  $('accOld').value = ''; $('accNew').value = ''; $('accMsg').textContent = ''; $('accMsg').classList.remove('err');
-  $('accModal').hidden = false; $('acMsg').textContent = '';
-  accCars.load();
-});
+$('userBtn').addEventListener('click', () => showView('account'));
 /* My cars (profile): the Trip tab lists these first */
 const accCars = {
   list: [],
@@ -1154,8 +1146,6 @@ $('accCars').addEventListener('click', async (e) => {
   if (!c || !confirm(t('trip.mycar.del.confirm', { n: c.name }))) return;
   try { await api('api/cars.php?id=' + c.id, { method: 'DELETE' }); await accCars.load(); } catch (err) { $('acMsg').textContent = err.message; $('acMsg').classList.add('err'); }
 });
-$('accPwToggle').addEventListener('click', () => { $('accPwBox').hidden = false; $('accPwToggle').hidden = true; $('accOld').focus(); });
-$('accLogout').addEventListener('click', () => { closeModals(); $('logoutBtn').click(); });
 $('accForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   $('accMsg').classList.remove('err');
@@ -1164,6 +1154,24 @@ $('accForm').addEventListener('submit', async (e) => {
     $('accMsg').textContent = t('acc.done'); $('accOld').value = ''; $('accNew').value = '';
   } catch (err) { $('accMsg').textContent = err.message; $('accMsg').classList.add('err'); }
 });
+/* My account page: tabs for Locations & Map, Cars, Users (administrator) and Password */
+const Account = {
+  tab: 'places',
+  show(tab) {
+    this.tab = tab || this.tab || 'places';
+    if (this.tab === 'users' && !state.admin) this.tab = 'places';
+    $('accName').textContent = state.user.name;
+    $('accInfo').textContent = t(state.admin ? 'usr.role.admin' : 'usr.role.user');
+    document.querySelectorAll('.acc-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === this.tab));
+    document.querySelectorAll('.acc-pane').forEach((p) => { p.hidden = p.id !== 'pane-' + this.tab; });
+    try { history.replaceState(null, '', '#' + this.tab); } catch (e) { /* ignore */ }
+    if (this.tab === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
+    if (this.tab === 'cars') accCars.load();
+    if (this.tab === 'users') Users.show();
+    if (this.tab === 'password') { $('accOld').value = ''; $('accNew').value = ''; $('accMsg').textContent = ''; $('accMsg').classList.remove('err'); }
+  },
+};
+document.querySelectorAll('.acc-tab').forEach((b) => b.addEventListener('click', () => Account.show(b.dataset.tab)));
 /* Users page (administrator) */
 const Users = (() => {
   async function load() {
@@ -1331,16 +1339,19 @@ $('savedList').addEventListener('click', async (e) => {
 
 /* ================= Πλοήγηση ================= */
 function showView(name) {
-  if (!state.user || (name === 'users' && !state.admin)) return;   // the login screen covers everything until you are in; Users is for administrators
+  if (!state.user) return;   // the login screen covers everything until you are in
+  let tab = null;
+  if (['places', 'cars', 'users', 'password'].includes(name)) { tab = name; name = 'account'; }          // old links: the account page, on that tab
+  if (tab === 'users' && !state.admin) tab = 'places';
   state.view = name;
   try { history.replaceState(null, '', name === 'forecast' ? location.pathname + location.search : '#' + name); } catch (e) { /* ignore */ }   // a refresh stays on this tab
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+  $('userBtn').classList.toggle('active', name === 'account');
   if (name === 'astro') Astro.load();
   if (name === 'dso') Dso.show();
   if (name === 'trip') Trip.show();
-  if (name === 'users') Users.show();
-  if (name === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
+  if (name === 'account') Account.show(tab);
 }
 document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
 document.addEventListener('click', (e) => { const a = e.target.closest('[data-goto]'); if (a) { e.preventDefault(); showView(a.dataset.goto); } });
@@ -1524,7 +1535,7 @@ $('brandIcon').innerHTML = WI.svg(2, false);
 async function startApp() {
   await loadLocations();
   const v = location.hash.slice(1);
-  if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'places' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
+  if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'account' || v === 'places' || v === 'cars' || v === 'password' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
 }
 $('gateIcon').innerHTML = WI.svg(2, false);
 loadAuth().then(() => { if (state.user) return startApp(); showGate(); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });

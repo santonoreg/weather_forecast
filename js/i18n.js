@@ -4,7 +4,7 @@ const I18N = {
   en: {
     'title': 'WeFO · Weather · Forecast · Observer',
     'brand.sub': 'weather · forecast · observer',
-    'acc.title': 'My account', 'acc.old': 'Current password', 'acc.new': 'New password (8+ characters)', 'acc.change': 'Change password', 'acc.done': 'Password changed.', 'acc.save': 'Save new password', 'acc.cars': 'My cars (they appear first in the Trip tab)', 'acc.addcar': 'Add car', 'acc.locs': '{n} saved locations',
+    'acc.title': 'My account', 'acc.old': 'Current password', 'acc.new': 'New password (8+ characters)', 'acc.change': 'Change password', 'acc.done': 'Password changed.', 'acc.save': 'Save new password', 'acc.cars.tab': 'Cars', 'acc.pw.tab': 'Password', 'acc.cars.hint': 'They appear first in the Trip tab\'s car list.', 'acc.cars': 'My cars', 'acc.addcar': 'Add car', 'acc.locs': '{n} saved locations',
     'usr.title': 'Users', 'usr.new': 'New user', 'usr.role': 'Role', 'usr.role.user': 'User', 'usr.role.admin': 'Administrator', 'usr.create': 'Create user', 'usr.locs': 'Locations', 'usr.cars': 'Cars', 'usr.you': 'you',
     'usr.pw': 'New password…', 'usr.del': 'Delete', 'usr.created': 'User {n} created.', 'usr.deleted': 'User {n} deleted.', 'usr.saved': 'Saved.', 'usr.pw.ask': 'New password for {n} (8+ characters):', 'usr.pw.done': 'Password of {n} changed; they are logged out everywhere.',
     'usr.del.confirm': 'Delete user {n} together with their saved locations and cars? This cannot be undone.',
@@ -270,7 +270,7 @@ const I18N = {
   el: {
     'title': 'WeFO · Καιρός · Πρόγνωση · Παρατήρηση',
     'brand.sub': 'καιρός · πρόγνωση · παρατήρηση',
-    'acc.title': 'Ο λογαριασμός μου', 'acc.old': 'Τρέχων κωδικός', 'acc.new': 'Νέος κωδικός (τουλάχιστον 8 χαρακτήρες)', 'acc.change': 'Αλλαγή κωδικού', 'acc.done': 'Ο κωδικός άλλαξε.', 'acc.save': 'Αποθήκευση νέου κωδικού', 'acc.cars': 'Τα αυτοκίνητά μου (εμφανίζονται πρώτα στο Ταξίδι)', 'acc.addcar': 'Προσθήκη αυτοκινήτου', 'acc.locs': '{n} αποθηκευμένες τοποθεσίες',
+    'acc.title': 'Ο λογαριασμός μου', 'acc.old': 'Τρέχων κωδικός', 'acc.new': 'Νέος κωδικός (τουλάχιστον 8 χαρακτήρες)', 'acc.change': 'Αλλαγή κωδικού', 'acc.done': 'Ο κωδικός άλλαξε.', 'acc.save': 'Αποθήκευση νέου κωδικού', 'acc.cars.tab': 'Αυτοκίνητα', 'acc.pw.tab': 'Κωδικός', 'acc.cars.hint': 'Εμφανίζονται πρώτα στη λίστα αυτοκινήτων του Ταξιδιού.', 'acc.cars': 'Τα αυτοκίνητά μου', 'acc.addcar': 'Προσθήκη αυτοκινήτου', 'acc.locs': '{n} αποθηκευμένες τοποθεσίες',
     'usr.title': 'Χρήστες', 'usr.new': 'Νέος χρήστης', 'usr.role': 'Ρόλος', 'usr.role.user': 'Χρήστης', 'usr.role.admin': 'Διαχειριστής', 'usr.create': 'Δημιουργία χρήστη', 'usr.locs': 'Τοποθεσίες', 'usr.cars': 'Αυτοκίνητα', 'usr.you': 'εσύ',
     'usr.pw': 'Νέος κωδικός…', 'usr.del': 'Διαγραφή', 'usr.created': 'Ο χρήστης {n} δημιουργήθηκε.', 'usr.deleted': 'Ο χρήστης {n} διαγράφηκε.', 'usr.saved': 'Αποθηκεύτηκε.', 'usr.pw.ask': 'Νέος κωδικός για τον {n} (τουλάχιστον 8 χαρακτήρες):', 'usr.pw.done': 'Ο κωδικός του {n} άλλαξε· αποσυνδέθηκε από παντού.',
     'usr.del.confirm': 'Διαγραφή του χρήστη {n} μαζί με τις αποθηκευμένες τοποθεσίες και τα αυτοκίνητά του; Δεν αναιρείται.',
