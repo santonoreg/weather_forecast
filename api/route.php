@@ -33,7 +33,7 @@ $tollFile = __DIR__ . '/../data/tolls_gr.json';
 $tollData = is_file($tollFile) ? json_decode((string)file_get_contents($tollFile), true) : null;
 
 $pdo = db();
-$ck = 'route:gr:' . md5(json_encode([$from, $to, $tollData['asof'] ?? '', 'toll-logic-3']));
+$ck = 'route:gr:' . md5(json_encode([$from, $to, $tollData['asof'] ?? '', 'toll-logic-4']));
 $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
 $st->execute([$ck]);
 if (empty($_GET['refresh']) && ($row = fetch_one($st)) && time() - (int)$row['fetched_at'] < ROUTE_TTL) {
