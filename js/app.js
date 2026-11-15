@@ -21,7 +21,7 @@ async function api(path, opts) {
 
 const state = { view: 'forecast', locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
-try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
+try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
 // Models shown or hidden is remembered per layout: hidden by default across, shown by default in the time-down view (where only "hide" is wanted)
 let modelsAcross = false;
 try { modelsAcross = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
@@ -162,12 +162,18 @@ function columns() {
 /* "Time down" ignores the Day selector and always starts from *now*, scrolling forward across day
    boundaries — a rolling window that grows via "Show N more hours" (see renderGridVertical), matching
    Glett. `hours` is how many real hours ahead to include (translated to step-blocks). */
+/* "Time down" starts at the current hour for today and at 00:00 for any later day picked above */
+function verticalStart() {
+  const { data, step } = state;
+  const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
+  let start = state.day > 0 ? state.day * 24 : data.time.findIndex((x) => x.slice(0, 13) >= nowStr);
+  if (start < 0) start = 0;
+  return start - (start % step);
+}
 function verticalColumns(hours) {
   const { data, step } = state;
   const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
-  let start = data.time.findIndex((x) => x.slice(0, 13) >= nowStr);
-  if (start < 0) start = 0;
-  start -= start % step;
+  const start = verticalStart();
   const count = Math.max(1, Math.ceil(hours / step));
   const cols = [];
   for (let a = start; cols.length < count && a < data.time.length; a += step) {
@@ -186,9 +192,7 @@ function verticalColumns(hours) {
 const hasMoreVerticalHours = (hours) => {
   const { data, step } = state;
   const nowStr = new Date(Date.now() + data.utc_offset_seconds * 1000).toISOString().slice(0, 13);
-  let start = data.time.findIndex((x) => x.slice(0, 13) >= nowStr);
-  if (start < 0) start = 0;
-  start -= start % step;
+  const start = verticalStart();
   return start + Math.ceil(hours / step) * step < data.time.length;
 };
 
@@ -627,7 +631,6 @@ function meteoHtml() {
     <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, band: rng('wind', 'wind_speed_10m'), heat: heatWind })}</div>
     <div class="mg-lane"><b>${t('mg.cloud')}</b>${hourChart(clouds, { kind: 'line', color: 'var(--muted)', unit: '%', d: 0, nowI, fixed: [0, 100], band: rng('cloud_cover'), heat: heatCloud })}</div>`;
 }
-function renderMeteogram() { $('meteo').innerHTML = meteoHtml(); }
 
 /* Weather tab only, "time across" mode: instead of one summary/prob pair, show every key metric as its
    own row at once (weather, agreement, temperature, rain, wind) — a compact dashboard, with the
@@ -677,21 +680,13 @@ function buildWeatherLanes(cols) {
 function renderGrid() {
   const { param } = state;
   // the parameter tabs only choose which model values are listed, so they do nothing while the models are hidden
-  const tabsOff = !state.modelsOpen && state.orient !== 'm' && state.orient !== 's';
+  const tabsOff = !state.modelsOpen && state.orient !== 's';
   document.querySelectorAll('#tabs .tab').forEach((b) => { b.disabled = tabsOff; });
   renderSegKey();
   // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
   const sun = state.orient === 's';
   document.querySelector('.hours .tabsrow').hidden = sun; $('legend').hidden = sun; $('sunsetBox').hidden = !sun;
-  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('meteo').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
-
-  if (state.orient === 'm') {
-    $('grid').classList.remove('vert', 'lanes');
-    $('modelsToggle').hidden = true; $('chartsToggle').hidden = true; $('hcharts').hidden = true; $('vFooter').hidden = true;
-    $('grid').hidden = true; $('meteo').hidden = false;
-    renderMeteogram();
-    return;
-  }
+  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
 
   const cols = state.orient === 'v' ? verticalColumns(state.vHours) : columns();
   // Weather = overview: the models are listed for every parameter; any other tab lists them for that one only
@@ -700,7 +695,7 @@ function renderGrid() {
 
   if (state.orient === 'v') {
     $('grid').classList.remove('lanes');
-    $('grid').hidden = false; $('meteo').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true;
+    $('grid').hidden = false; $('hcharts').hidden = true; $('chartsToggle').hidden = true;
     renderGridVertical(cols, builts);
     $('modelsToggle').hidden = true;   // the models are always listed in this layout
     setModelsToggle(rows.length + (extraRows || []).length);
@@ -708,7 +703,7 @@ function renderGrid() {
     $('grid').classList.remove('vert');
     $('grid').classList.add('lanes');
     $('vFooter').hidden = true;
-    $('grid').hidden = false; $('meteo').hidden = true;
+    $('grid').hidden = false;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
     const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
@@ -849,7 +844,7 @@ function renderAll() {
 
 $('days').addEventListener('click', (e) => {
   const b = e.target.closest('[data-day]'); if (!b) return;
-  state.day = +b.dataset.day; renderDays(); renderGrid();
+  state.day = +b.dataset.day; state.vHours = 24; vAutoCenter = true; renderDays(); renderGrid();
 });
 $('tabs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-param]'); if (!b) return;
