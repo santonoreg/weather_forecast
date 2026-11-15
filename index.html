@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261183">
+<link rel="stylesheet" href="css/style.css?v=20261184">
 </head>
 <body>
 <header class="topbar">
@@ -61,14 +61,8 @@
           <option value="12" data-i18n="step.12">12 hours</option>
         </select>
       </label>
-      <div class="fld">
-        <span class="lbl" data-i18n="tb.models">Models</span>
-        <details class="models" id="models">
-          <summary><span id="mdlCount">–</span></summary>
-          <div class="mdl-panel" id="mdlList"></div>
-        </details>
-      </div>
       <label class="chk"><input type="checkbox" id="weightChk" checked> <span data-i18n="tb.weight">Weight by reliability</span> <span id="vfStatus"></span></label>
+      <button id="relBtn" class="btn ghost" type="button" data-i18n-title="r.btn.title" title="Model reliability, and switching models on and off"><span data-i18n="p.reliability">Reliability</span></button>
       <button id="refreshBtn" class="btn ghost" data-i18n="tb.refresh" data-i18n-title="tb.refresh.title" title="Fetch fresh data">↻ Refresh</button>
       <span id="meta" class="meta"></span>
     </div>
@@ -110,9 +104,6 @@
                 <button type="button" data-orient="v" data-i18n-title="orient.v.tip" title="Time down">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.3h18M3 14.7h18M10 4v16"/></svg>
                 </button>
-                <button id="modelsToggle" type="button" hidden title="Show all models">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12.5l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
-                </button>
                 <button type="button" data-orient="m" data-i18n-title="orient.m.tip" title="Meteogram">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 5-7 4 4"/><path d="M3 21h18"/></svg>
                 </button>
@@ -126,7 +117,9 @@
             <div id="tabs" class="tabs"></div>
           </div>
           <div id="segKey" class="segkey" hidden></div>
-          <div id="relNote" class="relnote" hidden></div>
+          <div class="tbl-tools"><button id="modelsToggle" class="btn ghost small" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12.5l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg><span></span>
+          </button></div>
           <div class="table-wrap"><table id="grid" class="grid"></table><div id="meteo" class="meteo" hidden></div></div>
           <div id="sunsetBox" class="sunbox" hidden></div>
           <div id="vFooter" class="vfooter" hidden></div>
@@ -288,6 +281,19 @@
   </section>
 </main>
 
+<!-- Model reliability + switching models on / off -->
+<div id="relModal" class="modal" hidden>
+  <div class="modal-card wide">
+    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
+    <h2 data-i18n="p.reliability">Reliability</h2>
+    <p class="hint" data-i18n="r.pick.hint">Tick or untick a model to switch it on or off in every table and in the averages.</p>
+    <div id="relNote" class="relnote"></div>
+    <div class="table-wrap"><table id="relTable" class="grid rel"></table></div>
+    <div class="row"><button type="button" class="btn ghost small" id="relAll" data-i18n="m.all">Enable all</button></div>
+    <div id="relLegend" class="legend"></div>
+  </div>
+</div>
+
 <!-- Choose a place on the map -->
 <div id="mapModal" class="modal" hidden>
   <div class="modal-card wide">
@@ -316,12 +322,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261183"></script>
-<script src="js/icons.js?v=20261183"></script>
-<script src="js/app.js?v=20261183"></script>
-<script src="js/astro.js?v=20261183"></script>
-<script src="js/sunset.js?v=20261183"></script>
-<script src="js/dso.js?v=20261183"></script>
-<script src="js/trip.js?v=20261183"></script>
+<script src="js/i18n.js?v=20261184"></script>
+<script src="js/icons.js?v=20261184"></script>
+<script src="js/app.js?v=20261184"></script>
+<script src="js/astro.js?v=20261184"></script>
+<script src="js/sunset.js?v=20261184"></script>
+<script src="js/dso.js?v=20261184"></script>
+<script src="js/trip.js?v=20261184"></script>
 </body>
 </html>

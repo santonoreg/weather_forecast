@@ -129,7 +129,6 @@ const PARAMS = {
   cloud_cover: { unit: '%', d: 0, bg: bgCloud },
   relative_humidity_2m: { unit: '%', d: 0, bg: bgHum },
   pressure_msl: { unit: ' hPa', d: 0, bg: bgPress },
-  reliability: {  },
 };
 
 const agreementPill = (vals, tol) => {
@@ -344,45 +343,54 @@ function centerNow() {
 
 const scoreCls = (v) => (v >= 80 ? 'hi' : v >= 60 ? 'mid' : 'lo');
 
-function renderReliability() {
+/* Reliability pop-up: how each model scored against ERA5 / METAR, and where models are switched on and off. */
+function renderRelModal() {
+  if ($('relModal').hidden || !state.data) return;
   const v = state.verify;
-  if (!v) {
-    $('grid').innerHTML = `<tbody><tr><td class="pad">${state.verifyErr ? esc(t('r.unavailable', { e: state.verifyErr })) : t('r.loading')}</td></tr></tbody>`;
-    $('legend').textContent = '';
-    $('relNote').hidden = true;
-    return;
-  }
-  const ids = Object.entries(v.models).sort((a, b) => (b[1].score ?? -1) - (a[1].score ?? -1));
-  const src = (label, value, extra = '', cls = '') => `<div class="src ${cls}"><i>${label}</i> <b>${value}</b>${extra}</div>`;
-  const mae = (m, k, d = 1) => {
-    if (m.mae[k] == null) return '–';
-    const o = m.obs?.mae?.[k];
-    const bias = `<small>${t('r.bias', { v: (m.bias[k] > 0 ? '+' : '') + m.bias[k].toFixed(d) })}</small>`;
-    return src('ERA5', m.mae[k].toFixed(d), bias) + (o != null ? src('METAR', o.toFixed(d), '', 'obs') : '');
+  const all = state.data.providers;
+  const region = (id) => (hasT('mi.' + id) ? `<small>${t('mi.' + id)}</small>` : '');
+  const nameCell = (p) => (p.dupOf
+    ? `<span class="mdl off"><span class="mtxt"><b>${esc(pname(p))}</b><small>${esc(t('m.dup', { n: nameById(p.dupOf) }))}</small></span></span>`
+    : `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${state.disabled.has(p.id) ? '' : 'checked'}><span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}</span></label>`);
+  const missing = ALL_MODEL_IDS.filter((id) => !all.some((p) => p.id === id) && !OPTIONAL_MODEL_IDS.includes(id));
+  const ncol = 9;
+  const note = v ? '' : `<tr><td class="pad" colspan="${ncol - 1}">${state.verifyErr ? esc(t('r.unavailable', { e: state.verifyErr })) : t('r.loading')}</td></tr>`;
+  const scoreOf = (p) => v?.models?.[p.id]?.score ?? -1;
+  const sorted = [...all].sort((a, b) => scoreOf(b) - scoreOf(a));
+  const metrics = (m) => {
+    const src = (label, value, extra = '', cls = '') => `<div class="src ${cls}"><i>${label}</i> <b>${value}</b>${extra}</div>`;
+    const mae = (k, d = 1) => {
+      if (m.mae[k] == null) return '–';
+      const o = m.obs?.mae?.[k];
+      const bias = `<small>${t('r.bias', { v: (m.bias[k] > 0 ? '+' : '') + m.bias[k].toFixed(d) })}</small>`;
+      return src('ERA5', m.mae[k].toFixed(d), bias) + (o != null ? src('METAR', o.toFixed(d), '', 'obs') : '');
+    };
+    const pct = (e, o) => (e != null ? src('ERA5', Math.round(e * 100) + '%') : '–') + (o != null ? src('METAR', Math.round(o * 100) + '%', '', 'obs') : '');
+    return `<td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b></td>
+      <td class="cell">${mae('temperature_2m')}</td><td class="cell">${mae('wind_speed_10m')}</td><td class="cell">${mae('cloud_cover', 0)}</td>
+      <td class="cell">${mae('relative_humidity_2m', 0)}</td><td class="cell">${mae('pressure_msl', 2)}</td>
+      <td class="cell">${pct(m.csi, m.obs?.csi)}</td><td class="cell">${pct(m.code_acc, m.obs?.code_acc)}</td>`;
   };
-  const pct = (e, o) => (e != null ? src('ERA5', Math.round(e * 100) + '%') : '–') + (o != null ? src('METAR', Math.round(o * 100) + '%', '', 'obs') : '');
-  let html = `<thead><tr><th class="rowh">${t('r.model')}</th><th>${t('r.score')}</th><th>${t('r.temp')}</th><th>${t('r.wind')}</th><th>${t('r.cloud')}</th><th>${t('r.hum')}</th><th>${t('r.press')}</th><th>${t('r.rain')}</th><th>${t('r.code')}</th></tr></thead><tbody>`;
-  ids.forEach(([id, m]) => {
-    html += `<tr class="${state.disabled.has(id) ? 'off' : ''}"><th class="rowh">${esc(nameById(id))}${state.disabled.has(id) ? ` <small>${t('r.disabled')}</small>` : ''}</th>
-      <td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b></td>
-      <td class="cell">${mae(m, 'temperature_2m')}</td><td class="cell">${mae(m, 'wind_speed_10m')}</td><td class="cell">${mae(m, 'cloud_cover', 0)}</td>
-      <td class="cell">${mae(m, 'relative_humidity_2m', 0)}</td><td class="cell">${mae(m, 'pressure_msl', 2)}</td>
-      <td class="cell">${pct(m.csi, m.obs?.csi)}</td><td class="cell">${pct(m.code_acc, m.obs?.code_acc)}</td></tr>`;
+  let html = `<thead><tr><th class="rowh">${t('r.model')}</th><th>${t('r.score')}</th><th>${t('r.temp')}</th><th>${t('r.wind')}</th><th>${t('r.cloud')}</th><th>${t('r.hum')}</th><th>${t('r.press')}</th><th>${t('r.rain')}</th><th>${t('r.code')}</th></tr></thead><tbody>${note}`;
+  sorted.forEach((p) => {
+    const m = v?.models?.[p.id];
+    html += `<tr class="${state.disabled.has(p.id) || p.dupOf ? 'off' : ''}"><th class="rowh">${nameCell(p)}</th>${m && !p.dupOf ? metrics(m) : `<td colspan="${ncol - 1}"></td>`}</tr>`;
   });
-  $('grid').innerHTML = html + '</tbody>';
-  $('relNote').innerHTML = t('r.howto'); $('relNote').hidden = false;
+  missing.forEach((id) => { html += `<tr class="off"><th class="rowh"><span class="mdl off"><span class="mtxt"><b>${esc(nameById(id))}</b><small>${t('m.missing')}</small></span></span></th><td colspan="${ncol - 1}"></td></tr>`; });
+  $('relTable').innerHTML = html + '</tbody>';
+  $('relNote').innerHTML = t('r.howto');
+  if (!v) { $('relLegend').textContent = ''; return; }
   const w = Math.round((v.obs_weight || 0) * 100);
   if (v.greece) {
     const st = t('r.greece', { n: v.greece.stations, names: esc(v.greece.names.join(', ')) });
-    $('legend').innerHTML = `${st}<br>${t('r.legend.greece', { start: v.start, end: v.end, hours: v.hours, w })}<br>${t('r.limits')}`;
+    $('relLegend').innerHTML = `${st}<br>${t('r.legend.greece', { start: v.start, end: v.end, hours: v.hours, w })}<br>${t('r.limits')}`;
   } else {
     const st = v.station
       ? t('r.station', { id: v.station.id, name: esc(v.station.name), km: v.station.km, n: v.station.reports, start: v.station.start, end: v.station.end })
       : t('r.nostation', { km: 60 });
-    $('legend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(locName(state.current)), w })}<br>${t('r.limits')}`;
+    $('relLegend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(locName(state.current)), w })}<br>${t('r.limits')}`;
   }
 }
-
 const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''; };
 
 /* The single current hour, independent of whatever day/step is selected in the table below */
@@ -670,16 +678,12 @@ function renderGrid() {
   const { param } = state;
   // the parameter tabs only choose which model values are listed, so they do nothing while the models are hidden
   const tabsOff = !state.modelsOpen && state.orient !== 'm' && state.orient !== 's';
-  document.querySelectorAll('#tabs .tab').forEach((b) => { b.disabled = tabsOff && b.dataset.param !== 'reliability'; });
-  const notReliability = param !== 'reliability';
-  $('relNote').hidden = param !== 'reliability';
-  $('orientSeg').hidden = !notReliability;
+  document.querySelectorAll('#tabs .tab').forEach((b) => { b.disabled = tabsOff; });
   renderSegKey();
   // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
-  const sun = state.orient === 's' && notReliability;
+  const sun = state.orient === 's';
   document.querySelector('.hours .tabsrow').hidden = sun; $('legend').hidden = sun; $('expert').hidden = sun; $('sunsetBox').hidden = !sun;
   if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('meteo').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
-  if (param === 'reliability') { $('grid').classList.remove('vert', 'lanes'); $('modelsToggle').hidden = true; $('vFooter').hidden = true; $('grid').hidden = false; $('meteo').hidden = true; return renderReliability(); }
 
   if (state.orient === 'm') {
     $('grid').classList.remove('vert', 'lanes');
@@ -736,7 +740,7 @@ function renderGrid() {
 // icon-only button inside the view switch: the tooltip carries the text, "active" = all models shown
 function setModelsToggle(n) {
   const b = $('modelsToggle'), txt = state.modelsOpen ? t('m.hideall') : t('m.showall', { n });
-  b.title = txt; b.setAttribute('aria-label', txt); b.classList.toggle('active', !!state.modelsOpen);
+  b.title = txt; b.setAttribute('aria-label', txt); b.querySelector('span').textContent = txt; b.classList.toggle('active', !!state.modelsOpen);
 }
 $('modelsToggle').addEventListener('click', () => {
   state.modelsOpen = !state.modelsOpen;
@@ -804,38 +808,22 @@ const OPTIONAL_MODEL_IDS = ['google_weathernext'];
 const HEADLINE_MODEL_IDS = ['google_weathernext', 'ecmwf_aifs025_single'];
 
 function renderModels() {
-  const all = state.data.providers, uniq = uniqueProviders(), off = uniq.filter((p) => state.disabled.has(p.id)).length;
-  $('mdlCount').textContent = t('m.active', { a: uniq.length - off, n: uniq.length });
-  const region = (id) => (hasT('mi.' + id) ? `<small>${t('mi.' + id)}</small>` : '');
-  const row = (p) => {
-    if (p.dupOf) {
-      return `<div class="mdl off"><span class="mtxt"><b>${esc(pname(p))}</b><small>${esc(t('m.dup', { n: nameById(p.dupOf) }))}</small></span></div>`;
-    }
-    const sc = state.verify?.models?.[p.id]?.score;
-    return `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${state.disabled.has(p.id) ? '' : 'checked'}>
-      <span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}</span>${sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''}</label>`;
-  };
-  // Models without data for this location (outside their coverage area)
-  const missing = ALL_MODEL_IDS.filter((id) => !all.some((p) => p.id === id) && !OPTIONAL_MODEL_IDS.includes(id));
-  $('mdlList').innerHTML = all.map(row).join('')
-    + (missing.length ? `<div class="mdl-sep">${t('m.missing')}</div>${missing.map((id) => `<div class="mdl off"><span class="mtxt"><b>${esc(nameById(id))}</b>${region(id)}</span></div>`).join('')}` : '')
-    + `<button type="button" class="btn ghost small" id="mdlAll">${t('m.all')}</button>`;
+  const uniq = uniqueProviders(), off = uniq.filter((p) => state.disabled.has(p.id)).length;
+  $('relBtn').innerHTML = `${t('p.reliability')} <small>${t('m.active', { a: uniq.length - off, n: uniq.length })}</small>`;
+  renderRelModal();
 }
 function saveDisabled() {
   try { localStorage.setItem('wefo.disabled', JSON.stringify([...state.disabled])); } catch (e) { /* ignore */ }
 }
-$('mdlList').addEventListener('change', (e) => {
+$('relTable').addEventListener('change', (e) => {
   const id = e.target.dataset.mid; if (!id) return;
   if (e.target.checked) state.disabled.delete(id);
   else if (uniqueProviders().filter((p) => !state.disabled.has(p.id)).length > 1) state.disabled.add(id);
-  else e.target.checked = true;   // πρέπει να μείνει τουλάχιστον ένα μοντέλο
+  else e.target.checked = true;   // at least one model must stay on
   saveDisabled(); renderAll();
 });
-$('mdlList').addEventListener('click', (e) => {
-  if (e.target.id !== 'mdlAll') return;
-  state.disabled.clear(); saveDisabled(); renderAll();
-});
-document.addEventListener('click', (e) => { if (!e.target.closest('.models')) $('models').open = false; });
+$('relAll').addEventListener('click', () => { state.disabled.clear(); saveDisabled(); renderAll(); });
+$('relBtn').addEventListener('click', () => { $('relModal').hidden = false; renderRelModal(); });
 
 /* "See what the models say": every active provider's own temperature line (thin) plus the weighted
    average (highlighted), and a precipitation bars pair (model average vs the single wettest model) — the
@@ -989,7 +977,7 @@ async function loadVerify(loc, token) {
     if (token !== state.token) return;
     state.verifyErr = err.message;
     $('vfStatus').textContent = t('vf.unavail');
-    if (state.param === 'reliability') renderGrid();
+    renderRelModal();
   }
 }
 $('weightChk').checked = state.weighted;
