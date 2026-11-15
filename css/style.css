@@ -1157,3 +1157,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
   #tripOut.wide > .tr-stages .tr-slist { flex: 1 1 0; min-height: 0; overflow: auto; }
   #tripOut.wide > .tr-tl { order: 4; grid-column: 1 / -1; }
 }
+
+/* full-screen map */
+.tr-fsbtn { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; background: #fff; color: #1f2937; font-size: 19px; line-height: 1; text-decoration: none; border-radius: 4px; }
+.tr-mapc:fullscreen { min-height: 100vh; border-radius: 0; border: 0; } .tr-mapc:-webkit-full-screen { min-height: 100vh; border-radius: 0; }
+.tr-mapc.fs { position: fixed; inset: 0; z-index: 3000; min-height: 0; border-radius: 0; border: 0; }
+body.tr-fs-on { overflow: hidden; }

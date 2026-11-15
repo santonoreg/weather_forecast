@@ -396,12 +396,46 @@ const Trip = (() => {
     showFuel(r);
   }
 
+  /* ---------- full-screen map (Fullscreen API, with a fixed-position fallback for browsers that refuse it, e.g. iPhone Safari) ---------- */
+  const mapCard = () => { const m = $t('tripMap'); return m ? m.parentElement : null; };
+  const isFs = () => { const c = mapCard(); return !!c && (document.fullscreenElement === c || c.classList.contains('fs')); };
+  function refit() {
+    const b = document.querySelector('.tr-fsbtn');
+    if (b) { b.textContent = isFs() ? '✕' : '⛶'; b.title = t(isFs() ? 'trip.fs.off' : 'trip.fs.on'); }
+    setTimeout(() => { if (T.map && T.routes[T.sel]) { T.map.invalidateSize(); T.map.fitBounds(L.latLngBounds(T.routes[T.sel].pts), { padding: [28, 28] }); } }, 120);
+  }
+  async function toggleFs() {
+    const c = mapCard();
+    if (!c) return;
+    if (isFs()) {
+      c.classList.remove('fs'); document.body.classList.remove('tr-fs-on');
+      if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) { /* ignore */ } }
+      refit();
+      return;
+    }
+    try { if (!c.requestFullscreen) throw new Error('no api'); await c.requestFullscreen(); }
+    catch (e) { c.classList.add('fs'); document.body.classList.add('tr-fs-on'); refit(); }
+  }
+  document.addEventListener('fullscreenchange', refit);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const c = mapCard(); if (c && c.classList.contains('fs')) toggleFs(); } });
+
   /* ---------- map ---------- */
   function drawMap() {
     const el = $t('tripMap'), r = T.routes[T.sel];
     if (!el || !r) return;
     T.map = L.map(el, { zoomControl: true, scrollWheelZoom: true });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(T.map);
+    const Fs = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd() {
+        const b = L.DomUtil.create('a', 'leaflet-bar tr-fsbtn');
+        b.href = '#'; b.role = 'button'; b.textContent = '⛶'; b.title = t('trip.fs.on');
+        L.DomEvent.on(b, 'click', (e) => { L.DomEvent.stop(e); toggleFs(); });
+        L.DomEvent.disableClickPropagation(b);
+        return b;
+      },
+    });
+    new Fs().addTo(T.map);
     const grp = L.layerGroup().addTo(T.map);
     // the other routes, thin and grey (click to choose)
     T.routes.forEach((o, i) => {
