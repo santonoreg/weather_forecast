@@ -48,4 +48,10 @@ check('their prices and km along the route', $t[0]['p'] === 1.15 && $t[1]['p'] =
 // a route that only runs nearby (about 400 m away) does not pay
 $near = [[$by['Kleidi']['lat'] + 0.004, $by['Kleidi']['lon'] - 0.01], [$by['Kleidi']['lat'] + 0.004, $by['Kleidi']['lon'] + 0.01]];
 check('a parallel road 400 m away is not charged', route_tolls($near, [0.0, 1.7], $pl) === []);
+// a ramp plaza 80 m from the motorway is not charged when the route stays on the motorway, but is when it runs through the ramp
+$rp = [['name' => 'Test (ramp)', 'lat' => 38.0, 'lon' => 23.0, 'price' => 1.2, 'road' => 'A1', 'kind' => 'r']];
+$main = [[38.0007, 22.99], [38.0007, 23.01]];
+check('a ramp 80 m off the motorway is not charged', route_tolls($main, [0.0, 1.8], $rp) === []);
+$thru = [[38.0, 22.99], [38.0, 23.01]];
+check('a ramp the route runs through is charged', count(route_tolls($thru, [0.0, 1.8], $rp)) === 1);
 exit($fail ? 1 : 0);
