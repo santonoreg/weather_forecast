@@ -25,8 +25,8 @@ try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v'
 // Models shown or hidden is remembered per layout: hidden by default across, shown by default in the time-down view (where only "hide" is wanted)
 let modelsAcross = false;
 try { modelsAcross = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
-// time-down always lists the models (no toggle there); the show/hide choice only belongs to the time-across layout
-Object.defineProperty(state, 'modelsOpen', { get: () => state.orient === 'v' || modelsAcross, set: (x) => { if (state.orient !== 'v') modelsAcross = !!x; } });
+// time-down shows the weighted summary only (never the individual models, no toggle there); the show/hide choice belongs to the time-across layout
+Object.defineProperty(state, 'modelsOpen', { get: () => state.orient !== 'v' && modelsAcross, set: (x) => { if (state.orient !== 'v') modelsAcross = !!x; } });
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* ignore */ }
