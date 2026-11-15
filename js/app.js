@@ -22,7 +22,10 @@ async function api(path, opts) {
 const state = { view: 'forecast', locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
-try { state.modelsOpen = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
+// Models shown or hidden is remembered per layout: hidden by default across, shown by default in the time-down view (where only "hide" is wanted)
+const MODELS_OPEN = { h: false, v: true };
+try { MODELS_OPEN.h = localStorage.getItem('wefo.modelsOpen') === '1'; const sv = localStorage.getItem('wefo.modelsOpenV'); if (sv !== null) MODELS_OPEN.v = sv === '1'; } catch (e) { /* ignore */ }
+Object.defineProperty(state, 'modelsOpen', { get: () => (state.orient === 'v' ? MODELS_OPEN.v : MODELS_OPEN.h), set: (x) => { MODELS_OPEN[state.orient === 'v' ? 'v' : 'h'] = !!x; } });
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* ignore */ }
@@ -736,7 +739,7 @@ function setModelsToggle(n) {
 }
 $('modelsToggle').addEventListener('click', () => {
   state.modelsOpen = !state.modelsOpen;
-  try { localStorage.setItem('wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
+  try { localStorage.setItem(state.orient === 'v' ? 'wefo.modelsOpenV' : 'wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
   renderGrid();
 });
 document.querySelectorAll('#orientSeg [data-orient]').forEach((b) => {
