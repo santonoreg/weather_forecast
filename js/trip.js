@@ -361,8 +361,8 @@ const Trip = (() => {
           <h3>${esc(t('trip.fuel'))}</h3>
           <div class="tr-fuel"><div class="tr-fuel-pick">
               <label><span>${esc(t('trip.ftype'))}</span><select id="trType">${KINDS.map((k) => `<option value="${k}"${k === FUEL.type ? ' selected' : ''}>${esc(t('trip.ft.' + k))}</option>`).join('')}</select></label>
-              <label><span>${esc(t('trip.car'))}</span><select id="trMake"></select></label>
-              <label class="mdlsel"><span>${esc(t('trip.model'))}</span><select id="trModel"></select></label></div>
+              <div class="fld"><span class="fl">${esc(t('trip.car'))}</span><div class="cb"><input id="trMake" type="text" autocomplete="off" spellcheck="false" placeholder="${esc(t('trip.car.type'))}"><ul class="results cb-list" id="trMakeL" hidden></ul></div></div>
+              <div class="fld mdlsel"><span class="fl">${esc(t('trip.model'))}</span><div class="cb"><input id="trModel" type="text" autocomplete="off" spellcheck="false" placeholder="${esc(t('trip.model.type'))}"><ul class="results cb-list" id="trModelL" hidden></ul></div></div></div>
             <div class="tr-fuel-row"><div class="tr-fuel-in"><label><span id="trConsLbl"></span><input id="trCons" type="number" min="1" max="60" step="0.1" value="${FUEL.cons}"></label>
               <label><span id="trPriceLbl"></span><input id="trPrice" type="number" min="0.01" max="5" step="0.01" value="${FUEL.prices[FUEL.type]}"></label></div>
               <div class="tr-fuel-out" id="trFuelOut"></div></div></div>
@@ -408,27 +408,52 @@ const Trip = (() => {
     return T.cars;
   }
   const carVal = (c) => (c[1] === 'e' ? t('trip.fuel.cons.e') : t('trip.fuel.cons'));
-  /* Car / Model drop-downs for the chosen kind (makes that have a car of that kind, plus the typical cars) */
-  function fillCars(r) {
+  /* Make / Model: type to filter (every word you type must appear in the entry), click or Enter to choose, arrows to move */
+  function combo(inp, list, items, pick) {
+    let act = -1, shown = [];
+    const draw = (q) => {
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+      shown = items().filter((it) => words.every((w) => it.label.toLowerCase().includes(w)));
+      const cut = shown.slice(0, 80);
+      list.innerHTML = cut.length ? cut.map((it, k) => `<li data-k="${k}"${k === act ? ' class="on"' : ''}>${esc(it.label)}</li>`).join('') + (shown.length > cut.length ? `<li class="more">${esc(t('trip.car.more', { n: shown.length - cut.length }))}</li>` : '') : `<li class="more">${esc(t('search.none'))}</li>`;
+      list.hidden = false; shown = cut;
+    };
+    const choose = (k) => { const it = shown[k]; if (!it) return; list.hidden = true; inp.blur(); pick(it); };
+    inp.addEventListener('focus', () => { act = -1; inp.select(); draw(''); });
+    inp.addEventListener('input', () => { act = 0; draw(inp.value); });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (list.hidden) draw(inp.value);
+        act = Math.min(shown.length - 1, Math.max(0, act + (e.key === 'ArrowDown' ? 1 : -1)));
+        list.querySelectorAll('li').forEach((li, k) => li.classList.toggle('on', k === act));
+        const li = list.querySelector('li.on'); if (li) li.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') { e.preventDefault(); choose(act >= 0 ? act : 0); }
+      else if (e.key === 'Escape') { list.hidden = true; inp.blur(); }
+    });
+    list.addEventListener('mousedown', (e) => { const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); choose(+li.dataset.k); } });
+    inp.addEventListener('blur', () => { setTimeout(() => { list.hidden = true; }, 120); inp._restore && inp._restore(); });
+  }
+  const makeItems = () => {
+    const cars = T.cars || {};
+    return [{ k: '', label: t('trip.car.custom') }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
+  };
+  const modelList = () => (FUEL.make === '__gen' ? GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']) : FUEL.make ? ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type) : []);
+  const modelItems = () => modelList().map((c) => ({ k: c[0], c, label: `${c[0]}${c[3] ? ` · ${c[3]}` : ''} · ${c[2]} ${carVal(c)}` }));
+  function fillCars() {                                              // after the cars have loaded or the type changed: show the current choice in the two boxes
     const mk = $t('trMake'), md = $t('trModel');
     if (!mk || !md) return;
-    const cars = T.cars || {};
-    const makes = Object.keys(cars).filter((m) => cars[m].some((c) => c[1] === FUEL.type));
-    mk.innerHTML = `<option value="">${esc(t('trip.car.custom'))}</option><option value="__gen">${esc(t('trip.car.gen'))}</option>` + makes.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
-    if (FUEL.make && (FUEL.make === '__gen' || makes.includes(FUEL.make))) mk.value = FUEL.make; else { FUEL.make = ''; FUEL.model = ''; mk.value = ''; }
+    const ok = FUEL.make === '' || FUEL.make === '__gen' || makeItems().some((m) => m.k === FUEL.make);
+    if (!ok) { FUEL.make = ''; FUEL.model = ''; }
+    mk.value = FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make;
     fillModels();
   }
   function fillModels() {
     const md = $t('trModel');
     if (!md) return;
-    let list = [];
-    if (FUEL.make === '__gen') list = GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']);
-    else if (FUEL.make) list = ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type);
-    md.innerHTML = `<option value="">${FUEL.make ? '—' : esc(t('trip.car.pick'))}</option>` + list.map((c, i) => `<option value="${i}">${esc(c[0])}${c[3] ? ` · ${esc(c[3])}` : ''} · ${c[2]} ${esc(carVal(c))}</option>`).join('');
     md.disabled = !FUEL.make;
-    md._list = list;
-    const at = list.findIndex((c) => c[0] === FUEL.model);
-    md.value = at >= 0 ? String(at) : '';
+    const cur = modelItems().find((m) => m.k === FUEL.model);
+    md.value = cur ? cur.label : '';
   }
   function bindFuel(r) {
     const a = $t('trCons'), b = $t('trPrice'), ty = $t('trType'), mk = $t('trMake'), md = $t('trModel');
@@ -436,22 +461,25 @@ const Trip = (() => {
     const sync = () => { a.value = FUEL.cons; b.value = FUEL.prices[FUEL.type]; showFuel(r); };
     a.addEventListener('input', () => {                              // typed by hand: the car selection no longer applies
       const c = parseFloat(a.value);
-      if (c > 0) { FUEL.cons = c; FUEL.model = ''; if (md) md.value = ''; saveFuel(); }
+      if (c > 0) { FUEL.cons = c; FUEL.model = ''; md.value = ''; saveFuel(); }
       showFuel(r);
     });
     b.addEventListener('input', () => { const p = parseFloat(b.value); if (p > 0) { FUEL.prices[FUEL.type] = p; saveFuel(); } showFuel(r); });
     ty.addEventListener('change', () => {
       FUEL.type = ty.value; FUEL.make = ''; FUEL.model = ''; FUEL.cons = DEF.cons[FUEL.type]; saveFuel();
-      fillCars(r); sync();
+      fillCars(); sync();
     });
-    mk.addEventListener('change', () => { FUEL.make = mk.value; FUEL.model = ''; saveFuel(); fillModels(); });
-    md.addEventListener('change', () => {
-      const c = md._list && md._list[+md.value];
-      if (!c || md.value === '') { FUEL.model = ''; saveFuel(); return; }
-      FUEL.model = c[0]; FUEL.cons = c[2]; saveFuel(); sync();
+    mk._restore = () => { mk.value = FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make; };
+    md._restore = () => { fillModels(); };
+    combo(mk, $t('trMakeL'), makeItems, (it) => {
+      FUEL.make = it.k; FUEL.model = ''; saveFuel(); mk._restore(); fillModels();
+      if (it.k) setTimeout(() => md.focus(), 30);                    // straight on to the model list
+    });
+    combo(md, $t('trModelL'), modelItems, (it) => {
+      FUEL.model = it.k; FUEL.cons = it.c[2]; saveFuel(); fillModels(); sync();
     });
     showFuel(r);
-    loadCars().then(() => { if ($t('trMake') === mk) fillCars(r); });
+    loadCars().then(() => { if ($t('trMake') === mk) fillCars(); });
   }
 
   /* ---------- full-screen map (Fullscreen API, with a fixed-position fallback for browsers that refuse it, e.g. iPhone Safari) ---------- */

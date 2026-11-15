@@ -1171,3 +1171,10 @@ body.tr-fs-on { overflow: hidden; }
 .tr-fuel-pick { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 8px; margin-bottom: 8px; }
 .tr-fuel-pick label.mdlsel { grid-column: 1 / -1; } .tr-fuel-pick select { width: 100%; padding: 6px 8px; font-size: 13px; }
 .tr-fuel-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* type-to-filter boxes (make / model) */
+.tr-fuel-pick .fld { display: flex; flex-direction: column; gap: 4px; min-width: 0; } .tr-fuel-pick .fl { font-size: 12.5px; color: var(--muted); }
+.tr-fuel-pick .mdlsel { grid-column: 1 / -1; }
+.cb { position: relative; } .cb input { width: 100%; padding: 6px 8px; font-size: 13px; }
+.cb-list { max-height: 260px; z-index: 1500; }
+.cb-list li.on { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); } .cb-list li.more { color: var(--muted); font-size: 12px; cursor: default; }
