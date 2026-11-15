@@ -506,37 +506,36 @@ const tempWindRainCell = (c) => {
    weighted summary but lists the individual models for that one parameter only. */
 const ALL_SECTIONS = ['weather', 'temperature_2m', 'precip', 'wind', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl'];
 const LANE_OF = { temperature_2m: 'temp', precip: 'rain', wind: 'wind', cloud_cover: 'cloud', relative_humidity_2m: 'hum', pressure_msl: 'press' };
-/* One cell per model for the vertical table's "all parameters" view: icon + temperature, then wind,
-   rain, cloud, humidity and pressure, each from the same per-parameter rows the horizontal view uses. */
-function compositeCell(builts, id, i) {
-  const rowOf = (b) => [...(b.extraRows || []), ...b.rows].find((r) => r.id === id);
-  let html = '';
-  builts.forEach(({ key, built }) => {
-    const r = rowOf(built), c = r && r.cells[i];
-    if (!c || !c.has) return;
-    const line = { weather: c.html, wind: c.html, precip: `${c.html}<small> mm</small>`, cloud_cover: `☁ ${c.html}%`, relative_humidity_2m: `💧 ${c.html}%`, pressure_msl: c.html }[key];
-    if (line) html += `<div class="cm">${line}</div>`;
-  });
-  return html;
-}
-
+/* "Time down": the weighted answer as one column per parameter (most likely weather, then temperature,
+   wind, rain, cloud, humidity, pressure). With the models shown, every model gets one sub-column per
+   parameter on the Weather tab, or a single column for the chosen parameter on the other tabs. */
 function renderGridVertical(cols, builts) {
   const { rows, extraRows } = builts[0].built;
-  const all = builts.length > 1;   // Weather tab: each model column carries every parameter
   const cls = (c) => (c.now ? ' now' : '');
-  // the AI columns are individual models too: shown only with "Show all N models"
-  const providerCols = state.modelsOpen ? [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...rows.map((r) => ({ ...r, cls: 'model' }))] : [];
-  if (all) providerCols.forEach((r) => { r.cells = cols.map((c, i) => ({ html: compositeCell(builts, r.id, i), bg: '' })); r.cls += ' multi'; });
-  const colspan = 3 + providerCols.length;
-  let html = `<thead><tr><th class="rowh">${t('g.time')}</th><th class="prob">${t('g.prob_weather')}<small class="hint2">${t('g.prob_weather.sub')}</small></th><th class="summary">${t('g.twr')}</th>${providerCols.map((r) => `<th class="${r.cls}">${esc(r.name)}${badge(r.id)}</th>`).join('')}</tr></thead><tbody>`;
+  const lanes = buildWeatherLanes(cols).slice(2);   // temp, rain, wind, cloud, hum, press (weather + agreement come from weatherAgreeCell)
+  const order = ['temp', 'wind', 'rain', 'cloud', 'hum', 'press'];
+  const sumCols = order.map((k) => lanes.find((l) => l.cls === k));
+  const models = state.modelsOpen ? [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...rows.map((r) => ({ ...r, cls: 'model' }))] : [];
+  const subs = builts.map(({ key }) => ({ key, label: key === 'weather' ? t('lane.weather') : t('lane.' + LANE_OF[key]) }));
+  const multi = builts.length > 1 && models.length;
+  const rowOf = (b, id) => [...(b.extraRows || []), ...b.rows].find((r) => r.id === id);
+  const colspan = 2 + sumCols.length + models.length * builts.length;
+  const sel = LANE_OF[state.param];
+  let html = `<thead><tr><th class="rowh"${multi ? ' rowspan="2"' : ''}>${t('g.time')}</th><th class="prob"${multi ? ' rowspan="2"' : ''}>${t('g.prob_weather')}<small class="hint2">${t('g.prob_weather.sub')}</small></th>`
+    + sumCols.map((l) => `<th class="summary${l.cls === sel ? ' sel' : ''}"${multi ? ' rowspan="2"' : ''}>${l.name}</th>`).join('')
+    + models.map((r) => `<th class="${r.cls}${multi ? ' grp' : ''}"${multi ? ` colspan="${builts.length}"` : ''}>${esc(r.name)}${badge(r.id)}</th>`).join('') + '</tr>';
+  if (multi) html += `<tr class="subh">${models.map((r) => subs.map((s, j) => `<th class="${r.cls} sub${j === 0 ? ' first' : ''}">${s.label}</th>`).join('')).join('')}</tr>`;
+  html += '</thead><tbody>';
   let prevDate = -1;
   cols.forEach((c, i) => {
     if (c.dateIdx !== prevDate) { html += `<tr class="dayrow"><th class="dh" colspan="${colspan}"><span>${dayLabelFor(c.dateIdx)}</span></th></tr>`; prevDate = c.dateIdx; }
-    // Non-weather tabs: agreement first, then the average (swapped from summary-then-prob).
     const left = weatherAgreeCell(c);
-    const right = tempWindRainCell(c);
-    const provCells = providerCols.map((r) => { const pc = r.cells[i]; return `<td class="${r.cls}" style="background:${pc && pc.bg || ''}">${pc ? pc.html : ''}</td>`; }).join('');
-    html += `<tr class="hr${cls(c)}"><th class="rowh">${c.label}</th><td class="${left.cls || ''}" style="background:${left.bg || ''}">${left.html}</td><td class="${right.cls || ''}" style="background:${right.bg || ''}">${right.html}</td>${provCells}</tr>`;
+    const sums = sumCols.map((l) => { const x = l.cells[i]; return `<td class="summary sc" style="background:${x.bg || ''}">${x.html}</td>`; }).join('');
+    const provCells = models.map((r) => builts.map(({ built }, j) => {
+      const pr = rowOf(built, r.id), pc = pr && pr.cells[i];
+      return `<td class="${r.cls}${j === 0 && multi ? ' first' : ''}" style="background:${pc && pc.bg || ''}">${pc ? pc.html : ''}</td>`;
+    }).join('')).join('');
+    html += `<tr class="hr${cls(c)}"><th class="rowh">${c.label}</th><td class="${left.cls || ''}" style="background:${left.bg || ''}">${left.html}</td>${sums}${provCells}</tr>`;
   });
   html += '</tbody>';
   $('grid').innerHTML = html;
