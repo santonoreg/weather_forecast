@@ -2,7 +2,7 @@
 """Builds assets/cars_eu.json: European-market models with their official WLTP combined consumption, read from the version pages of
 autotijd.be (which republishes the homologation figures). One brand per run argument; Skoda is the default.
 
-    python tools/build-cars-eu.py [brand-slug ...]        e.g.  python tools/build-cars-eu.py skoda
+    python tools/build-cars-eu.py [brand-slug | brand-slug:model-slug ...]      e.g.  python tools/build-cars-eu.py skoda hyundai:i10
 
 Same format as assets/cars.json: {"cars": {"Skoda": [[label, kind, value, "2022-2027"], ...]}}  kind p petrol (incl. mild hybrid) · d diesel · e electric
 (value = L/100 km or kWh/100 km: the middle of the WLTP range the page gives). Plug-in hybrids and CNG / LPG versions are left out.
@@ -50,10 +50,10 @@ def after(L, label, unit):
             return rng(L[i + 1])
     return None
 
-def crawl(brand):
-    models = sorted(set(re.findall(r'href="/en/consumption/%s/([a-z0-9-]+)"' % brand, get('/en/consumption/%s/octavia' % brand if brand == 'skoda' else '/en/consumption/%s' % brand))))
+def crawl(brand, only=None):
+    models = [only] if only else sorted(set(re.findall(r'href="/en/consumption/%s/([a-z0-9-]+)"' % brand, get('/en/consumption/%s/octavia' % brand if brand == 'skoda' else '/en/consumption/%s' % brand))))
     seen_pages, variants = set(), set()
-    queue = list(models) + (['octavia'] if brand == 'skoda' else [])           # the seed page does not link to itself
+    queue = list(models) + (['octavia'] if brand == 'skoda' and not only else [])           # the seed page does not link to itself
     while queue:
         slug = queue.pop(0)
         if slug in seen_pages:
@@ -118,13 +118,23 @@ if os.path.exists(out_path):
     except Exception:
         pass
 for b in brands:
-    lst = crawl(b)
-    seen, out = set(), []
-    for c in sorted(lst, key=lambda c: (c[0], c[3])):
-        k = (c[0], c[1], c[2], c[3])
-        if k not in seen:
-            seen.add(k); out.append(c)
-    res['cars'][b.capitalize()] = out
+    brand, _, only = b.partition(':')                                # "hyundai:i10" crawls just that model
+    lst = crawl(brand, only or None)
+    merged = {}                                                      # the same version and figure sold in consecutive generations: one entry with the whole year range
+    for c in lst:
+        y0, y1 = (int(y) for y in c[3].split('-')) if c[3] else (0, 0)
+        k = (c[0], c[1], c[2])
+        if k in merged:
+            merged[k][0], merged[k][1] = min(merged[k][0], y0), max(merged[k][1], y1)
+        else:
+            merged[k] = [y0, y1]
+    out = [[k[0], k[1], k[2], f'{v[0]}-{v[1]}' if v[0] != v[1] else str(v[0])] for k, v in sorted(merged.items(), key=lambda kv: (kv[0][0], kv[1][0]))]
+    make = brand.replace('-', ' ').title()
+    keep = res['cars'].get(make, [])
+    if only:                                                         # replace only this model's entries, keep the rest of the make
+        keep = [c for c in keep if not c[0].lower().startswith(only.replace('-', ' ').lower() + ' ')]
+        out = sorted(keep + out, key=lambda c: (c[0], c[3]))
+    res['cars'][make] = out
     print(b, '->', len(out), 'entries')
 json.dump(res, open(out_path, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print(os.path.getsize(out_path), 'bytes')
