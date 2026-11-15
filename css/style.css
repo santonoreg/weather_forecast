@@ -1243,3 +1243,4 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 #relModal .modal-card { max-width: 1060px; }
 #relModal .table-wrap { max-height: 62vh; overflow: auto; }
 #relTable .rowh { min-width: 190px; } #relTable tr.off { opacity: .6; } #relTable .mdl { padding: 2px 0; } #relTable .mdl:hover { background: none; }
+#relModal .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } #relModal .row .btn { height: 38px; box-sizing: border-box; }
