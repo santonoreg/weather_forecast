@@ -1224,3 +1224,5 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .acc-tab { background: none; border: none; border-bottom: 3px solid transparent; padding: 9px 14px; font: inherit; font-size: 14.5px; color: var(--muted); cursor: pointer; margin-bottom: -1px; } .acc-tab:hover { color: var(--text); } .acc-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 .acc-pane[hidden] { display: none; } .acc-narrow { max-width: 520px; }
 .userbtn.active { border-color: var(--accent); color: var(--accent); }
+.grid tr.sect th > span { position: sticky; left: 10px; display: inline-block; }
+.tabs .tab:disabled { opacity: .45; cursor: default; pointer-events: none; }

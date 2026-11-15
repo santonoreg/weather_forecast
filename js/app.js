@@ -651,20 +651,23 @@ function buildWeatherLanes(cols) {
     const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
     return cell(`${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(m)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`);
   });
-  const plain = (key, d, suffix = '') => cols.map((c) => {
+  const plain = (key, d, suffix = '', shade = null) => cols.map((c) => {
     const m = wmean(wpairs(key, (p) => agg(p, key, c.a, c.b)));
-    return m == null ? cell('–') : cell(`${fmt(m, d)}${suffix}`);
+    return m == null ? cell('–') : cell(`${fmt(m, d)}${suffix}`, shade ? shade(m) : '');   // cloud / humidity: shading grows with the percentage
   });
   return [
     lane(t('lane.weather'), wx, 'wx'), lane(t('lane.agree'), agree, 'agree'), lane(t('lane.temp'), temp, 'temp'),
     lane(t('lane.rain'), rain, 'rain'), lane(t('lane.wind'), wind, 'wind'),
-    lane(t('lane.cloud'), plain('cloud_cover', 0, '%'), 'cloud'), lane(t('lane.hum'), plain('relative_humidity_2m', 0, '%'), 'hum'),
+    lane(t('lane.cloud'), plain('cloud_cover', 0, '%', bgCloud), 'cloud'), lane(t('lane.hum'), plain('relative_humidity_2m', 0, '%', bgHum), 'hum'),
     lane(t('lane.press'), plain('pressure_msl', 0), 'press'),
   ];
 }
 
 function renderGrid() {
   const { param } = state;
+  // the parameter tabs only choose which model values are listed, so they do nothing while the models are hidden
+  const tabsOff = !state.modelsOpen && state.orient !== 'm' && state.orient !== 's';
+  document.querySelectorAll('#tabs .tab').forEach((b) => { b.disabled = tabsOff && b.dataset.param !== 'reliability'; });
   const notReliability = param !== 'reliability';
   $('relNote').hidden = param !== 'reliability';
   $('orientSeg').hidden = !notReliability;
@@ -713,7 +716,7 @@ function renderGrid() {
       builts.forEach(({ key, built: b }) => {
         const list = [...(b.extraRows || []).map((r) => [r, 'ai']), ...b.rows.map((r) => [r, ''])];
         if (!list.length) return;
-        html += `<tr class="sect"><th colspan="${cols.length + 1}">${t('p.' + key)}</th></tr>`;
+        html += `<tr class="sect"><th colspan="${cols.length + 1}"><span>${t('p.' + key)}</span></th></tr>`;
         list.forEach(([r, c]) => { html += rowHtml(r, c); });
       });
     }
