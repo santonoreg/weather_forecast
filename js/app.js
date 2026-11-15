@@ -344,6 +344,7 @@ function centerNow() {
 const scoreCls = (v) => (v >= 80 ? 'hi' : v >= 60 ? 'mid' : 'lo');
 
 /* Reliability pop-up: how each model scored against ERA5 / METAR, and where models are switched on and off. */
+let relDraft = new Set();   // the on/off choices made in the pop-up, applied only with "Exit and save"
 function renderRelModal() {
   if ($('relModal').hidden || !state.data) return;
   const v = state.verify;
@@ -351,7 +352,7 @@ function renderRelModal() {
   const region = (id) => (hasT('mi.' + id) ? `<small>${t('mi.' + id)}</small>` : '');
   const nameCell = (p) => (p.dupOf
     ? `<span class="mdl off"><span class="mtxt"><b>${esc(pname(p))}</b><small>${esc(t('m.dup', { n: nameById(p.dupOf) }))}</small></span></span>`
-    : `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${state.disabled.has(p.id) ? '' : 'checked'}><span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}</span></label>`);
+    : `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${relDraft.has(p.id) ? '' : 'checked'}><span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}</span></label>`);
   const missing = ALL_MODEL_IDS.filter((id) => !all.some((p) => p.id === id) && !OPTIONAL_MODEL_IDS.includes(id));
   const ncol = 9;
   const note = v ? '' : `<tr><td class="pad" colspan="${ncol - 1}">${state.verifyErr ? esc(t('r.unavailable', { e: state.verifyErr })) : t('r.loading')}</td></tr>`;
@@ -374,7 +375,7 @@ function renderRelModal() {
   let html = `<thead><tr><th class="rowh">${t('r.model')}</th><th>${t('r.score')}</th><th>${t('r.temp')}</th><th>${t('r.wind')}</th><th>${t('r.cloud')}</th><th>${t('r.hum')}</th><th>${t('r.press')}</th><th>${t('r.rain')}</th><th>${t('r.code')}</th></tr></thead><tbody>${note}`;
   sorted.forEach((p) => {
     const m = v?.models?.[p.id];
-    html += `<tr class="${state.disabled.has(p.id) || p.dupOf ? 'off' : ''}"><th class="rowh">${nameCell(p)}</th>${m && !p.dupOf ? metrics(m) : `<td colspan="${ncol - 1}"></td>`}</tr>`;
+    html += `<tr class="${relDraft.has(p.id) || p.dupOf ? 'off' : ''}"><th class="rowh">${nameCell(p)}</th>${m && !p.dupOf ? metrics(m) : `<td colspan="${ncol - 1}"></td>`}</tr>`;
   });
   missing.forEach((id) => { html += `<tr class="off"><th class="rowh"><span class="mdl off"><span class="mtxt"><b>${esc(nameById(id))}</b><small>${t('m.missing')}</small></span></span></th><td colspan="${ncol - 1}"></td></tr>`; });
   $('relTable').innerHTML = html + '</tbody>';
@@ -817,13 +818,20 @@ function saveDisabled() {
 }
 $('relTable').addEventListener('change', (e) => {
   const id = e.target.dataset.mid; if (!id) return;
-  if (e.target.checked) state.disabled.delete(id);
-  else if (uniqueProviders().filter((p) => !state.disabled.has(p.id)).length > 1) state.disabled.add(id);
+  if (e.target.checked) relDraft.delete(id);
+  else if (uniqueProviders().filter((p) => !relDraft.has(p.id)).length > 1) relDraft.add(id);
   else e.target.checked = true;   // at least one model must stay on
-  saveDisabled(); renderAll();
+  renderRelModal();
 });
-$('relAll').addEventListener('click', () => { state.disabled.clear(); saveDisabled(); renderAll(); });
-$('relBtn').addEventListener('click', () => { $('relModal').hidden = false; renderRelModal(); });
+$('relAll').addEventListener('click', () => { relDraft.clear(); renderRelModal(); });
+$('relBtn').addEventListener('click', () => { relDraft = new Set(state.disabled); $('relModal').hidden = false; renderRelModal(); });
+// Exit and save: apply the choices and refresh the tables only if some model was switched on or off
+$('relSave').addEventListener('click', () => {
+  const changed = relDraft.size !== state.disabled.size || [...relDraft].some((id) => !state.disabled.has(id));
+  $('relModal').hidden = true;
+  if (!changed) return;
+  state.disabled = new Set(relDraft); saveDisabled(); renderAll();
+});
 
 /* "See what the models say": every active provider's own temperature line (thin) plus the weighted
    average (highlighted), and a precipitation bars pair (model average vs the single wettest model) — the

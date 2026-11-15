@@ -228,7 +228,7 @@ const I18N = {
     'vf.loading': '· loading reliability…', 'vf.unavail': '· unavailable',
 
     'm.active': '{a}/{n} active', 'm.dup': 'Same data as {n} (outside its coverage) – not counted twice',
-    'r.btn.title': 'Model reliability, and switching models on and off', 'r.pick.hint': 'Tick or untick a model to switch it on or off in every table and in the averages.',
+    'r.save': 'Exit and save', 'r.btn.title': 'Model reliability, and switching models on and off', 'r.pick.hint': 'Tick or untick the models to switch them on or off in every table and in the averages, then press “Exit and save”.',
     'm.showall': 'Show all {n} models', 'm.hideall': 'Hide individual models',
     'm.missing': 'No coverage for this location', 'm.all': 'Enable all',
     'mn.jma_seamless': 'JMA (Japan)', 'mn.cma_grapes_global': 'CMA GRAPES (China)', 'mn.bom_access_global': 'BOM ACCESS (Australia)',
@@ -495,7 +495,7 @@ const I18N = {
     'vf.loading': '· φόρτωση αξιοπιστίας…', 'vf.unavail': '· μη διαθέσιμη',
 
     'm.active': '{a}/{n} ενεργά', 'm.dup': 'Ίδια δεδομένα με {n} (εκτός περιοχής κάλυψης) – δεν μετράει διπλά',
-    'r.btn.title': 'Αξιοπιστία μοντέλων και ενεργοποίηση/απενεργοποίηση', 'r.pick.hint': 'Τσεκάρισε ή ξετσεκάρισε ένα μοντέλο για να το ενεργοποιήσεις ή να το απενεργοποιήσεις σε όλους τους πίνακες και στους μέσους όρους.',
+    'r.save': 'Έξοδος και αποθήκευση', 'r.btn.title': 'Αξιοπιστία μοντέλων και ενεργοποίηση/απενεργοποίηση', 'r.pick.hint': 'Τσεκάρισε ή ξετσεκάρισε ένα μοντέλο για να το ενεργοποιήσεις ή να το απενεργοποιήσεις σε όλους τους πίνακες και στους μέσους όρους. Μετά πάτα «Έξοδος και αποθήκευση».',
     'm.showall': 'Εμφάνιση όλων ({n} μοντέλα)', 'm.hideall': 'Απόκρυψη μεμονωμένων μοντέλων',
     'm.missing': 'Χωρίς κάλυψη για αυτή την τοποθεσία', 'm.all': 'Ενεργοποίηση όλων',
     'mn.jma_seamless': 'JMA (Ιαπωνία)', 'mn.cma_grapes_global': 'CMA GRAPES (Κίνα)', 'mn.bom_access_global': 'BOM ACCESS (Αυστραλία)',
