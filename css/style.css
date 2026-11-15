@@ -1165,3 +1165,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 body.tr-fs-on { overflow: hidden; }
 
 .tr-chart .lb.ec { font-weight: 700; }
+
+/* fuel / energy panel with the car list */
+.tr-fuel { display: block; border-left: 3px solid #0ea5e9; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+.tr-fuel-pick { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 8px; margin-bottom: 8px; }
+.tr-fuel-pick label.mdlsel { grid-column: 1 / -1; } .tr-fuel-pick select { width: 100%; padding: 6px 8px; font-size: 13px; }
+.tr-fuel-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

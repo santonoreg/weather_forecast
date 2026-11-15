@@ -11,10 +11,21 @@ const Trip = (() => {
   const SEV_COL = ['#16a34a', '#d9a406', '#ea7a14', '#dc2626'];
   const MODEL_IDS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];
   const clampN = (x, a, b) => Math.min(b, Math.max(a, x));
-  /* petrol car estimate: litres = distance × consumption + 0.15 L per 100 m of climb; defaults: 7 L/100 km, 2.05 €/L (Greek 95-octane average, 11 Nov 2026) */
-  const FUEL = { cons: 7, price: 2.05 };
-  try { const f = JSON.parse(localStorage.getItem('wefo.trip.fuel') || 'null'); if (f && f.cons > 0 && f.price > 0) { FUEL.cons = f.cons; FUEL.price = f.price; } } catch (e) { /* ignore */ }
-  const fuelOf = (r) => { const l = (r.km * FUEL.cons) / 100 + ((r.ascent || 0) / 100) * 0.15; return { l, c: l * FUEL.price }; };
+  /* fuel / energy estimate: units = distance × consumption + an allowance for climbing (0.15 L or 0.1 kWh per 100 m); the car comes from
+     assets/cars.json (US EPA data, see tools/build-cars.py) or from "Typical cars", and the numbers can always be typed in by hand.
+     Default prices: 95-octane 2.05 €/L and diesel 2.09 €/L (Greek averages, 11 Nov 2026); electricity 0.30 €/kWh is a guess (home cheaper, fast chargers dearer). */
+  const KINDS = ['p', 'd', 'h', 'e'];
+  const DEF = { cons: { p: 7, d: 5.5, h: 5, e: 17 }, price: { p: 2.05, d: 2.09, h: 2.05, e: 0.3 } };
+  const GENERIC = { p: [['small', 6], ['family', 7], ['suv', 8.5]], d: [['small', 5], ['family', 5.8], ['suv', 7]], h: [['small', 4.6], ['family', 5.2], ['suv', 6]], e: [['small', 15], ['family', 17], ['suv', 20]] };
+  const FUEL = { type: 'p', cons: 7, prices: { ...DEF.price }, make: '', model: '' };
+  try {
+    const f = JSON.parse(localStorage.getItem('wefo.trip.fuel') || 'null');
+    if (f && KINDS.includes(f.type) && f.cons > 0) { FUEL.type = f.type; FUEL.cons = f.cons; FUEL.make = f.make || ''; FUEL.model = f.model || ''; if (f.prices) KINDS.forEach((k) => { if (f.prices[k] > 0) FUEL.prices[k] = f.prices[k]; }); }
+    else if (f && f.cons > 0 && f.price > 0) { FUEL.cons = f.cons; FUEL.prices.p = f.price; }       // an older saved petrol-only setting
+  } catch (e) { /* ignore */ }
+  const saveFuel = () => { try { localStorage.setItem('wefo.trip.fuel', JSON.stringify(FUEL)); } catch (e) { /* ignore */ } };
+  const fuelOf = (r) => { const u = (r.km * FUEL.cons) / 100 + ((r.ascent || 0) / 100) * (FUEL.type === 'e' ? 0.1 : 0.15); return { l: u, c: u * FUEL.prices[FUEL.type] }; };
+  const unitOf = () => (FUEL.type === 'e' ? 'kWh' : 'L');
   const inGreece = (p) => p && p.lat >= 34.5 && p.lat <= 42 && p.lon >= 19 && p.lon <= 30;      // the route search and the toll table cover Greece only
   const timeStr = (ms) => new Date(ms).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
   const dayStr = (ms) => new Date(ms).toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
@@ -348,9 +359,13 @@ const Trip = (() => {
           <h3>${esc(t('trip.tolls'))}${nT ? ` <span class="tr-tt">${esc(cost)}</span>` : ''}</h3>
           ${tollList(r, unknownToll)}
           <h3>${esc(t('trip.fuel'))}</h3>
-          <div class="tr-fuel"><div class="tr-fuel-in"><label><span>${esc(t('trip.fuel.cons'))}</span><input id="trCons" type="number" min="3" max="20" step="0.1" value="${FUEL.cons}"></label>
-            <label><span>${esc(t('trip.fuel.price'))}</span><input id="trPrice" type="number" min="0.5" max="4" step="0.01" value="${FUEL.price}"></label></div>
-            <div class="tr-fuel-out" id="trFuelOut"></div></div>
+          <div class="tr-fuel"><div class="tr-fuel-pick">
+              <label><span>${esc(t('trip.ftype'))}</span><select id="trType">${KINDS.map((k) => `<option value="${k}"${k === FUEL.type ? ' selected' : ''}>${esc(t('trip.ft.' + k))}</option>`).join('')}</select></label>
+              <label><span>${esc(t('trip.car'))}</span><select id="trMake"></select></label>
+              <label class="mdlsel"><span>${esc(t('trip.model'))}</span><select id="trModel"></select></label></div>
+            <div class="tr-fuel-row"><div class="tr-fuel-in"><label><span id="trConsLbl"></span><input id="trCons" type="number" min="1" max="60" step="0.1" value="${FUEL.cons}"></label>
+              <label><span id="trPriceLbl"></span><input id="trPrice" type="number" min="0.01" max="5" step="0.01" value="${FUEL.prices[FUEL.type]}"></label></div>
+              <div class="tr-fuel-out" id="trFuelOut"></div></div></div>
           <p class="hint">${esc(t('trip.fuel.note'))}</p>
           <h3>${esc(t('trip.warnings'))}</h3>
           ${r.warn.length ? `<ul class="tr-warn">${r.warn.slice(0, 9).map((w) => `<li class="s${Math.min(3, Math.round(w.sev))}"><i>${WARN_ICON[w.kind] || '•'}</i><span>${esc(warnText(w))}</span></li>`).join('')}</ul>` : `<p class="hint">${esc(t('trip.nowarn'))}</p>`}
@@ -380,20 +395,63 @@ const Trip = (() => {
   function showFuel(r) {
     const out = $t('trFuelOut'), f = fuelOf(r), tolls = r.tollCost || 0;
     if (!out) return;
-    out.innerHTML = `<b>≈ ${f.l.toFixed(1)} L · ${esc(money(f.c, 'EUR'))}</b>${tolls ? `<small>${esc(t('trip.fuel.total', { c: money(f.c + tolls, 'EUR') }))}</small>` : ''}`;
-    const k = $t('trFuelKpi');
-    if (k) k.textContent = money(f.c, 'EUR');
+    out.innerHTML = `<b>≈ ${f.l.toFixed(1)} ${unitOf()} · ${esc(money(f.c, 'EUR'))}</b>${tolls ? `<small>${esc(t('trip.fuel.total', { c: money(f.c + tolls, 'EUR') }))}</small>` : ''}`;
+    const kp = $t('trFuelKpi');
+    if (kp) kp.textContent = money(f.c, 'EUR');
+    const cl = $t('trConsLbl'), pl = $t('trPriceLbl');
+    if (cl) cl.textContent = t(FUEL.type === 'e' ? 'trip.fuel.cons.e' : 'trip.fuel.cons');
+    if (pl) pl.textContent = t(FUEL.type === 'e' ? 'trip.fuel.price.e' : 'trip.fuel.price');
+  }
+  async function loadCars() {
+    if (T.cars) return T.cars;
+    try { T.cars = (await (await fetch('assets/cars.json')).json()).cars || {}; } catch (e) { T.cars = {}; }
+    return T.cars;
+  }
+  const carVal = (c) => (c[1] === 'e' ? t('trip.fuel.cons.e') : t('trip.fuel.cons'));
+  /* Car / Model drop-downs for the chosen kind (makes that have a car of that kind, plus the typical cars) */
+  function fillCars(r) {
+    const mk = $t('trMake'), md = $t('trModel');
+    if (!mk || !md) return;
+    const cars = T.cars || {};
+    const makes = Object.keys(cars).filter((m) => cars[m].some((c) => c[1] === FUEL.type));
+    mk.innerHTML = `<option value="">${esc(t('trip.car.custom'))}</option><option value="__gen">${esc(t('trip.car.gen'))}</option>` + makes.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    if (FUEL.make && (FUEL.make === '__gen' || makes.includes(FUEL.make))) mk.value = FUEL.make; else { FUEL.make = ''; FUEL.model = ''; mk.value = ''; }
+    fillModels();
+  }
+  function fillModels() {
+    const md = $t('trModel');
+    if (!md) return;
+    let list = [];
+    if (FUEL.make === '__gen') list = GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']);
+    else if (FUEL.make) list = ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type);
+    md.innerHTML = `<option value="">${FUEL.make ? '—' : esc(t('trip.car.pick'))}</option>` + list.map((c, i) => `<option value="${i}">${esc(c[0])}${c[3] ? ` · ${esc(c[3])}` : ''} · ${c[2]} ${esc(carVal(c))}</option>`).join('');
+    md.disabled = !FUEL.make;
+    md._list = list;
+    const at = list.findIndex((c) => c[0] === FUEL.model);
+    md.value = at >= 0 ? String(at) : '';
   }
   function bindFuel(r) {
-    const a = $t('trCons'), b = $t('trPrice');
+    const a = $t('trCons'), b = $t('trPrice'), ty = $t('trType'), mk = $t('trMake'), md = $t('trModel');
     if (!a || !b) return;
-    const upd = () => {
-      const c = parseFloat(a.value), p = parseFloat(b.value);
-      if (c > 0 && p > 0) { FUEL.cons = c; FUEL.price = p; try { localStorage.setItem('wefo.trip.fuel', JSON.stringify(FUEL)); } catch (e) { /* ignore */ } }
+    const sync = () => { a.value = FUEL.cons; b.value = FUEL.prices[FUEL.type]; showFuel(r); };
+    a.addEventListener('input', () => {                              // typed by hand: the car selection no longer applies
+      const c = parseFloat(a.value);
+      if (c > 0) { FUEL.cons = c; FUEL.model = ''; if (md) md.value = ''; saveFuel(); }
       showFuel(r);
-    };
-    a.addEventListener('input', upd); b.addEventListener('input', upd);
+    });
+    b.addEventListener('input', () => { const p = parseFloat(b.value); if (p > 0) { FUEL.prices[FUEL.type] = p; saveFuel(); } showFuel(r); });
+    ty.addEventListener('change', () => {
+      FUEL.type = ty.value; FUEL.make = ''; FUEL.model = ''; FUEL.cons = DEF.cons[FUEL.type]; saveFuel();
+      fillCars(r); sync();
+    });
+    mk.addEventListener('change', () => { FUEL.make = mk.value; FUEL.model = ''; saveFuel(); fillModels(); });
+    md.addEventListener('change', () => {
+      const c = md._list && md._list[+md.value];
+      if (!c || md.value === '') { FUEL.model = ''; saveFuel(); return; }
+      FUEL.model = c[0]; FUEL.cons = c[2]; saveFuel(); sync();
+    });
     showFuel(r);
+    loadCars().then(() => { if ($t('trMake') === mk) fillCars(r); });
   }
 
   /* ---------- full-screen map (Fullscreen API, with a fixed-position fallback for browsers that refuse it, e.g. iPhone Safari) ---------- */
