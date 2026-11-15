@@ -404,7 +404,10 @@ const Trip = (() => {
   }
   async function loadCars() {
     if (T.cars) return T.cars;
-    try { T.cars = (await (await fetch('assets/cars.json')).json()).cars || {}; } catch (e) { T.cars = {}; }
+    const get = async (f) => { try { return (await (await fetch(f)).json()).cars || {}; } catch (e) { return {}; } };
+    const [us, eu] = await Promise.all([get('assets/cars.json'), get('assets/cars_eu.json')]);    // US EPA list + European-market models (official WLTP)
+    T.cars = us;
+    Object.keys(eu).forEach((m) => { T.cars[m] = (eu[m] || []).concat(T.cars[m] || []); });
     return T.cars;
   }
   const carVal = (c) => (c[1] === 'e' ? t('trip.fuel.cons.e') : t('trip.fuel.cons'));
@@ -436,7 +439,7 @@ const Trip = (() => {
   }
   const makeItems = () => {
     const cars = T.cars || {};
-    return [{ k: '', label: t('trip.car.custom') }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
+    return [{ k: '', label: t('trip.car.custom') }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).sort((x, y) => x.localeCompare(y)).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
   };
   const modelList = () => (FUEL.make === '__gen' ? GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']) : FUEL.make ? ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type) : []);
   const modelItems = () => modelList().map((c) => ({ k: c[0], c, label: `${c[0]}${c[3] ? ` · ${c[3]}` : ''} · ${c[2]} ${carVal(c)}` }));

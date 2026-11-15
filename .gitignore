@@ -1,3 +1,4 @@
 data/*.sqlite
 data/*.sqlite-*
 api/config.php
+tools/.cache-eu/
