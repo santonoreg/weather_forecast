@@ -28,13 +28,12 @@ return [
     //   app is affected.
     'google_weather_api_key' => '',
 
-    // Admin login for the "Locations & Map" screen (saving/deleting locations). Without it nobody can
-    // log in, so that screen stays locked and only the built-in Greek cities + the map picker are
-    // available to visitors. The password itself is never stored — only a hash of it:
+    // Optional: the account that becomes the first ADMINISTRATOR the first time the app runs with no users yet (it also takes over the
+    // locations saved so far). Leave empty and create the first administrator with `php tools/add-user.php <name> admin` instead.
+    // Later users are created in the app (Users page, administrators only). Only a hash of the password is stored:
     //   1. php tools/hash-password.php        (type the password when asked; prints the hash)
     //   2. paste the user name and that hash below, or set the env vars instead
     //   Env vars: WEFO_ADMIN_USER, WEFO_ADMIN_PASSWORD_HASH (take priority over the lines below)
-    // Changing the hash logs every existing session out. Wrong guesses are throttled (5 per IP per 15 min).
     // OpenRouteService key for the "Trip" tab (driving routes in Greece: distance, time, elevation, toll roads).
     //   Env var: WEFO_ORS_API_KEY (takes priority over the line below if set)
     //   Get a key: https://openrouteservice.org/dev/#/signup -> sign up (free, no card) -> "Request a token" (Standard / Free plan:

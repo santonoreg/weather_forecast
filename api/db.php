@@ -83,6 +83,30 @@ function db(): PDO
         body TEXT NOT NULL,
         fetched_at INTEGER NOT NULL
     )');
+    // Users, sessions and their cars. Saved locations belong to a user.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        pass_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )");
+    $pdo->exec('CREATE TABLE IF NOT EXISTS sessions (
+        token_hash TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        expires INTEGER NOT NULL,
+        created INTEGER NOT NULL
+    ) WITHOUT ROWID');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS user_cars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        cons REAL NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )');
+    if (!in_array('user_id', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN user_id INTEGER');
+    seed_admin($pdo);
     sync_cities($pdo);
     // Long-term daily history per saved location (downloaded once, then cached here)
     $pdo->exec('CREATE TABLE IF NOT EXISTS history_daily (
@@ -97,6 +121,27 @@ function db(): PDO
         first_date TEXT, last_date TEXT, fetched_at INTEGER NOT NULL
     )');
     return $pdo;
+}
+
+// The account that was configured before users existed (api/config.php / WEFO_ADMIN_* env vars) becomes the first administrator and
+// takes over the locations saved so far. Only runs while the users table is empty.
+function seed_admin(PDO $pdo): void
+{
+    if ((int)fetch_col($pdo->query('SELECT COUNT(*) FROM users')) > 0) return;
+    $c = app_config();
+    if (empty($c['admin_user']) || empty($c['admin_password_hash'])) return;
+    $pdo->exec('BEGIN IMMEDIATE');
+    try {
+        if ((int)fetch_col($pdo->query('SELECT COUNT(*) FROM users')) === 0) {
+            $pdo->prepare("INSERT INTO users (username, pass_hash, role) VALUES (?, ?, 'admin')")->execute([(string)$c['admin_user'], (string)$c['admin_password_hash']]);
+            $id = (int)$pdo->lastInsertId();
+            $pdo->prepare("UPDATE locations SET user_id = ? WHERE kind = 'saved' AND user_id IS NULL")->execute([$id]);
+        }
+        $pdo->exec('COMMIT');
+    } catch (Throwable $e) {
+        $pdo->exec('ROLLBACK');
+        throw $e;
+    }
 }
 
 // Keeps the built-in Greek cities (api/cities.php) in the locations table. Cheap on every request (one
@@ -173,4 +218,10 @@ function http_get(string $url, int $timeout = 20): ?string
     $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     curl_close($ch);
     return ($body !== false && $status === 200) ? $body : null;
+}
+
+// Every endpoint needs a logged-in user, except the ones that define WEFO_PUBLIC first (api/auth.php) and command-line tools.
+if (!defined('WEFO_PUBLIC') && PHP_SAPI !== 'cli') {
+    require_once __DIR__ . '/auth_lib.php';
+    auth_require();
 }

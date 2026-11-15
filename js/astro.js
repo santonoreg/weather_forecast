@@ -349,8 +349,8 @@ const Astro = (() => {
     const loc = state.current; if (!loc || !S.data) return;
     S.bortle = { v: v || null, src: 'own' };
     const done = () => { renderBortle(); model = build(S.data, S.bortle.v); nightsList = nights(model); render(); };
-    if (state.admin && loc.id != null) {
-      // the admin's value is stored with the location and becomes the default for everybody
+    if (loc.id != null && (state.admin || state.locations.some((l) => l.id === loc.id))) {
+      // stored with the location: your own saved place, or (administrator) a built-in city for everybody
       api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'bortle', id: loc.id, bortle: v || null }) })
         .then(() => { loc.bortle = v || null; loc.bortle_set = v ? 1 : 0; try { localStorage.removeItem(bkey(loc)); } catch (e) { /* ignore */ } S.bortle = bortleOf(loc); done(); })
         .catch((e) => { $('astroErr').textContent = e.message; $('astroErr').hidden = false; });

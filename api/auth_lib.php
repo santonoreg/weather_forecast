@@ -1,50 +1,21 @@
 <?php
-// Admin login helpers. One admin account, configured in api/config.php (git-ignored) or env vars:
-//   admin_user / WEFO_ADMIN_USER, admin_password_hash / WEFO_ADMIN_PASSWORD_HASH
-// The password itself is never stored — only a password_hash() hash (see tools/hash-password.php).
-// With nothing configured nobody can log in, so the locations manager simply stays locked.
-//
-// The session is a stateless signed cookie: payload "user|expiry" + HMAC keyed from the password hash,
-// so changing the password invalidates every existing login and no server-side session files are needed.
+// Users, roles and sessions.
+//   users     : id, username (unique, case-insensitive), pass_hash (password_hash), role 'admin' | 'user'
+//   sessions  : server-side, so deleting a user or changing a password logs them out at once. The cookie holds a random token;
+//               only its sha256 is stored. "Remember me" keeps the session 30 days (persistent cookie), otherwise it ends when the
+//               browser closes (and after one day at the latest).
+// The first admin is seeded from api/config.php (admin_user / admin_password_hash) or the WEFO_ADMIN_* env vars when the users table is
+// still empty, so the account that existed before becomes the administrator. More users: Users page (admin) or tools/add-user.php.
+// Every API endpoint requires a login (see the bottom of db.php) except api/auth.php.
 declare(strict_types=1);
 
-const AUTH_COOKIE = 'wefo_auth';
-const AUTH_TTL = 14 * 86400;
+const AUTH_COOKIE = 'wefo_sid';
+const AUTH_TTL_REMEMBER = 30 * 86400;
+const AUTH_TTL_SESSION = 86400;
 
 function auth_configured(): bool
 {
-    $c = app_config();
-    return !empty($c['admin_user']) && !empty($c['admin_password_hash']);
-}
-
-function auth_secret(): string
-{
-    return hash('sha256', 'wefo-auth-v1|' . (string)(app_config()['admin_password_hash'] ?? ''));
-}
-
-function auth_b64(string $s): string { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); }
-function auth_unb64(string $s): string { return (string)base64_decode(strtr($s, '-_', '+/')); }
-
-function auth_make_token(string $user, int $exp): string
-{
-    $p = auth_b64($user . '|' . $exp);
-    return $p . '.' . hash_hmac('sha256', $p, auth_secret());
-}
-
-function auth_is_admin(): bool
-{
-    if (!auth_configured()) return false;
-    $v = $_COOKIE[AUTH_COOKIE] ?? '';
-    if (!is_string($v) || substr_count($v, '.') !== 1) return false;
-    [$p, $sig] = explode('.', $v);
-    if (!hash_equals(hash_hmac('sha256', $p, auth_secret()), $sig)) return false;
-    $parts = explode('|', auth_unb64($p), 2);
-    return count($parts) === 2 && hash_equals((string)app_config()['admin_user'], $parts[0]) && (int)$parts[1] > time();
-}
-
-function auth_require(): void
-{
-    if (!auth_is_admin()) json_out(['error' => 'Login required', 'code' => 'login_required'], 401);
+    return (int)fetch_col(db()->query('SELECT COUNT(*) FROM users')) > 0;
 }
 
 function auth_https(): bool
@@ -63,6 +34,54 @@ function auth_set_cookie(string $value, int $expires): void
 {
     setcookie(AUTH_COOKIE, $value, ['expires' => $expires, 'path' => auth_cookie_path(), 'secure' => auth_https(), 'httponly' => true, 'samesite' => 'Lax']);
 }
+
+/* The logged-in user: ['id','name','role'] or null */
+function auth_user(): ?array
+{
+    static $u = false;
+    if ($u !== false) return $u;
+    $u = null;
+    $tok = $_COOKIE[AUTH_COOKIE] ?? '';
+    if (!is_string($tok) || !preg_match('/^[0-9a-f]{64}$/', $tok)) return $u;
+    $st = db()->prepare('SELECT u.id, u.username, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires > ?');
+    $st->execute([hash('sha256', $tok), time()]);
+    $row = fetch_one($st);
+    if ($row) $u = ['id' => (int)$row['id'], 'name' => (string)$row['username'], 'role' => (string)$row['role']];
+    return $u;
+}
+
+function auth_is_user(): bool { return auth_user() !== null; }
+function auth_is_admin(): bool { $u = auth_user(); return $u !== null && $u['role'] === 'admin'; }
+
+function auth_require(): void
+{
+    if (!auth_is_user()) json_out(['error' => 'Login required', 'code' => 'login_required'], 401);
+}
+
+function auth_require_admin(): void
+{
+    auth_require();
+    if (!auth_is_admin()) json_out(['error' => 'Administrator only', 'code' => 'admin_required'], 403);
+}
+
+function auth_start_session(int $userId, bool $remember): void
+{
+    $pdo = db();
+    $pdo->prepare('DELETE FROM sessions WHERE expires < ?')->execute([time()]);
+    $tok = bin2hex(random_bytes(32));
+    $ttl = $remember ? AUTH_TTL_REMEMBER : AUTH_TTL_SESSION;
+    $pdo->prepare('INSERT INTO sessions (token_hash, user_id, expires, created) VALUES (?, ?, ?, ?)')->execute([hash('sha256', $tok), $userId, time() + $ttl, time()]);
+    auth_set_cookie($tok, $remember ? time() + $ttl : 0);
+}
+
+function auth_end_session(): void
+{
+    $tok = $_COOKIE[AUTH_COOKIE] ?? '';
+    if (is_string($tok) && preg_match('/^[0-9a-f]{64}$/', $tok)) db()->prepare('DELETE FROM sessions WHERE token_hash = ?')->execute([hash('sha256', $tok)]);
+    auth_set_cookie('', time() - 3600);
+}
+
+function auth_valid_name(string $n): bool { return (bool)preg_match('/^[A-Za-z0-9._@-]{3,40}$/', $n); }
 
 /* ---- brute-force throttle: a few failures per IP per window, plus a looser global cap ---- */
 const AUTH_FAIL_WINDOW = 900;

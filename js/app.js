@@ -14,6 +14,7 @@ const locName = (l) => ((LANG === 'el' && l.name_el) ? l.name_el : l.name);
 async function api(path, opts) {
   const res = await fetch(path, opts);
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && data.code === 'login_required') { if (typeof showGate === 'function') showGate(); throw new Error(data.error); }
   if (!res.ok) throw new Error(data.error || t('err.http', { s: res.status }));
   return data;
 }
@@ -972,7 +973,7 @@ function renderLocSelect() {
   const cities = [...state.cities].sort((a, b) => locName(a).localeCompare(locName(b), dateLocale()));
   const adhoc = state.current && state.current.id == null ? `<option value="${ADHOC}">📌 ${esc(state.current.name)}</option>` : '';
   $('locSelect').innerHTML = `<option value="__geo__">📍 ${esc(t('pl.geo'))}</option><option value="__map__">🗺️ ${esc(t('loc.map'))}</option>${adhoc}`
-    + (state.admin && state.locations.length ? `<optgroup label="${esc(t('loc.saved'))}">${state.locations.map(opt).join('')}</optgroup>` : '')
+    + (state.user && state.locations.length ? `<optgroup label="${esc(t('loc.saved'))}">${state.locations.map(opt).join('')}</optgroup>` : '')
     + `<optgroup label="${esc(t('loc.cities'))}">${cities.map(opt).join('')}</optgroup>`;
   $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : '';
   $('astroLoc').innerHTML = $('locSelect').innerHTML; $('astroLoc').value = $('locSelect').value;
@@ -1020,7 +1021,7 @@ function useMyLocation() {
       const near = allLocations().find((l) => haversineKm(lat, lon, l.lat, l.lon) < 1);
       if (near) { setCurrent(near); return; }
       const name = await adhocName(lat, lon);
-      if (!state.admin) { setCurrent({ id: null, name, lat, lon }); return; }
+      if (!state.user) { setCurrent({ id: null, name, lat, lon }); return; }
       try {
         const loc = await api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, lat, lon }) });
         await loadLocations(loc.id);
@@ -1072,50 +1073,109 @@ $('pickResults').addEventListener('click', (e) => {
   choosePoint(r.lat, r.lon, r.name.split(',')[0]); pickMap.setView([r.lat, r.lon], 11);
 });
 
-/* ================= Admin login ================= */
+/* ================= Login, users ================= */
+const jsonPost = (body) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 function updateAuthUI() {
-  $('loginBtn').hidden = state.admin;
-  $('logoutBtn').hidden = !state.admin;
-  document.querySelector('.nav-btn[data-view="places"]').hidden = !state.admin;
+  document.body.classList.toggle('locked', !state.user);
+  $('gate').hidden = !!state.user;
+  $('userBtn').hidden = !state.user;
+  $('userBtn').textContent = state.user ? state.user.name : '';
+  $('logoutBtn').hidden = !state.user;
+  document.querySelector('.nav-btn[data-view="users"]').hidden = !state.admin;
 }
+function setUser(u) { state.user = u || null; state.admin = !!(u && u.role === 'admin'); updateAuthUI(); }
 async function loadAuth() {
-  try { state.admin = !!(await api('api/auth.php')).admin; } catch (e) { state.admin = false; }
-  updateAuthUI();
+  try { setUser((await api('api/auth.php')).user); } catch (e) { setUser(null); }
 }
-function closeModals() { document.querySelectorAll('.modal').forEach((m) => { m.hidden = true; }); }
-function openLogin() {
+function showGate() {                                   // the session ended (or never existed): back to the login screen
+  if (state.user) setUser(null);
+  closeModals();
+  $('gate').hidden = false;
   $('loginMsg').textContent = ''; $('loginPass').value = '';
-  $('loginModal').hidden = false;
   setTimeout(() => $('loginUser').focus(), 30);
 }
-$('loginBtn').addEventListener('click', openLogin);
+function closeModals() { document.querySelectorAll('.modal').forEach((m) => { m.hidden = true; }); }
 document.querySelectorAll('.modal').forEach((m) => m.addEventListener('mousedown', (e) => { if (e.target === m || e.target.closest('[data-close]')) closeModals(); }));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModals(); });
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   $('loginSubmit').disabled = true; $('loginMsg').textContent = '';
   try {
-    const res = await fetch('api/auth.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', user: $('loginUser').value, password: $('loginPass').value }) });
+    const res = await fetch('api/auth.php', jsonPost({ action: 'login', user: $('loginUser').value, password: $('loginPass').value, remember: $('loginRemember').checked }));
     const j = await res.json().catch(() => ({}));
     if (!res.ok) {
       $('loginMsg').textContent = t({ locked: 'auth.err.locked', not_configured: 'auth.err.notconfigured' }[j.code] || 'auth.err.bad');
       return;
     }
     $('loginPass').value = '';
-    closeModals();
-    state.admin = true; updateAuthUI();
-    await loadLocations(state.current && state.current.id != null ? state.current.id : undefined);
-    showView('places');
+    setUser(j.user);
+    await startApp();
   } catch (err) { $('loginMsg').textContent = t('auth.err.net'); }
   finally { $('loginSubmit').disabled = false; }
 });
 $('logoutBtn').addEventListener('click', async () => {
-  try { await api('api/auth.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) }); } catch (e) { /* the cookie is only a convenience; clear the UI regardless */ }
-  state.admin = false; updateAuthUI();
+  try { await api('api/auth.php', jsonPost({ action: 'logout' })); } catch (e) { /* the session is only a convenience; clear the UI regardless */ }
   closeHistory();
-  showView('forecast');
-  await loadLocations(state.current && state.current.id != null ? state.current.id : undefined);
+  state.current = null; state.data = null;
+  setUser(null); showGate();
 });
+// Account: change my password
+$('userBtn').addEventListener('click', () => {
+  $('accName').textContent = state.user.name + (state.admin ? ' · ' + t('usr.role.admin') : '');
+  $('accOld').value = ''; $('accNew').value = ''; $('accMsg').textContent = ''; $('accMsg').classList.remove('err');
+  $('accModal').hidden = false; setTimeout(() => $('accOld').focus(), 30);
+});
+$('accForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('accMsg').classList.remove('err');
+  try {
+    await api('api/auth.php', jsonPost({ action: 'password', old: $('accOld').value, new: $('accNew').value }));
+    $('accMsg').textContent = t('acc.done'); $('accOld').value = ''; $('accNew').value = '';
+  } catch (err) { $('accMsg').textContent = err.message; $('accMsg').classList.add('err'); }
+});
+/* Users page (administrator) */
+const Users = (() => {
+  async function load() {
+    const box = $('usersList');
+    let r;
+    try { r = await api('api/users.php'); } catch (e) { box.textContent = e.message; return; }
+    box.innerHTML = `<table class="users-tbl"><thead><tr><th>${esc(t('auth.user'))}</th><th>${esc(t('usr.role'))}</th><th>${esc(t('usr.locs'))}</th><th>${esc(t('usr.cars'))}</th><th></th></tr></thead><tbody>`
+      + r.users.map((u) => `<tr data-id="${u.id}"><td><b>${esc(u.name)}</b>${u.id === r.me ? ` <small>(${esc(t('usr.you'))})</small>` : ''}</td>
+        <td><select data-act="role"${u.id === r.me ? ' disabled' : ''}><option value="user"${u.role === 'user' ? ' selected' : ''}>${esc(t('usr.role.user'))}</option><option value="admin"${u.role === 'admin' ? ' selected' : ''}>${esc(t('usr.role.admin'))}</option></select></td>
+        <td>${u.locations}</td><td>${u.cars}</td>
+        <td class="ut-act"><button class="btn ghost small" data-act="pw" type="button">${esc(t('usr.pw'))}</button>${u.id === r.me ? '' : ` <button class="btn ghost small danger" data-act="del" type="button">${esc(t('usr.del'))}</button>`}</td></tr>`).join('')
+      + '</tbody></table>';
+  }
+  const msg = (m, err) => { $('usersMsg').textContent = m || ''; $('usersMsg').classList.toggle('err', !!err); };
+  $('userForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); msg('');
+    try {
+      await api('api/users.php', jsonPost({ action: 'create', name: $('nuName').value, password: $('nuPass').value, role: $('nuRole').value }));
+      msg(t('usr.created', { n: $('nuName').value })); $('nuName').value = ''; $('nuPass').value = ''; load();
+    } catch (err) { msg(err.message, true); }
+  });
+  $('usersList').addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const id = +b.closest('tr').dataset.id, name = b.closest('tr').querySelector('b').textContent;
+    try {
+      if (b.dataset.act === 'del') {
+        if (!confirm(t('usr.del.confirm', { n: name }))) return;
+        await api('api/users.php?id=' + id, { method: 'DELETE' }); msg(t('usr.deleted', { n: name })); load();
+      } else if (b.dataset.act === 'pw') {
+        const p = prompt(t('usr.pw.ask', { n: name }));
+        if (!p) return;
+        await api('api/users.php', jsonPost({ action: 'password', id, password: p })); msg(t('usr.pw.done', { n: name }));
+      }
+    } catch (err) { msg(err.message, true); }
+  });
+  $('usersList').addEventListener('change', async (e) => {
+    const s = e.target.closest('select[data-act="role"]'); if (!s) return;
+    try { await api('api/users.php', jsonPost({ action: 'role', id: +s.closest('tr').dataset.id, role: s.value })); msg(t('usr.saved')); }
+    catch (err) { msg(err.message, true); }
+    load();
+  });
+  return { show: load };
+})();
 const haversineKm = (la1, lo1, la2, lo2) => {
   const r = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
   const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
@@ -1125,7 +1185,7 @@ const haversineKm = (la1, lo1, la2, lo2) => {
 /* ================= Τοποθεσίες ================= */
 async function loadLocations(selectId) {
   const r = await api('api/locations.php');
-  state.locations = r.saved || [];   // only filled for a logged-in admin
+  state.locations = r.saved || [];   // your own saved locations
   state.cities = r.cities || [];
   renderSaved();
   let saved = null;
@@ -1240,7 +1300,7 @@ $('savedList').addEventListener('click', async (e) => {
 
 /* ================= Πλοήγηση ================= */
 function showView(name) {
-  if (name === 'places' && !state.admin) { openLogin(); return; }   // the locations manager is for the logged-in admin only
+  if (!state.user || (name === 'users' && !state.admin)) return;   // the login screen covers everything until you are in; Users is for administrators
   state.view = name;
   try { history.replaceState(null, '', name === 'forecast' ? location.pathname + location.search : '#' + name); } catch (e) { /* ignore */ }   // a refresh stays on this tab
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
@@ -1248,6 +1308,7 @@ function showView(name) {
   if (name === 'astro') Astro.load();
   if (name === 'dso') Dso.show();
   if (name === 'trip') Trip.show();
+  if (name === 'users') Users.show();
   if (name === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
 }
 document.querySelectorAll('.nav-btn').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -1429,7 +1490,13 @@ if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', sync
 syncThemeBtn();
 
 $('brandIcon').innerHTML = WI.svg(2, false);
-loadAuth().then(() => loadLocations()).then(() => { const v = location.hash.slice(1); if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'places') showView(v); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
+async function startApp() {
+  await loadLocations();
+  const v = location.hash.slice(1);
+  if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'places' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
+}
+$('gateIcon').innerHTML = WI.svg(2, false);
+loadAuth().then(() => { if (state.user) return startApp(); showGate(); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
 
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(centerNow, 50));
 window.addEventListener('load', () => setTimeout(centerNow, 100));

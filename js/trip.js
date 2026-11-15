@@ -368,7 +368,8 @@ const Trip = (() => {
               <div class="fld mdlsel"><span class="fl">${esc(t('trip.model'))}</span><div class="cb"><input id="trModel" type="text" autocomplete="off" spellcheck="false" placeholder="${esc(t('trip.model.type'))}"><ul class="results cb-list" id="trModelL" hidden></ul></div></div></div>
             <div class="tr-fuel-row"><div class="tr-fuel-in"><label><span id="trConsLbl"></span><input id="trCons" type="number" min="1" max="60" step="0.1" value="${FUEL.cons}"></label>
               <label><span id="trPriceLbl"></span><input id="trPrice" type="number" min="0.01" max="5" step="0.01" value="${FUEL.prices[FUEL.type]}"></label></div>
-              <div class="tr-fuel-out" id="trFuelOut"></div></div></div>
+              <div class="tr-fuel-out" id="trFuelOut"></div></div>
+            <div class="tr-mycar"><input id="trMyName" type="text" maxlength="80" autocomplete="off" placeholder="${esc(t('trip.mycar.name'))}"><button id="trMySave" class="btn ghost small" type="button">${esc(t('trip.mycar.save'))}</button><span id="trMyMsg" class="hint"></span></div></div>
           <div class="tr-total"><span>${esc(t('trip.total'))}<small>${esc(t('trip.total.sub'))}</small></span><b id="trTotal">${esc(totalTxt(r))}</b></div>
           <p class="hint">${esc(t('trip.fuel.note'))}</p>
           <h3>${esc(t('trip.warnings'))}</h3>
@@ -415,6 +416,12 @@ const Trip = (() => {
     Object.keys(eu).forEach((m) => { T.cars[m] = (eu[m] || []).concat(T.cars[m] || []); });
     return T.cars;
   }
+  async function loadMine() {
+    try { T.mine = (await (await fetch('api/cars.php')).json()).cars || []; } catch (e) { T.mine = T.mine || []; }
+    return T.mine;
+  }
+  const mineOf = () => (T.mine || []).filter((c) => c.kind === FUEL.type);
+  const makeLabel = () => (FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make === '__mine' ? t('trip.car.mine') : FUEL.make);
   const carVal = (c) => (c[1] === 'e' ? t('trip.fuel.cons.e') : t('trip.fuel.cons'));
   /* Make / Model: type to filter (every word you type must appear in the entry), click or Enter to choose, arrows to move */
   function combo(inp, list, items, pick) {
@@ -423,7 +430,7 @@ const Trip = (() => {
       const words = q.toLowerCase().split(/\s+/).filter(Boolean);
       shown = items().filter((it) => words.every((w) => it.label.toLowerCase().includes(w)));
       const cut = shown.slice(0, 80);
-      list.innerHTML = cut.length ? cut.map((it, k) => `<li data-k="${k}"${k === act ? ' class="on"' : ''}>${esc(it.label)}</li>`).join('') + (shown.length > cut.length ? `<li class="more">${esc(t('trip.car.more', { n: shown.length - cut.length }))}</li>` : '') : `<li class="more">${esc(t('search.none'))}</li>`;
+      list.innerHTML = cut.length ? cut.map((it, k) => `<li data-k="${k}"${k === act ? ' class="on"' : ''}>${esc(it.label)}${it.del ? `<b class="cb-x" data-del="${k}" title="${esc(t('trip.mycar.del'))}">✕</b>` : ''}</li>`).join('') + (shown.length > cut.length ? `<li class="more">${esc(t('trip.car.more', { n: shown.length - cut.length }))}</li>` : '') : `<li class="more">${esc(t('search.none'))}</li>`;
       list.hidden = false; shown = cut;
     };
     const choose = (k) => { const it = shown[k]; if (!it) return; list.hidden = true; inp.blur(); pick(it); };
@@ -439,21 +446,32 @@ const Trip = (() => {
       } else if (e.key === 'Enter') { e.preventDefault(); choose(act >= 0 ? act : 0); }
       else if (e.key === 'Escape') { list.hidden = true; inp.blur(); }
     });
-    list.addEventListener('mousedown', (e) => { const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); choose(+li.dataset.k); } });
+    list.addEventListener('mousedown', (e) => {
+      const x = e.target.closest('[data-del]');
+      if (x) { e.preventDefault(); const it = shown[+x.dataset.del]; if (it && it.del) it.del().then(() => draw(inp.value)); return; }
+      const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); choose(+li.dataset.k); }
+    });
     inp.addEventListener('blur', () => { setTimeout(() => { list.hidden = true; }, 120); inp._restore && inp._restore(); });
   }
   const makeItems = () => {
     const cars = T.cars || {};
-    return [{ k: '', label: t('trip.car.custom') }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).sort((x, y) => x.localeCompare(y)).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
+    return [{ k: '', label: t('trip.car.custom') }, { k: '__mine', label: `${t('trip.car.mine')} (${mineOf().length})` }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).sort((x, y) => x.localeCompare(y)).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
   };
-  const modelList = () => (FUEL.make === '__gen' ? GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']) : FUEL.make ? ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type) : []);
-  const modelItems = () => modelList().map((c) => ({ k: c[0], c, label: `${c[0]}${c[3] ? ` · ${c[3]}` : ''} · ${c[2]} ${carVal(c)}` }));
+  const modelList = () => (FUEL.make === '__mine' ? mineOf().map((c) => [c.name, c.kind, c.cons, '', c.id]) : FUEL.make === '__gen' ? GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']) : FUEL.make ? ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type) : []);
+  const modelItems = () => (FUEL.make === '__mine' && !mineOf().length ? [{ k: '__none', c: null, label: t('trip.mycar.none') }] : modelList().map((c) => (c[4] ? { k: 'id:' + c[4], c, label: `${c[0]} · ${c[2]} ${carVal(c)}`, del: () => removeMine(c) } : { k: c[0], c, label: `${c[0]}${c[3] ? ` · ${c[3]}` : ''} · ${c[2]} ${carVal(c)}` })));
+  async function removeMine(c) {
+    if (!confirm(t('trip.mycar.del.confirm', { n: c[0] }))) return;
+    try { await fetch('api/cars.php?id=' + c[4], { method: 'DELETE' }); } catch (e) { return; }
+    T.mine = (T.mine || []).filter((x) => x.id !== c[4]);
+    if (FUEL.model === 'id:' + c[4]) { FUEL.model = ''; saveFuel(); }
+    fillModels();
+  }
   function fillCars() {                                              // after the cars have loaded or the type changed: show the current choice in the two boxes
     const mk = $t('trMake'), md = $t('trModel');
     if (!mk || !md) return;
-    const ok = FUEL.make === '' || FUEL.make === '__gen' || makeItems().some((m) => m.k === FUEL.make);
+    const ok = FUEL.make === '' || FUEL.make === '__gen' || FUEL.make === '__mine' || makeItems().some((m) => m.k === FUEL.make);
     if (!ok) { FUEL.make = ''; FUEL.model = ''; }
-    mk.value = FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make;
+    mk.value = makeLabel();
     fillModels();
   }
   function fillModels() {
@@ -477,17 +495,32 @@ const Trip = (() => {
       FUEL.type = ty.value; FUEL.make = ''; FUEL.model = ''; FUEL.cons = DEF.cons[FUEL.type]; saveFuel();
       fillCars(); sync();
     });
-    mk._restore = () => { mk.value = FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make; };
+    mk._restore = () => { mk.value = makeLabel(); };
     md._restore = () => { fillModels(); };
     combo(mk, $t('trMakeL'), makeItems, (it) => {
       FUEL.make = it.k; FUEL.model = ''; saveFuel(); mk._restore(); fillModels();
       if (it.k) setTimeout(() => md.focus(), 30);                    // straight on to the model list
     });
     combo(md, $t('trModelL'), modelItems, (it) => {
+      if (!it.c) return;
       FUEL.model = it.k; FUEL.cons = it.c[2]; saveFuel(); fillModels(); sync();
     });
+    const save = $t('trMySave'), nm = $t('trMyName'), msg = $t('trMyMsg');
+    save.addEventListener('click', async () => {                     // keep the figures on screen as one of my cars
+      msg.classList.remove('err'); msg.textContent = '';
+      const name = nm.value.trim();
+      if (!name || !(FUEL.cons > 0)) { nm.focus(); return; }
+      try {
+        const res = await fetch('api/cars.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, kind: FUEL.type, cons: FUEL.cons }) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(j.error || t('err.http', { s: res.status }));
+        (T.mine = T.mine || []).push({ id: j.id, name: j.name, kind: j.kind, cons: j.cons });
+        FUEL.make = '__mine'; FUEL.model = 'id:' + j.id; saveFuel(); nm.value = '';
+        fillCars(); msg.textContent = t('trip.mycar.saved');
+      } catch (err) { msg.textContent = err.message; msg.classList.add('err'); }
+    });
     showFuel(r);
-    loadCars().then(() => { if ($t('trMake') === mk) fillCars(); });
+    Promise.all([loadCars(), loadMine()]).then(() => { if ($t('trMake') === mk) fillCars(); });
   }
 
   /* ---------- full-screen map (Fullscreen API, with a fixed-position fallback for browsers that refuse it, e.g. iPhone Safari) ---------- */

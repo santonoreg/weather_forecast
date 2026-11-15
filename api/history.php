@@ -6,7 +6,7 @@
 // (at most one check per HIST_CHECK_SECONDS, or immediately with refresh=1).
 declare(strict_types=1);
 require __DIR__ . '/db.php';
-require __DIR__ . '/auth_lib.php';
+require_once __DIR__ . '/auth_lib.php';
 set_time_limit(240);
 
 const HIST_START = '1940-01-01';

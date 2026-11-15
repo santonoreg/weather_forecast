@@ -8,7 +8,7 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 - Frontend: plain **HTML / CSS / JavaScript** (no build step), [Leaflet](https://leafletjs.com/) for the map
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
 - **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
-- No API keys needed for the forecast, Sky Conditions or DSO Explorer (only the optional **Trip** route search needs a free OpenRouteService key). Everything is open to visitors except the *Locations & Map* manager, which sits behind a single optional [admin login](#admin-login)
+- No API keys needed for the forecast, Sky Conditions or DSO Explorer (only the optional **Trip** route search needs a free OpenRouteService key). The whole app sits behind a [login](#users-and-login) with users and an administrator
 - Beyond the forecast: a [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
@@ -65,7 +65,7 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 
 ![Models drop-down](docs/screenshots/models-dropdown.png)
 
-**Locations & Map** (admin login) – pick a point on the map, search, save locations
+**Locations & Map** – pick a point on the map, search, save locations
 
 ![Locations & Map](docs/screenshots/locations-map.png)
 
@@ -87,7 +87,7 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 
 ---
 
-_The screenshots are regenerated with `node tools/screenshots.js` (headless Edge/Chrome against a local copy; an admin login is needed for the Locations and History shots)._
+_The screenshots are regenerated with `node tools/screenshots.js` (headless Edge/Chrome against a local copy; pass a user name and password for the login)._
 
 ---
 
@@ -98,7 +98,7 @@ _The screenshots are regenerated with `node tools/screenshots.js` (headless Edge
 3. [How it works](#how-it-works)
 4. [Requirements](#requirements)
 5. [Installation](#installation)
-6. [Admin login](#admin-login)
+6. [Users and login](#users-and-login)
 7. [Configuration](#configuration)
 8. [Project structure](#project-structure)
 9. [HTTP API](#http-api)
@@ -111,9 +111,9 @@ _The screenshots are regenerated with `node tools/screenshots.js` (headless Edge
 
 ## What it shows
 
-### Locations & Map (admin only)
+### Locations & Map
 
-The *Locations & Map* page is only available after an **admin login** (see [Admin login](#admin-login)). Visitors who are not logged in get the full list of Greek cities in the *Location* drop-down, plus a **Choose on map…** entry that lets them pick any point (and **My location**) without saving anything. Logged-in admins additionally see their saved locations in the drop-down.
+Every logged-in user can open *Locations & Map* and save their own locations (private to them); they appear in the *Location* drop-down next to the Greek cities, and the **Choose on map…** entry and **My location** work without saving anything.
 
 - Pick a place by **clicking on the map**, typing **latitude/longitude**, **searching by name**, or using **My location**.
 - The name is filled in automatically (reverse geocoding) and you can edit it.
@@ -364,26 +364,22 @@ cd /var/www/wefo && git pull
 
 Then hard-refresh the browser (Ctrl+F5). The CSS/JS URLs carry a `?v=` version parameter in `index.html` to avoid stale caches; bump it when you change those files.
 
-## Admin login
+## Users and login
 
-Only a logged-in admin can open *Locations & Map*, save/delete locations or force a history refresh. Everyone else gets the Greek cities (`api/cities.php`, 119 towns and islands, seeded into the database as `kind='city'` rows) and the map picker.
+The whole app sits behind a login: until you are logged in you see only the login screen, and every API endpoint (except `api/auth.php`) answers `401`. There are two roles:
 
-1. Generate a password hash (the password is read from stdin and never stored):
+- **User** – everything in the app, plus their own saved locations (*Locations & Map*) and their own cars with fuel / energy consumption (Trip tab → *My cars*). Saved locations and cars are private to each user.
+- **Administrator** – everything a user can, plus the **Users** page (create users with a password, change a user's password or role, delete a user together with their locations and cars), forcing a climate-history refresh and setting the dark-sky class of the built-in cities. There is always at least one administrator; you cannot delete yourself.
 
-   ```bash
-   php tools/hash-password.php
-   ```
+*Keep me logged in for 30 days* (ticked by default) gives a persistent cookie; unticked, the session ends when the browser closes. Sessions are stored on the server (`sessions` table, only the SHA-256 of the random cookie token), so deleting a user or changing their password ends their sessions at once. The cookie is HttpOnly, `SameSite=Lax` and `Secure` over HTTPS. Failed logins are throttled (5 per IP / 40 total per 15 minutes, then HTTP 429). Everyone can change their own password from the user-name button in the header.
 
-2. Put it in `api/config.php` (git-ignored), or use environment variables:
+**The first administrator.** If `api/config.php` (or the env vars `WEFO_ADMIN_USER` / `WEFO_ADMIN_PASSWORD_HASH`) holds an admin account, as in earlier versions, it is turned into the first administrator the first time the app runs with an empty users table, and it takes over the locations saved so far. Otherwise create one on the server:
 
-   ```php
-   'admin_user' => 'admin',
-   'admin_password_hash' => '$2y$...',
-   ```
+```bash
+php tools/add-user.php santo admin      # asks for the password; also resets a forgotten one
+```
 
-   Environment equivalents: `WEFO_ADMIN_USER`, `WEFO_ADMIN_PASSWORD_HASH`. With no hash configured, nobody can log in.
-
-The session is a signed, HttpOnly cookie (`wefo_auth`, 14 days) derived from the password hash, so changing the password logs everyone out. Failed logins are throttled (5 per IP / 40 total per 15 minutes, then HTTP 429).
+Other users are created in the app (*Users* page) or with `php tools/add-user.php <name> user`. User names are 3-40 characters (letters, digits, `. _ @ -`), passwords at least 8.
 
 ## Configuration
 
@@ -411,7 +407,7 @@ index.html          single-page UI (Forecast, Sky Conditions, DSO Explorer, Loca
 css/style.css       styles (light/dark, responsive)
 js/i18n.js          translations (en, el) and language switching
 js/icons.js         3D-style SVG weather icons, WMO code → category mapping
-js/app.js           UI logic: tables, consensus, weighting, map, preferences, admin login
+js/app.js           UI logic: tables, consensus, weighting, map, preferences, login and users
 js/sunset.js        Sunset & sunrise quality view (Forecast tab)
 js/astro.js         Sky Conditions tab: Sun/Moon maths, seeing/transparency estimates, scores, light-pollution map
 js/dso.js           DSO Explorer: tonight's targets, hour boxes, altitude charts, photo viewer, finding chart
@@ -427,12 +423,15 @@ api/skypoints.php   cloud layers at points along the Sun's azimuth (Sunset & sun
 api/history.php     long-term daily history per saved location (download once, cached in SQLite)
 api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved locations (admin)
 api/cities.php      list of Greek cities shown to everyone
-api/auth.php        admin login / logout / status (api/auth_lib.php: cookie + throttle helpers)
+api/auth.php        login / logout / status / change own password (api/auth_lib.php: users, sessions, throttle)
+api/users.php       user management (administrators)
+api/cars.php        the logged-in user's own cars
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/google_weather.php   optional Google WeatherNext 3 integration (used by forecast.php)
 api/config.example.php   template for api/config.php (your own API keys — copy it, don't edit this one)
 api/config.php      your own local config (git-ignored; absent = optional features stay off)
-tools/hash-password.php  CLI helper that creates the admin password hash
+tools/hash-password.php  CLI helper that creates a password hash (for the optional admin account in config.php)
+tools/add-user.php      CLI: create a user / administrator or reset a password
 tools/test-dso.js        checks of the astronomy maths (node tools/test-dso.js)
 tools/screenshots.js     retakes the README screenshots with a headless browser
 data/               SQLite database (created automatically, git-ignored)
@@ -444,11 +443,13 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 
 | Endpoint | Description |
 |---|---|
-| `GET api/locations.php` | `{cities, saved}`; `saved` only for a logged-in admin |
-| `GET/POST api/auth.php` | status; `{action:'login'\|'logout', user, password}` |
-| `POST api/locations.php` | admin only; body `{"name","lat","lon"}` – save a location |
-| `POST api/locations.php` | admin only; body `{"action":"bortle","id","bortle":1-9\|null}` – set a location's dark-sky class |
-| `DELETE api/locations.php?id=ID` | admin only; delete a saved location |
+| `GET api/locations.php` | `{cities, saved}`; `saved` = the logged-in user's own |
+| `GET/POST api/auth.php` | status; `{action:'login'\|'logout'\|'password', user, password, remember}` |
+| `GET/POST/DELETE api/users.php` | administrators only: list, `{action:'create'\|'password'\|'role'}`, delete |
+| `GET/POST/DELETE api/cars.php` | the user's own cars `{name, kind p\|d\|h\|e, cons}` |
+| `POST api/locations.php` | body `{"name","lat","lon"}` – save a location |
+| `POST api/locations.php` | body `{"action":"bortle","id","bortle":1-9\|null}` – set a location's dark-sky class |
+| `DELETE api/locations.php?id=ID` | delete one of your saved locations |
 | `GET api/geocode.php?q=TEXT&lang=en\|el` | search places |
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
@@ -460,7 +461,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 
 Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 
-> There is a single admin account (see [Admin login](#admin-login)); saved locations are visible only to it. The forecast/verify endpoints stay open so visitors can use cities and the map picker.
+> Every endpoint needs a logged-in user (see [Users and login](#users-and-login)); saved locations and cars are private to their owner.
 
 ## Data, privacy and external services
 
