@@ -1244,3 +1244,8 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 #relModal .table-wrap { max-height: 62vh; overflow: auto; }
 #relTable .rowh { min-width: 190px; } #relTable tr.off { opacity: .6; } #relTable .mdl { padding: 2px 0; } #relTable .mdl:hover { background: none; }
 #relModal .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } #relModal .row .btn { height: 38px; box-sizing: border-box; }
+/* reliability window: wide, and always fully on screen (the table scrolls inside it) */
+#relModal { align-items: center; padding: 3vh 2vw; }
+#relModal .modal-card { max-width: 1500px; width: 96vw; max-height: 94vh; overflow: hidden; }
+#relModal .table-wrap { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+#relTable .rowh { min-width: 270px; max-width: none; white-space: normal; }

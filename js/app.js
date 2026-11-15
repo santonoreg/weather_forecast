@@ -380,17 +380,6 @@ function renderRelModal() {
   missing.forEach((id) => { html += `<tr class="off"><th class="rowh"><span class="mdl off"><span class="mtxt"><b>${esc(nameById(id))}</b><small>${t('m.missing')}</small></span></span></th><td colspan="${ncol - 1}"></td></tr>`; });
   $('relTable').innerHTML = html + '</tbody>';
   $('relNote').innerHTML = t('r.howto');
-  if (!v) { $('relLegend').textContent = ''; return; }
-  const w = Math.round((v.obs_weight || 0) * 100);
-  if (v.greece) {
-    const st = t('r.greece', { n: v.greece.stations, names: esc(v.greece.names.join(', ')) });
-    $('relLegend').innerHTML = `${st}<br>${t('r.legend.greece', { start: v.start, end: v.end, hours: v.hours, w })}<br>${t('r.limits')}`;
-  } else {
-    const st = v.station
-      ? t('r.station', { id: v.station.id, name: esc(v.station.name), km: v.station.km, n: v.station.reports, start: v.station.start, end: v.station.end })
-      : t('r.nostation', { km: 60 });
-    $('relLegend').innerHTML = `${st}<br>${t('r.legend', { start: v.start, end: v.end, hours: v.hours, loc: esc(locName(state.current)), w })}<br>${t('r.limits')}`;
-  }
 }
 const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''; };
 
