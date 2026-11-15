@@ -1135,3 +1135,16 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 /* the map fills its whole card, however tall the right-hand column gets */
 .tr-mapc { position: relative; min-height: 480px; } .tr-map { position: absolute; inset: 0; height: auto; }
 @media (max-width: 900px) { .tr-mapc { min-height: 340px; } }
+
+/* Trip: wide-map layout (button in the summary card) — map across the whole width, details + weather chart side by side underneath */
+.tr-hd { display: inline-flex; align-items: center; gap: 12px; } .tr-widebtn { margin-top: 0; }
+.tr-c1 em { font-style: normal; color: var(--text); font-weight: 600; }
+@media (min-width: 901px) {
+  #tripOut.wide { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); align-items: stretch; }
+  #tripOut.wide > .tr-sum, #tripOut.wide > .tr-stages, #tripOut.wide > .notice, #tripOut.wide > .loading { grid-column: 1 / -1; }
+  #tripOut.wide .tr-grid { display: contents; }
+  #tripOut.wide .tr-mapc { grid-column: 1 / -1; min-height: clamp(480px, 46vw, 720px); }
+}
+@media (max-width: 900px) { .tr-widebtn { display: none; } }
+.tr-sh, .tr-st { grid-template-columns: 210px minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 1fr); }
+.tr-c1 small { display: block; line-height: 1.35; }

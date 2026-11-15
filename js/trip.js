@@ -5,7 +5,8 @@
    Rough road-condition hints (slippery, fog, gusts …) are estimated from the forecast – there is no road-authority data. */
 const Trip = (() => {
   const $t = (id) => document.getElementById(id);
-  const T = { from: null, to: null, dep: Date.now(), when: 'now', routes: [], sel: 0, loading: '', error: null, map: null, layer: null, hover: null, token: 0, mapFitted: false };
+  const T = { from: null, to: null, dep: Date.now(), when: 'now', routes: [], sel: 0, loading: '', error: null, map: null, layer: null, hover: null, token: 0, mapFitted: false, wide: false, places: null };
+  try { T.wide = localStorage.getItem('wefo.trip.wide') === '1'; } catch (e) { /* ignore */ }
   const CAT_COL = { clear: '#f5b301', partly: '#f5b301', cloudy: '#94a3b8', fog: '#a8b4c8', drizzle: '#7fb4f5', rain: '#3b82f6', snow: '#38bdf8', thunder: '#a855f7' };
   const SEV_COL = ['#16a34a', '#d9a406', '#ea7a14', '#dc2626'];
   const MODEL_IDS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];
@@ -143,6 +144,28 @@ const Trip = (() => {
     return mx < 0.5 && m < 0.3 ? 0 : mx < 1.5 && m < 0.8 ? 1 : mx < 2.3 ? 2 : 3;
   }
 
+  /* ---------- place names: nearest settlement from assets/places_gr.json (GeoNames, 3 800 places; built once, cached by the service worker) ---------- */
+  async function loadPlaces() {
+    if (T.places) return T.places;
+    try { T.places = await (await fetch('assets/places_gr.json')).json(); } catch (e) { T.places = []; }
+    return T.places;
+  }
+  function placeNear(lat, lon) {                                   // the closest settlement; a bigger one wins when it is almost as close
+    const k = Math.cos((lat * Math.PI) / 180);
+    let best = null;
+    for (const p of T.places || []) {
+      const dy = (p[2] - lat) * 111.2;
+      if (dy > 16 || dy < -16) continue;
+      const d = Math.hypot(dy, (p[3] - lon) * 111.2 * k);
+      if (d > 16) continue;
+      const sc = d - 2 * Math.log10(p[4] + 10);
+      if (!best || sc < best.sc) best = { sc, d, p };
+    }
+    if (!best) return null;
+    const name = (LANG === 'el' && best.p[1]) || best.p[0];
+    return best.d < 3 ? name : t('trip.near', { p: name });
+  }
+
   /* ---------- data loading ---------- */
   async function plan() {
     if (!T.from || !T.to) { T.error = { text: t('trip.need') }; render(); return; }
@@ -158,10 +181,12 @@ const Trip = (() => {
       T.routes = d.routes; T.tollAsOf = d.tollAsOf || '';
       T.routes.forEach(prepRoute);
       T.loading = 'weather'; render();
+      await loadPlaces();
       await Promise.all(T.routes.map(async (r) => {
         const pts = r.sampleKm.map((km) => `${r.latAt(km).toFixed(2)},${r.lonAt(km).toFixed(2)},${Math.round((T.dep + r.timeAt(km)) / 1000)}`).join(';');
         const w = await api('api/tripweather.php?pts=' + encodeURIComponent(pts));
         r.wx = w.pts.map(analyse);
+        r.places = r.sampleKm.map((km) => placeNear(r.latAt(km), r.lonAt(km)));
         r.warn = warnings(r);
         r.score = score(r);
         r.verdict = verdict(r);
@@ -281,7 +306,7 @@ const Trip = (() => {
       const km = r.sampleKm[i], tm = T.dep + r.timeAt(km), nm = r.nameAt(km), el = r.eleAt(km);
       const fl = a ? Object.entries(a.flags).filter(([, v]) => v).map(([k]) => `<span class="tr-fl ${k}">${WARN_ICON[k] || ''} ${esc(t('trip.f.' + k))}</span>`).join('') : '';
       return `<div class="tr-st" data-i="${i}">
-        <div class="tr-c1"><b>${when(tm)}</b><small>${t('trip.km', { n: Math.round(km) })}${el != null ? ` · ${Math.round(el)} m` : ''}</small></div>
+        <div class="tr-c1"><b>${when(tm)}</b><small>${t('trip.km', { n: Math.round(km) })}${r.places && r.places[i] ? ` · <em>${esc(r.places[i])}</em>` : ''}${el != null ? ` · ${Math.round(el)} m` : ''}</small></div>
         <div class="tr-c2">${a ? wxIcon(a, true) : ''}<span><b>${a ? esc(t('cat.' + a.cat)) : '–'}</b><small>${a ? esc(t('trip.agree', { p: Math.round(a.agree * 100), n: a.n })) : esc(t('trip.nodata'))}${nm ? ` · ${esc(nm)}` : ''}</small></span></div>
         <div class="tr-c3">${a ? `<span title="${esc(t('trip.tspread'))}"><b>${Math.round(a.temp)}°</b> <small>${Math.round(a.tmin)}…${Math.round(a.tmax)}°</small></span><span><b>${a.rain >= 0.05 ? a.rain.toFixed(1) : '0'}</b> <small>mm/h</small></span><span><b>${a.gust != null ? Math.round(a.gust) : '–'}</b> <small>km/h</small></span>` : ''}</div>
         <div class="tr-c4">${fl}</div></div>`;
@@ -304,7 +329,7 @@ const Trip = (() => {
     const cost = nT ? (priced ? money(r.tollCost, r.tollCur) + (priced < nT ? ' +' : '') : '–') : t(unknownToll ? 'trip.cost.unknown' : 'trip.cost.none');
     box.innerHTML = `
       <section class="card tr-sum">
-        <div class="tr-title"><h2>${esc(T.from.name)} <span>→</span> ${esc(T.to.name)}</h2><span class="meta">${esc(T.when === 'now' ? t('trip.now') + ' · ' + timeStr(T.dep) : when(T.dep))}</span></div>
+        <div class="tr-title"><h2>${esc(T.from.name)} <span>→</span> ${esc(T.to.name)}</h2><span class="tr-hd"><span class="meta">${esc(T.when === 'now' ? t('trip.now') + ' · ' + timeStr(T.dep) : when(T.dep))}</span><button type="button" id="trWide" class="btn ghost small tr-widebtn" title="${esc(t('trip.wide.tip'))}">${esc(t(T.wide ? 'trip.wide.off' : 'trip.wide.on'))}</button></span></div>
         <div class="tr-kpis">
           <div class="tr-k"><span>${esc(t('trip.dist'))}</span><b>${kmStr(r.km)} km</b></div>
           <div class="tr-k"><span>${esc(t('trip.dur'))}</span><b>${durStr(r.sec)}</b></div>
@@ -340,6 +365,15 @@ const Trip = (() => {
     drawMap();
     bindChart(r);
     bindFuel(r);
+    box.classList.toggle('wide', T.wide);
+    const wb = $t('trWide');
+    if (wb) wb.addEventListener('click', () => {
+      T.wide = !T.wide;
+      try { localStorage.setItem('wefo.trip.wide', T.wide ? '1' : '0'); } catch (e) { /* ignore */ }
+      box.classList.toggle('wide', T.wide);
+      wb.textContent = t(T.wide ? 'trip.wide.off' : 'trip.wide.on');
+      setTimeout(() => { if (T.map) { T.map.invalidateSize(); T.map.fitBounds(L.latLngBounds(T.routes[T.sel].pts), { padding: [28, 28] }); } }, 80);
+    });
   }
 
   /* ---------- fuel estimate (updates in place, no redraw of the map) ---------- */
