@@ -1120,11 +1120,15 @@ $('logoutBtn').addEventListener('click', async () => {
   setUser(null); showGate();
 });
 // Account: change my password
-$('userBtn').addEventListener('click', () => {
-  $('accName').textContent = state.user.name + (state.admin ? ' · ' + t('usr.role.admin') : '');
+$('userBtn').addEventListener('click', async () => {
+  $('accName').textContent = state.user.name;
+  $('accInfo').textContent = t(state.admin ? 'usr.role.admin' : 'usr.role.user') + ' · ' + t('acc.locs', { n: state.locations.length });
+  $('accPwBox').hidden = true; $('accPwToggle').hidden = false;
   $('accOld').value = ''; $('accNew').value = ''; $('accMsg').textContent = ''; $('accMsg').classList.remove('err');
-  $('accModal').hidden = false; setTimeout(() => $('accOld').focus(), 30);
+  $('accModal').hidden = false;
 });
+$('accPwToggle').addEventListener('click', () => { $('accPwBox').hidden = false; $('accPwToggle').hidden = true; $('accOld').focus(); });
+$('accLogout').addEventListener('click', () => { closeModals(); $('logoutBtn').click(); });
 $('accForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   $('accMsg').classList.remove('err');

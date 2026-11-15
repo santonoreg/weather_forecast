@@ -1204,3 +1204,5 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .tr-mycar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; } .tr-mycar input { flex: 1 1 140px; min-width: 0; padding: 6px 8px; font-size: 13px; } .tr-mycar .hint { margin: 0; }
 .cb-list li { display: flex; justify-content: space-between; gap: 8px; align-items: center; } .cb-x { cursor: pointer; color: var(--muted); padding: 0 4px; font-weight: 400; } .cb-x:hover { color: #d33; }
 .gate-card label.chk { flex-direction: row; align-items: center; gap: 8px; padding-bottom: 0; }
+
+.acc-info { margin: 0; color: var(--muted); font-size: 14px; } .acc-pw { display: flex; flex-direction: column; gap: 10px; } .acc-pw label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261173">
+<link rel="stylesheet" href="css/style.css?v=20261174">
 </head>
 <body>
 <header class="topbar">
@@ -266,10 +266,15 @@
   <form class="modal-card" id="accForm">
     <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
     <h2 id="accName"></h2>
-    <label><span data-i18n="acc.old">Current password</span><input id="accOld" type="password" autocomplete="current-password" required></label>
-    <label><span data-i18n="acc.new">New password (8+ characters)</span><input id="accNew" type="password" autocomplete="new-password" minlength="8" required></label>
+    <p id="accInfo" class="acc-info"></p>
+    <button type="button" class="btn ghost" id="accPwToggle" data-i18n="acc.change">Change password</button>
+    <div id="accPwBox" class="acc-pw" hidden>
+      <label><span data-i18n="acc.old">Current password</span><input id="accOld" type="password" autocomplete="current-password" required></label>
+      <label><span data-i18n="acc.new">New password (8+ characters)</span><input id="accNew" type="password" autocomplete="new-password" minlength="8" required></label>
+      <button type="submit" class="btn primary" data-i18n="acc.save">Save new password</button>
+    </div>
     <p id="accMsg" class="hint" role="status"></p>
-    <button type="submit" class="btn primary" data-i18n="acc.change">Change password</button>
+    <button type="button" class="btn ghost" id="accLogout" data-i18n="auth.logout">Log out</button>
   </form>
 </div>
 
@@ -301,12 +306,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261173"></script>
-<script src="js/icons.js?v=20261173"></script>
-<script src="js/app.js?v=20261173"></script>
-<script src="js/astro.js?v=20261173"></script>
-<script src="js/sunset.js?v=20261173"></script>
-<script src="js/dso.js?v=20261173"></script>
-<script src="js/trip.js?v=20261173"></script>
+<script src="js/i18n.js?v=20261174"></script>
+<script src="js/icons.js?v=20261174"></script>
+<script src="js/app.js?v=20261174"></script>
+<script src="js/astro.js?v=20261174"></script>
+<script src="js/sunset.js?v=20261174"></script>
+<script src="js/dso.js?v=20261174"></script>
+<script src="js/trip.js?v=20261174"></script>
 </body>
 </html>
