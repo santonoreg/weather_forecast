@@ -568,6 +568,7 @@ document.addEventListener('click', (e) => {
 function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, heat = null, fixed = null }) {
   const n = points.length;
   if (n < 2) return '';
+  const label0 = (i) => points[i].label;
   const W = 1200, H = kind === 'bar' ? 110 : 170, pl = 40, pr = 12, pt = 10, pb = 22;
   const vals = nn(points.map((p) => p.v).concat(band ? band.flat() : []));
   let lo, hi;
@@ -583,7 +584,10 @@ function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, h
   }
   points.forEach((p, i) => { if (i % 3 === 0 || i === n - 1) g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="tx">${p.label}</text>`; });
   let body = '';
-  if (band) {
+  if (band && kind === 'bar') {
+    const bw0 = Math.max(2, (W - pl - pr) / n - 3);
+    body += band.map((b_, i) => (b_[1] == null || b_[1] <= 0.01 ? '' : `<rect x="${(x(i) - bw0 / 2).toFixed(1)}" y="${y(b_[1]).toFixed(1)}" width="${bw0.toFixed(1)}" height="${(y(0) - y(b_[1])).toFixed(1)}" fill="${color}" opacity=".22"><title>${label0(i)}: max ${b_[1].toFixed(d)}${unit}</title></rect>`)).join('');
+  } else if (band) {
     const top = band.map((b_, i) => (b_[1] == null ? '' : `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(b_[1]).toFixed(1)}`)).join('');
     const bot = band.map((b_, i) => (b_[0] == null ? '' : `L${x(n - 1 - i).toFixed(1)} ${y(band[n - 1 - i][0]).toFixed(1)}`)).join('');
     body += `<path d="${top}${bot}Z" fill="${color}" opacity=".14"/>`;
@@ -611,16 +615,17 @@ function meteoHtml() {
   const nowI = idx.findIndex((i) => data.time[i].slice(0, 13) === nowStr);
 
   const temps = idx.map((i) => ({ v: wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', i, i + 1))), label: label(i) }));
-  const band = idx.map((i) => { const v = nn(activeProviders().map((p) => agg(p, 'temperature_2m', i, i + 1))); return v.length ? [Math.min(...v), Math.max(...v)] : [null, null]; });
+  const rng = (key, k2) => idx.map((i) => { const v = nn(activeProviders().map((p) => agg(p, k2 || key, i, i + 1))); return v.length ? [Math.min(...v), Math.max(...v)] : [null, null]; });
+  const band = rng('temperature_2m');
   const precs = idx.map((i) => ({ v: wmean(wpairs('precip', (p) => agg(p, 'precip', i, i + 1))), label: label(i) }));
   const winds = idx.map((i) => ({ v: wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', i, i + 1))), label: label(i) }));
 
   const clouds = idx.map((i) => ({ v: wmean(wpairs('cloud_cover', (p) => agg(p, 'cloud_cover', i, i + 1))), label: label(i) }));
   return `
     <div class="mg-lane"><b>${t('mg.temp')}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, nowI, heat: heatTemp })}</div>
-    <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI, heat: heatRain })}</div>
-    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, heat: heatWind })}</div>
-    <div class="mg-lane"><b>${t('mg.cloud')}</b>${hourChart(clouds, { kind: 'line', color: 'var(--muted)', unit: '%', d: 0, nowI, fixed: [0, 100], heat: heatCloud })}</div>`;
+    <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI, band: rng('precip'), heat: heatRain })}</div>
+    <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, band: rng('wind', 'wind_speed_10m'), heat: heatWind })}</div>
+    <div class="mg-lane"><b>${t('mg.cloud')}</b>${hourChart(clouds, { kind: 'line', color: 'var(--muted)', unit: '%', d: 0, nowI, fixed: [0, 100], band: rng('cloud_cover'), heat: heatCloud })}</div>`;
 }
 function renderMeteogram() { $('meteo').innerHTML = meteoHtml(); }
 
