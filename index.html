@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261174">
+<link rel="stylesheet" href="css/style.css?v=20261175">
 </head>
 <body>
 <header class="topbar">
@@ -274,6 +274,15 @@
       <button type="submit" class="btn primary" data-i18n="acc.save">Save new password</button>
     </div>
     <p id="accMsg" class="hint" role="status"></p>
+    <h3 class="acc-h" data-i18n="acc.cars">My cars</h3>
+    <ul id="accCars" class="acc-cars"></ul>
+    <div class="acc-addcar">
+      <input id="acName" type="text" maxlength="80" autocomplete="off" data-i18n-ph="trip.mycar.name" placeholder="Name of this car">
+      <select id="acKind"><option value="p" data-i18n="trip.ft.p">Petrol</option><option value="d" data-i18n="trip.ft.d">Diesel</option><option value="h" data-i18n="trip.ft.h">Hybrid (petrol)</option><option value="e" data-i18n="trip.ft.e">Electric</option></select>
+      <input id="acCons" type="number" min="1" max="100" step="0.1" placeholder="L / 100 km">
+      <button type="button" class="btn ghost small" id="acAdd" data-i18n="acc.addcar">Add car</button>
+    </div>
+    <p id="acMsg" class="hint" role="status"></p>
     <button type="button" class="btn ghost" id="accLogout" data-i18n="auth.logout">Log out</button>
   </form>
 </div>
@@ -306,12 +315,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261174"></script>
-<script src="js/icons.js?v=20261174"></script>
-<script src="js/app.js?v=20261174"></script>
-<script src="js/astro.js?v=20261174"></script>
-<script src="js/sunset.js?v=20261174"></script>
-<script src="js/dso.js?v=20261174"></script>
-<script src="js/trip.js?v=20261174"></script>
+<script src="js/i18n.js?v=20261175"></script>
+<script src="js/icons.js?v=20261175"></script>
+<script src="js/app.js?v=20261175"></script>
+<script src="js/astro.js?v=20261175"></script>
+<script src="js/sunset.js?v=20261175"></script>
+<script src="js/dso.js?v=20261175"></script>
+<script src="js/trip.js?v=20261175"></script>
 </body>
 </html>

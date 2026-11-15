@@ -1125,7 +1125,34 @@ $('userBtn').addEventListener('click', async () => {
   $('accInfo').textContent = t(state.admin ? 'usr.role.admin' : 'usr.role.user') + ' · ' + t('acc.locs', { n: state.locations.length });
   $('accPwBox').hidden = true; $('accPwToggle').hidden = false;
   $('accOld').value = ''; $('accNew').value = ''; $('accMsg').textContent = ''; $('accMsg').classList.remove('err');
-  $('accModal').hidden = false;
+  $('accModal').hidden = false; $('acMsg').textContent = '';
+  accCars.load();
+});
+/* My cars (profile): the Trip tab lists these first */
+const accCars = {
+  list: [],
+  unit: (k) => (k === 'e' ? 'kWh / 100 km' : 'L / 100 km'),
+  draw() {
+    $('accCars').innerHTML = this.list.length ? this.list.map((c) => `<li data-id="${c.id}"><span>${esc(c.name)} <small>${c.cons} ${this.unit(c.kind)} · ${esc(t('trip.ft.' + c.kind))}</small></span><button type="button" class="cb-x" title="${esc(t('trip.mycar.del'))}">✕</button></li>`).join('') : `<li class="none">${esc(t('trip.mycar.none'))}</li>`;
+    $('acCons').placeholder = this.unit($('acKind').value);
+  },
+  async load() { try { this.list = (await api('api/cars.php')).cars || []; } catch (e) { this.list = []; } this.draw(); },
+};
+$('acKind').addEventListener('change', () => accCars.draw());
+$('acAdd').addEventListener('click', async () => {
+  const name = $('acName').value.trim(), cons = parseFloat($('acCons').value);
+  $('acMsg').classList.remove('err'); $('acMsg').textContent = '';
+  if (!name || !(cons > 0)) { (name ? $('acCons') : $('acName')).focus(); return; }
+  try {
+    await api('api/cars.php', jsonPost({ name, kind: $('acKind').value, cons }));
+    $('acName').value = ''; $('acCons').value = ''; $('acMsg').textContent = t('trip.mycar.saved'); await accCars.load();
+  } catch (err) { $('acMsg').textContent = err.message; $('acMsg').classList.add('err'); }
+});
+$('accCars').addEventListener('click', async (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const li = b.closest('li'), c = accCars.list.find((x) => x.id === +li.dataset.id);
+  if (!c || !confirm(t('trip.mycar.del.confirm', { n: c.name }))) return;
+  try { await api('api/cars.php?id=' + c.id, { method: 'DELETE' }); await accCars.load(); } catch (err) { $('acMsg').textContent = err.message; $('acMsg').classList.add('err'); }
 });
 $('accPwToggle').addEventListener('click', () => { $('accPwBox').hidden = false; $('accPwToggle').hidden = true; $('accOld').focus(); });
 $('accLogout').addEventListener('click', () => { closeModals(); $('logoutBtn').click(); });

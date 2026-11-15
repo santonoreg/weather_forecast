@@ -1206,3 +1206,8 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .gate-card label.chk { flex-direction: row; align-items: center; gap: 8px; padding-bottom: 0; }
 
 .acc-info { margin: 0; color: var(--muted); font-size: 14px; } .acc-pw { display: flex; flex-direction: column; gap: 10px; } .acc-pw label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+
+.acc-h { margin: 6px 0 0; font-size: 14px; } .acc-cars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow: auto; }
+.acc-cars li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); font-size: 13.5px; } .acc-cars small { color: var(--muted); } .acc-cars li.none { color: var(--muted); border-style: dashed; }
+.acc-addcar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .acc-addcar input, .acc-addcar select { padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; min-width: 0; } .acc-addcar input[type="text"] { grid-column: 1 / -1; } .acc-addcar .btn { grid-column: 1 / -1; }
+#accModal .modal-card { max-height: 92vh; overflow: auto; }

@@ -369,7 +369,7 @@ const Trip = (() => {
             <div class="tr-fuel-row"><div class="tr-fuel-in"><label><span id="trConsLbl"></span><input id="trCons" type="number" min="1" max="60" step="0.1" value="${FUEL.cons}"></label>
               <label><span id="trPriceLbl"></span><input id="trPrice" type="number" min="0.01" max="5" step="0.01" value="${FUEL.prices[FUEL.type]}"></label></div>
               <div class="tr-fuel-out" id="trFuelOut"></div></div>
-            <div class="tr-mycar"><input id="trMyName" type="text" maxlength="80" autocomplete="off" placeholder="${esc(t('trip.mycar.name'))}"><button id="trMySave" class="btn ghost small" type="button">${esc(t('trip.mycar.save'))}</button><span id="trMyMsg" class="hint"></span></div></div>
+</div></div></div>
           <div class="tr-total"><span>${esc(t('trip.total'))}<small>${esc(t('trip.total.sub'))}</small></span><b id="trTotal">${esc(totalTxt(r))}</b></div>
           <p class="hint">${esc(t('trip.fuel.note'))}</p>
           <h3>${esc(t('trip.warnings'))}</h3>
@@ -420,8 +420,8 @@ const Trip = (() => {
     try { T.mine = (await (await fetch('api/cars.php')).json()).cars || []; } catch (e) { T.mine = T.mine || []; }
     return T.mine;
   }
-  const mineOf = () => (T.mine || []).filter((c) => c.kind === FUEL.type);
-  const makeLabel = () => (FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make === '__mine' ? t('trip.car.mine') : FUEL.make);
+  const mineCar = () => (FUEL.make.startsWith('mine:') ? (T.mine || []).find((c) => 'mine:' + c.id === FUEL.make) : null);
+  const makeLabel = () => (FUEL.make === '' ? '' : FUEL.make === '__gen' ? t('trip.car.gen') : FUEL.make.startsWith('mine:') ? '★ ' + ((mineCar() || {}).name || '') : FUEL.make);
   const carVal = (c) => (c[1] === 'e' ? t('trip.fuel.cons.e') : t('trip.fuel.cons'));
   /* Make / Model: type to filter (every word you type must appear in the entry), click or Enter to choose, arrows to move */
   function combo(inp, list, items, pick) {
@@ -455,21 +455,15 @@ const Trip = (() => {
   }
   const makeItems = () => {
     const cars = T.cars || {};
-    return [{ k: '', label: t('trip.car.custom') }, { k: '__mine', label: `${t('trip.car.mine')} (${mineOf().length})` }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).sort((x, y) => x.localeCompare(y)).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
+    const mine = (T.mine || []).map((c) => ({ k: 'mine:' + c.id, mine: c, label: `★ ${c.name} · ${c.cons} ${c.kind === 'e' ? t('trip.fuel.cons.e') : t('trip.fuel.cons')} · ${t('trip.ft.' + c.kind)}` }));
+    return [...mine, { k: '', label: t('trip.car.custom') }, { k: '__gen', label: t('trip.car.gen') }, ...Object.keys(cars).sort((x, y) => x.localeCompare(y)).filter((m) => cars[m].some((c) => c[1] === FUEL.type)).map((m) => ({ k: m, label: m }))];
   };
-  const modelList = () => (FUEL.make === '__mine' ? mineOf().map((c) => [c.name, c.kind, c.cons, '', c.id]) : FUEL.make === '__gen' ? GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']) : FUEL.make ? ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type) : []);
-  const modelItems = () => (FUEL.make === '__mine' && !mineOf().length ? [{ k: '__none', c: null, label: t('trip.mycar.none') }] : modelList().map((c) => (c[4] ? { k: 'id:' + c[4], c, label: `${c[0]} · ${c[2]} ${carVal(c)}`, del: () => removeMine(c) } : { k: c[0], c, label: `${c[0]}${c[3] ? ` · ${c[3]}` : ''} · ${c[2]} ${carVal(c)}` })));
-  async function removeMine(c) {
-    if (!confirm(t('trip.mycar.del.confirm', { n: c[0] }))) return;
-    try { await fetch('api/cars.php?id=' + c[4], { method: 'DELETE' }); } catch (e) { return; }
-    T.mine = (T.mine || []).filter((x) => x.id !== c[4]);
-    if (FUEL.model === 'id:' + c[4]) { FUEL.model = ''; saveFuel(); }
-    fillModels();
-  }
+  const modelList = () => (FUEL.make === '__gen' ? GENERIC[FUEL.type].map(([k, v]) => [t('trip.gen.' + k), FUEL.type, v, '']) : FUEL.make ? ((T.cars || {})[FUEL.make] || []).filter((c) => c[1] === FUEL.type) : []);
+  const modelItems = () => modelList().map((c) => ({ k: c[0], c, label: `${c[0]}${c[3] ? ` · ${c[3]}` : ''} · ${c[2]} ${carVal(c)}` }));
   function fillCars() {                                              // after the cars have loaded or the type changed: show the current choice in the two boxes
     const mk = $t('trMake'), md = $t('trModel');
     if (!mk || !md) return;
-    const ok = FUEL.make === '' || FUEL.make === '__gen' || FUEL.make === '__mine' || makeItems().some((m) => m.k === FUEL.make);
+    const ok = FUEL.make === '' || FUEL.make === '__gen' || makeItems().some((m) => m.k === FUEL.make);
     if (!ok) { FUEL.make = ''; FUEL.model = ''; }
     mk.value = makeLabel();
     fillModels();
@@ -477,17 +471,17 @@ const Trip = (() => {
   function fillModels() {
     const md = $t('trModel');
     if (!md) return;
-    md.disabled = !FUEL.make;
+    md.disabled = !FUEL.make || FUEL.make.startsWith('mine:');
     const cur = modelItems().find((m) => m.k === FUEL.model);
     md.value = cur ? cur.label : '';
   }
   function bindFuel(r) {
     const a = $t('trCons'), b = $t('trPrice'), ty = $t('trType'), mk = $t('trMake'), md = $t('trModel');
     if (!a || !b) return;
-    const sync = () => { a.value = FUEL.cons; b.value = FUEL.prices[FUEL.type]; showFuel(r); };
+    const sync = () => { ty.value = FUEL.type; a.value = FUEL.cons; b.value = FUEL.prices[FUEL.type]; showFuel(r); };
     a.addEventListener('input', () => {                              // typed by hand: the car selection no longer applies
       const c = parseFloat(a.value);
-      if (c > 0) { FUEL.cons = c; FUEL.model = ''; md.value = ''; saveFuel(); }
+      if (c > 0) { FUEL.cons = c; FUEL.model = ''; md.value = ''; if (FUEL.make.startsWith('mine:')) { FUEL.make = ''; mk._restore(); } saveFuel(); }
       showFuel(r);
     });
     b.addEventListener('input', () => { const p = parseFloat(b.value); if (p > 0) { FUEL.prices[FUEL.type] = p; saveFuel(); } showFuel(r); });
@@ -498,26 +492,14 @@ const Trip = (() => {
     mk._restore = () => { mk.value = makeLabel(); };
     md._restore = () => { fillModels(); };
     combo(mk, $t('trMakeL'), makeItems, (it) => {
-      FUEL.make = it.k; FUEL.model = ''; saveFuel(); mk._restore(); fillModels();
+      FUEL.make = it.k; FUEL.model = ''; mk._restore();
+      if (it.mine) { FUEL.type = it.mine.kind; FUEL.cons = it.mine.cons; saveFuel(); fillCars(); sync(); return; }   // one of my saved cars: type and consumption come with it
+      saveFuel(); fillModels();
       if (it.k) setTimeout(() => md.focus(), 30);                    // straight on to the model list
     });
     combo(md, $t('trModelL'), modelItems, (it) => {
       if (!it.c) return;
       FUEL.model = it.k; FUEL.cons = it.c[2]; saveFuel(); fillModels(); sync();
-    });
-    const save = $t('trMySave'), nm = $t('trMyName'), msg = $t('trMyMsg');
-    save.addEventListener('click', async () => {                     // keep the figures on screen as one of my cars
-      msg.classList.remove('err'); msg.textContent = '';
-      const name = nm.value.trim();
-      if (!name || !(FUEL.cons > 0)) { nm.focus(); return; }
-      try {
-        const res = await fetch('api/cars.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, kind: FUEL.type, cons: FUEL.cons }) });
-        const j = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(j.error || t('err.http', { s: res.status }));
-        (T.mine = T.mine || []).push({ id: j.id, name: j.name, kind: j.kind, cons: j.cons });
-        FUEL.make = '__mine'; FUEL.model = 'id:' + j.id; saveFuel(); nm.value = '';
-        fillCars(); msg.textContent = t('trip.mycar.saved');
-      } catch (err) { msg.textContent = err.message; msg.classList.add('err'); }
     });
     showFuel(r);
     Promise.all([loadCars(), loadMine()]).then(() => { if ($t('trMake') === mk) fillCars(); });
@@ -679,7 +661,7 @@ const Trip = (() => {
     sel.addEventListener('change', () => { T.when = sel.value; at.hidden = sel.value === 'now'; lim(); });
     $t('tripGo').addEventListener('click', plan);
   }
-  function show() { if (T.map) setTimeout(() => T.map && T.map.invalidateSize(), 50); }
+  function show() { loadMine().then(() => { if ($t('trMake')) fillCars(); }); if (T.map) setTimeout(() => T.map && T.map.invalidateSize(), 50); }
   return { init, render, show };
 })();
 Trip.init();
