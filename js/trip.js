@@ -359,7 +359,7 @@ const Trip = (() => {
       </div>
       <section class="card tr-tl"><h3>${esc(t('trip.timeline'))}</h3>${chart(r)}
         <p class="hint">${esc(t('trip.chart.note'))}</p></section>
-      <section class="card tr-stages"><h3>${esc(t('trip.stages'))}</h3><div class="tr-sh"><span>${esc(t('trip.col.when'))}</span><span>${esc(t('trip.col.wx'))}</span><span>${esc(t('trip.col.nums'))}</span><span></span></div>${stages(r)}
+      <section class="card tr-stages"><h3>${esc(t('trip.stages'))}</h3><div class="tr-slist"><div class="tr-sh"><span>${esc(t('trip.col.when'))}</span><span>${esc(t('trip.col.wx'))}</span><span>${esc(t('trip.col.nums'))}</span><span></span></div>${stages(r)}</div>
         <p class="hint">${t('trip.note', { asof: esc(T.tollAsOf || '–') })}</p></section>`;
     box.querySelectorAll('.tr-rc').forEach((b) => b.addEventListener('click', () => { T.sel = +b.dataset.r; T.mapFitted = false; render(); }));
     drawMap();

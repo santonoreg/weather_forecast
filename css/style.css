@@ -1148,3 +1148,12 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 @media (max-width: 900px) { .tr-widebtn { display: none; } }
 .tr-sh, .tr-st { grid-template-columns: 210px minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 1fr); }
 .tr-c1 small { display: block; line-height: 1.35; }
+
+/* wide layout, rearranged: map, then the details card beside "Stage by stage" (same height, the stage list scrolls), then the weather chart across */
+.tr-sh { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+@media (min-width: 901px) {
+  #tripOut.wide > .tr-sum { order: 0; } #tripOut.wide .tr-mapc { order: 1; } #tripOut.wide .tr-wx { order: 2; }
+  #tripOut.wide > .tr-stages { order: 3; grid-column: auto; display: flex; flex-direction: column; contain: size; min-height: 660px; }
+  #tripOut.wide > .tr-stages .tr-slist { flex: 1 1 0; min-height: 0; overflow: auto; }
+  #tripOut.wide > .tr-tl { order: 4; grid-column: 1 / -1; }
+}
