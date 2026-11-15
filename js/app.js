@@ -23,9 +23,10 @@ const state = { view: 'forecast', locations: [], cities: [], admin: false, curre
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 'm' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
 // Models shown or hidden is remembered per layout: hidden by default across, shown by default in the time-down view (where only "hide" is wanted)
-const MODELS_OPEN = { h: false, v: true };
-try { MODELS_OPEN.h = localStorage.getItem('wefo.modelsOpen') === '1'; const sv = localStorage.getItem('wefo.modelsOpenV'); if (sv !== null) MODELS_OPEN.v = sv === '1'; } catch (e) { /* ignore */ }
-Object.defineProperty(state, 'modelsOpen', { get: () => (state.orient === 'v' ? MODELS_OPEN.v : MODELS_OPEN.h), set: (x) => { MODELS_OPEN[state.orient === 'v' ? 'v' : 'h'] = !!x; } });
+let modelsAcross = false;
+try { modelsAcross = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
+// time-down always lists the models (no toggle there); the show/hide choice only belongs to the time-across layout
+Object.defineProperty(state, 'modelsOpen', { get: () => state.orient === 'v' || modelsAcross, set: (x) => { if (state.orient !== 'v') modelsAcross = !!x; } });
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* ignore */ }
@@ -544,7 +545,7 @@ function renderGridVertical(cols, builts) {
   $('grid').innerHTML = html;
   $('grid').classList.add('vert');
   $('grid').classList.add('weather-cols');
-  $('grid').classList.toggle('solo', !providerCols.length);   // only the weighted columns: let their bars use the free width
+  $('grid').classList.toggle('solo', !models.length);   // only the weighted columns: let their bars use the free width
   const more = hasMoreVerticalHours(state.vHours);
   $('vFooter').hidden = false;
   $('vFooter').innerHTML = `<span>${t('v.showing', { d: dayLabelFor(cols[cols.length - 1]?.dateIdx), time: cols[cols.length - 1]?.label })}</span>
@@ -697,7 +698,7 @@ function renderGrid() {
     $('grid').classList.remove('lanes');
     $('grid').hidden = false; $('meteo').hidden = true;
     renderGridVertical(cols, builts);
-    $('modelsToggle').hidden = false;
+    $('modelsToggle').hidden = true;   // the models are always listed in this layout
     setModelsToggle(rows.length + (extraRows || []).length);
   } else {
     $('grid').classList.remove('vert');
@@ -739,7 +740,7 @@ function setModelsToggle(n) {
 }
 $('modelsToggle').addEventListener('click', () => {
   state.modelsOpen = !state.modelsOpen;
-  try { localStorage.setItem(state.orient === 'v' ? 'wefo.modelsOpenV' : 'wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
   renderGrid();
 });
 document.querySelectorAll('#orientSeg [data-orient]').forEach((b) => {
