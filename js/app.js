@@ -141,6 +141,7 @@ function prepare(data) {
     if (p.name) MODEL_NAMES[p.id] = p.name;
     p.hourly.code = p.hourly.weather_code.map((c, i) => (c != null ? c : deriveCode(p, i)));
   });
+  Object.entries(data.models_known || {}).forEach(([id, name]) => { if (!MODEL_NAMES[id]) MODEL_NAMES[id] = name; });
   markDuplicates(data);
   markDerived(data);
   data.isDay = Array.from({ length: n }, (_, i) => {
@@ -162,6 +163,7 @@ function circMean(dirs, weights) {
 const liveHours = (p, arr, a, b) => nn(arr.slice(a, b).filter((_, k) => !(p.dupHours && p.dupHours[a + k])));
 let AGG_RAW = false;   // true while building a provider's own row: copied hours are shown (dimmed) instead of skipped
 function agg(p, param, a, b) {
+  lastAggA = a;
   const h = p.hourly;
   const keep = []; for (let i = a; i < Math.min(b, h.temperature_2m.length); i++) if (AGG_RAW || !p.dupHours || !p.dupHours[i]) keep.push(i);
   const sl = (arr) => nn(keep.map((i) => arr[i]));
@@ -289,9 +291,41 @@ const cell = (html, bg = '', cls = '') => ({ html, bg, cls });
 
 /* Reliability weighting: κάθε πάροχος έχει βάρος ανά παράμετρο (1 = ουδέτερο) */
 const weightsOn = () => state.weighted && !!state.verify;
-const W = (p, key) => ((weightsOn() && state.verify.models[p.id]?.weights?.[key]) || 1)
+/* Lead time. The verification gives every model its own weights for several forecast lead days (see
+   api/verify_lib.php); a column far into the future must not borrow the weights earned a few hours ahead.
+   The lead of a column is its distance in hours from the moment the forecast was fetched; the weight is read
+   from the neighbouring measured lead days and blended linearly (held constant beyond the first/last one).
+   `at` is the hour index of the column: callers do not pass it — agg() notes the hour it was last asked about
+   (lastAggA) and wpairs() reads it right after the callback has run; code that reads p.hourly directly (renderDays)
+   passes it as wpairs' 3rd argument. Without it (or without lead data) the lead-0 weights are used, as before. */
+let lastAggA = null;
+const leadHoursOf = (a) => Math.max(0, (Date.parse(`${state.data.time[Math.min(a, state.data.time.length - 1)]}:00Z`) - state.data.utc_offset_seconds * 1000 - Date.parse(state.data.generated)) / 3600000);
+function leadWeight(p, key, a) {
+  const w = leadWeightNational(p, key, a), loc = state.verify.local, nat0 = state.verify.models[p.id]?.weights?.[key], wl = loc?.weights?.[p.id]?.[key];
+  if (!loc || !loc.alpha || wl == null || nat0 == null) return w;
+  return Math.min(2.2, Math.max(0.3, w + loc.alpha * (wl - nat0)));   // tilted towards the nearest stations (api/verify_lib.php local_blend)
+}
+function leadWeightNational(p, key, a) {
+  const v = state.verify, base = v.models[p.id]?.weights?.[key];
+  const wbl = v.weights_by_lead;
+  if (!wbl || a == null) return base || 1;
+  v._lw = v._lw || {};
+  const ck = `${p.id}|${key}`;
+  if (!v._lw[ck]) {
+    v._lw[ck] = Object.keys(wbl).map(Number).sort((x, y) => x - y).map((d) => [d, wbl[d]?.[p.id]?.[key]]).filter(([, w]) => w != null);
+  }
+  const pts = v._lw[ck];
+  if (!pts.length) return base || 1;
+  const L = leadHoursOf(a) / 24;
+  if (L <= pts[0][0]) return pts[0][1];
+  for (let k = 1; k < pts.length; k++) {
+    if (L <= pts[k][0]) { const [d0, w0] = pts[k - 1], [d1, w1] = pts[k]; return w0 + ((w1 - w0) * (L - d0)) / (d1 - d0); }
+  }
+  return pts[pts.length - 1][1];
+}
+const W = (p, key, a) => (weightsOn() ? leadWeight(p, key, a) : 1)
   * (state.weighted && p.corr?.cut ? ECMWF_COPY_FACTOR : 1) * familyShare(p);
-const wpairs = (key, fn) => activeProviders().map((p) => ({ v: fn(p), w: W(p, key) })).filter((x) => x.v != null && !Number.isNaN(x.v));
+const wpairs = (key, fn, at) => activeProviders().map((p) => { lastAggA = null; const v = fn(p); return { v, w: W(p, key, at ?? lastAggA) }; }).filter((x) => x.v != null && !Number.isNaN(x.v));
 const wsum = (pr) => pr.reduce((a, x) => a + x.w, 0);
 const wmean = (pr) => (pr.length ? pr.reduce((a, x) => a + x.v * x.w, 0) / wsum(pr) : null);
 const wshare = (pr, f) => (pr.length ? pr.filter((x) => f(x.v)).reduce((a, x) => a + x.w, 0) / wsum(pr) : null);
@@ -458,7 +492,7 @@ function renderRelModal() {
   const nameCell = (p) => (p.dupOf
     ? `<span class="mdl off"><span class="mtxt"><b>${esc(pname(p))}</b><small>${esc(t('m.dup', { n: nameById(p.dupOf) }))}</small></span></span>`
     : `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${relDraft.has(p.id) ? '' : 'checked'}><span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}${corrNote(p)}</span></label>`);
-  const missing = ALL_MODEL_IDS.filter((id) => !all.some((p) => p.id === id) && !OPTIONAL_MODEL_IDS.includes(id));
+  const missing = allModelIds().filter((id) => !all.some((p) => p.id === id) && !OPTIONAL_MODEL_IDS.includes(id));
   const ncol = 9;
   const note = v ? '' : `<tr><td class="pad" colspan="${ncol - 1}">${state.verifyErr ? esc(t('r.unavailable', { e: state.verifyErr })) : t('r.loading')}</td></tr>`;
   const scoreOf = (p) => v?.models?.[p.id]?.score ?? -1;
@@ -472,7 +506,10 @@ function renderRelModal() {
       return src('ERA5', m.mae[k].toFixed(d), bias) + (o != null ? src('METAR', o.toFixed(d), '', 'obs') : '');
     };
     const pct = (e, o) => (e != null ? src('ERA5', Math.round(e * 100) + '%') : '–') + (o != null ? src('METAR', Math.round(o * 100) + '%', '', 'obs') : '');
-    return `<td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b></td>
+    // score per forecast day: shows which models lose accuracy quickly (only when the nightly job has measured the leads)
+    const bl = m.by_lead ? Object.keys(m.by_lead).map(Number).sort((x, y) => x - y).filter((d) => m.by_lead[d].score != null) : [];
+    const lead = bl.length > 1 ? `<div class="byl" title="${esc(t('r.bylead'))}">${bl.map((d) => `<span title="${esc(t('r.bylead.day', { d, s: m.by_lead[d].score }))}"><i class="${scoreCls(m.by_lead[d].score)}" style="height:${Math.max(2, Math.round(m.by_lead[d].score * 0.22))}px"></i><small>${d}</small></span>`).join('')}</div>` : '';
+    return `<td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b>${lead}</td>
       <td class="cell">${mae('temperature_2m')}</td><td class="cell">${mae('wind_speed_10m')}</td><td class="cell">${mae('cloud_cover', 0)}</td>
       <td class="cell">${mae('relative_humidity_2m', 0)}</td><td class="cell">${mae('pressure_msl', 2)}</td>
       <td class="cell">${pct(m.csi, m.obs?.csi)}</td><td class="cell">${pct(m.code_acc, m.obs?.code_acc)}</td>`;
@@ -484,7 +521,9 @@ function renderRelModal() {
   });
   missing.forEach((id) => { html += `<tr class="off"><th class="rowh"><span class="mdl off"><span class="mtxt"><b>${esc(nameById(id))}</b><small>${t('m.missing')}</small></span></span></th><td colspan="${ncol - 1}"></td></tr>`; });
   $('relTable').innerHTML = html + '</tbody>';
-  $('relNote').innerHTML = t('r.howto');
+  const loc = v?.local;
+  const localNote = loc && loc.alpha > 0 ? `<p class="hint">${t('r.local', { a: Math.round(loc.alpha * 100), list: loc.stations.map((x) => `${esc(x.name)} (${x.km} km)`).join(', ') })}</p>` : '';
+  $('relNote').innerHTML = t('r.howto') + localNote;
 }
 const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''; };
 
@@ -876,16 +915,17 @@ function renderDays() {
   const { data } = state;
   $('days').innerHTML = data.dates.map((date, d) => {
     const a = d * 24, b = Math.min(a + 24, data.time.length);
+    const wp = (key, fn) => wpairs(key, fn, a + 12);   // a day's weights: the lead at midday
     const cnt = {};
-    wpairs('weather', (p) => dayCategory(liveHours(p, p.hourly.code, a + 6, a + 22))).forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
+    wp('weather', (p) => dayCategory(liveHours(p, p.hourly.code, a + 6, a + 22))).forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
     const top = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0];
-    const ext = (fn) => wmean(wpairs('temperature_2m', (p) => { const v = liveHours(p, p.hourly.temperature_2m, a, b); return v.length ? fn(...v) : null; }));
+    const ext = (fn) => wmean(wp('temperature_2m', (p) => { const v = liveHours(p, p.hourly.temperature_2m, a, b); return v.length ? fn(...v) : null; }));
     const hi = ext(Math.max), lo = ext(Math.min);
-    const rp = wshare(wpairs('precip', (p) => { const v = liveHours(p, p.hourly.precipitation, a, b); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
+    const rp = wshare(wp('precip', (p) => { const v = liveHours(p, p.hourly.precipitation, a, b); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
     const rain = rp == null ? null : Math.round(rp * 100);
-    const sp = wshare(wpairs('storm', (p) => { const v = liveHours(p, p.hourly.weather_code, a, b); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
+    const sp = wshare(wp('storm', (p) => { const v = liveHours(p, p.hourly.weather_code, a, b); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
     const storm = sp == null ? 0 : Math.round(sp * 100);
-    const gm = wmean(wpairs('wind', (p) => { const v = liveHours(p, p.hourly.wind_gusts_10m, a, b); return v.length ? Math.max(...v) : null; }));
+    const gm = wmean(wp('wind', (p) => { const v = liveHours(p, p.hourly.wind_gusts_10m, a, b); return v.length ? Math.max(...v) : null; }));
     const dt = new Date(date + 'T12:00:00');
     const name = d === 0 ? t('today') : dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
     return `<button class="d ${d === state.day ? 'sel' : ''}" data-day="${d}">
@@ -902,7 +942,7 @@ function renderTabs() {
   $('tabs').innerHTML = Object.entries(PARAMS).map(([k, v]) => `<button class="tab ${k === state.param ? 'active' : ''}" data-param="${k}">${t('p.' + k)}</button>`).join('');
 }
 
-const ALL_MODEL_IDS = Object.keys(MODEL_NAMES);   // used to list models without coverage for a location
+const allModelIds = () => Object.keys(state.data.models_known || {});   // used to list models without coverage for a location
 // Optional, key-gated models (e.g. need a Google Cloud API key in api/config.php): most deployments
 // won't have them configured, so — unlike an ordinary "no coverage here" model — they are only ever
 // listed when actually present in the data, never shown as a perpetual "missing" placeholder.
@@ -962,7 +1002,7 @@ async function loadForecast(refresh = false) {
   const token = ++state.token;
   $('error').hidden = true; $('loading').hidden = false; $('forecastBody').hidden = true;
   try {
-    const data = await api(`api/forecast.php?lat=${loc.lat}&lon=${loc.lon}${refresh ? '&refresh=1' : ''}`);
+    const data = await api(`api/forecast.php?lat=${loc.lat}&lon=${loc.lon}${loc.elevation != null ? `&elevation=${loc.elevation}` : ''}${refresh ? '&refresh=1' : ''}`);
     if (token !== state.token) return;
     state.data = prepare(data);
     state.day = 0; state.vHours = 24;
@@ -1326,12 +1366,26 @@ function drawSavedMarkers() {
 async function pickPoint(lat, lon, name, reverse) {
   lat = +lat.toFixed(4); lon = +(((lon + 540) % 360) - 180).toFixed(4);
   $('latInput').value = lat; $('lonInput').value = lon;
+  fillElevation(lat, lon);
   if (marker) marker.setLatLng([lat, lon]); else marker = L.marker([lat, lon]).addTo(map);
   if (name) { $('nameInput').value = name; nameAuto = false; }
   else if (reverse && nameAuto) {
     $('nameInput').value = '';
     try { const r = await api(`api/geocode.php?lat=${lat}&lon=${lon}&lang=${LANG}`); if (r.name && nameAuto) $('nameInput').value = r.name; } catch (e) { /* ignore */ }
   }
+}
+// Elevation field: shows the terrain height of the picked point (Open-Meteo DEM) as the default; saving it unchanged stores nothing
+let elevTimer;
+function fillElevation(lat, lon) {
+  clearTimeout(elevTimer);
+  elevTimer = setTimeout(async () => {
+    const el = $('elevInput');
+    try {
+      const r = await api(`api/elevation.php?lat=${lat}&lon=${lon}`);
+      if (r.elevation == null) return;
+      el.value = r.elevation; el.dataset.dem = r.elevation;
+    } catch (e) { /* the field simply stays as it is */ }
+  }, 400);
 }
 function msg(text, cls = '') { const el = $('placeMsg'); el.textContent = text; el.className = 'hint ' + cls; }
 
@@ -1347,8 +1401,9 @@ $('saveBtn').addEventListener('click', async () => {
   const lat = parseFloat($('latInput').value), lon = parseFloat($('lonInput').value), name = $('nameInput').value.trim();
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return msg(t('err.pick'), 'err');
   if (!name) return msg(t('err.name'), 'err');
+  const e = parseFloat($('elevInput').value), elevation = Number.isFinite(e) && e !== Number($('elevInput').dataset.dem) ? e : null;   // the DEM default is not stored: only a height the user typed
   try {
-    const loc = await api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, lat, lon }) });
+    const loc = await api('api/locations.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, lat, lon, elevation }) });
     await loadLocations(loc.id);
     drawSavedMarkers();
     msg(t('ok.saved', { n: name }), 'ok');

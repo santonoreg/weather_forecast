@@ -16,9 +16,12 @@ $lon = filter_var($_GET['lon'] ?? null, FILTER_VALIDATE_FLOAT);
 if ($lat === false || $lon === false || abs($lat) > 90 || abs($lon) > 180) json_out(['error' => 'Invalid coordinates'], 400);
 $lat = round($lat, 3);
 $lon = round($lon, 3);
+// optional height (m) the forecast is corrected to (a saved location's own elevation); without it Open-Meteo uses its terrain model
+$elevRaw = $_GET['elevation'] ?? null;
+$elev = ($elevRaw !== null && $elevRaw !== '' && is_numeric($elevRaw) && $elevRaw >= -500 && $elevRaw <= 9000) ? round((float)$elevRaw) : null;
 
 $pdo = db();
-$key = "fc:$lat:$lon";
+$key = "fc:$lat:$lon" . ($elev !== null ? ":e$elev" : '');
 if (empty($_GET['refresh'])) {
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
@@ -35,7 +38,7 @@ $url = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
     'hourly' => implode(',', $VARS),
     'models' => implode(',', array_keys($MODELS)),
     'timezone' => 'auto', 'forecast_days' => 7,
-]);
+] + ($elev !== null ? ['elevation' => $elev] : []));
 $body = http_get($url);
 $om = $body ? json_decode($body, true) : null;
 if (!$om || !isset($om['hourly']['time'])) json_out(['error' => 'Failed to fetch data from Open-Meteo'], 502);
@@ -72,7 +75,7 @@ function yr_code(string $s): int
     return 0;
 }
 
-$yrBody = http_get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=$lat&lon=$lon");
+$yrBody = http_get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=$lat&lon=$lon" . ($elev !== null ? "&altitude=$elev" : ''));
 $yr = $yrBody ? json_decode($yrBody, true) : null;
 if ($yr && !empty($yr['properties']['timeseries'])) {
     $pts = [];
@@ -132,6 +135,7 @@ $out = json_encode([
     'elevation' => $om['elevation'] ?? null,
     'generated' => gmdate('c'),
     'time' => $time,
+    'models_known' => $MODELS,   // every model WeFO knows (the UI lists those without data for this place as "no coverage")
     'providers' => $providers,
 ], JSON_UNESCAPED_UNICODE);
 

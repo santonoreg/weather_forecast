@@ -225,7 +225,7 @@ The thresholds are constants at the top of `js/app.js` (`RAIN_THR_BY_HOURS`, `WI
 
 ### Model verification (Reliability tab)
 
-`api/verify.php` compares every model's *archived forecasts* (Open-Meteo **Historical Forecast API**) with two references: the **ERA5 reanalysis** (Open-Meteo **Archive API**, last 28 days, ending 6 days ago since ERA5 is published with a delay — available everywhere, but a model product of ECMWF's own system, so it slightly favours ECMWF) and **real METAR observations** (hourly reports from [aviationweather.gov](https://aviationweather.gov/data/api/), no key needed — measured temperature, dew point → relative humidity, wind, pressure, cloud cover and present weather).
+`api/verify.php` (the work itself is in `api/verify_lib.php`) compares every model's *archived forecasts* (Open-Meteo **Historical Forecast API**) with two references: the **ERA5 reanalysis** (Open-Meteo **Archive API**, last 28 days, ending 6 days ago since ERA5 is published with a delay — available everywhere, but a model product of ECMWF's own system, so it slightly favours ECMWF) and **real METAR observations** (hourly reports from [aviationweather.gov](https://aviationweather.gov/data/api/), no key needed — measured temperature, dew point → relative humidity, wind, pressure, cloud cover and present weather).
 
 **For a location in Greece**, both references are pooled **nationwide** rather than computed per visited place: every Greek METAR-reporting airport is discovered (an ICAO `LG*` bounding-box query, not a fixed list — currently ~23 stations), and for *each station* a separate archived forecast is fetched **at that station's own coordinates** and compared with its METAR reports, plus ERA5 at that same point. All stations' comparisons are pooled into one score per model, computed once and cached for **every** Greek location (24 hours), rather than redone per place. This matters because comparing a forecast computed for the *visitor's* point against a station tens of km away would partly measure real local weather differences (coastal effects, elevation), not model skill — fetching the forecast at each station's own point instead removes that bias, and pooling many stations gives a far more stable score than any single nearest station would. Fetching dozens of stations' archived forecasts concurrently runs into Open-Meteo's burst rate limit (HTTP 429 past roughly 5 simultaneous requests), so they're fetched in small chunks with automatic retry rather than all at once — the first request after the daily cache expires takes signficantly longer (tens of seconds) than a normal cached response.
 
@@ -234,6 +234,14 @@ The thresholds are constants at the top of `js/app.js` (`RAIN_THR_BY_HOURS`, `WI
 For each model and reference it computes: mean absolute error and bias for temperature, wind, cloud cover, humidity and pressure; the *critical success index* for detecting wet hours; and the share of hours with the correct weather category (drizzle and rain are treated as one category for this comparison).
 
 **Combining the two:** per parameter, `skill = 0.6 × METAR skill + 0.4 × ERA5 skill` when at least 48 matched hourly observations exist; otherwise ERA5 alone is used. Observations get the larger share because ERA5 is not independent of the models being judged. The **score (0–100)** is the mean skill across parameters, and the skills are turned into **weights between 0.5 and 1.8** (average = 1) per parameter. With *Weight by reliability* enabled, the averages, chances and weather-category shares use these weights, so better models count more.
+
+**Lead times.** The Historical Forecast API stitches together the first hours of every model run, so on its own it measures how good a model is a few hours ahead — yet a forecast for day 5 is a different animal. WeFO therefore also asks the Open-Meteo **Previous Runs API** (`previous-runs-api.open-meteo.com`, variables such as `temperature_2m_previous_day3`: the forecast issued 3 days earlier) for **lead days 1, 2, 3, 5 and 7** and scores each lead separately with the same procedure. The response has `weights_by_lead` (lead day → model → weight per parameter) and `models[m].by_lead` (score per lead). Not every model offers every lead (checked for Athens: ICON, UKMO up to 6 days, Météo-France 3, CMA 4, BOM none; `weather_code` is missing for several models at leads ≥ 1); a missing lead is bridged by linear interpolation, and beyond the last one the nearest is held. A lead based on fewer than 300 matched hours is pulled towards weight 1 (`SHRINK_N`). In the browser, every column of the table takes the weights that fit its distance in hours from the moment the forecast was fetched, blending the two neighbouring lead days linearly; the Reliability window shows the score per forecast day for each model (small bars).
+
+**Nightly job.** All this is heavy (dozens of stations × models × leads, ~1.5 MB per station), so it is done by `php tools/verify-cron.php` once a night, which fills the cache (`vf4:greece`). `api/verify.php` only serves the cache: a fresh entry is returned as it is; a *stale* one (older than 24 h) is still returned immediately, marked `"stale": true` (and refreshed in the background where PHP-FPM allows it); only when there is no cache at all (first run) does it compute on the spot, lead 0 only, like before. Crontab on the VPS:
+
+```
+15 3 * * * php /var/www/wefo/tools/verify-cron.php >> /var/log/wefo-verify.log 2>&1
+```
 
 In the Reliability table every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table explains which method was used — the list of pooled stations for Greece, or the single nearest station (name, distance, report count) elsewhere.
 
@@ -280,6 +288,7 @@ You are responsible for your own Google Cloud billing; check current pricing bef
 - **PHP 8.0+** (developed on 8.4) with the extensions **`pdo_sqlite`** and **`curl`** (`mbstring` and `gd` are optional — `gd` is only needed for the hero card's radar "Next break" line, see below)
 - A web server that can run PHP (Apache, Nginx + PHP-FPM, or the built-in PHP server for development)
 - Write permission for the web-server user on the `data/` directory
+- A **cron job** on the server for the nightly verification: `15 3 * * * php /var/www/wefo/tools/verify-cron.php` (optional — without it the first visitor of the day-after-cache-expiry no longer waits, but the scores and lead times are only refreshed when someone triggers it)
 - Outbound HTTPS access to `open-meteo.com`, `api.met.no`, `aviationweather.gov`, `nominatim.openstreetmap.org`, `api.rainviewer.com` + `tilecache.rainviewer.com`, `unpkg.com`, `fonts.googleapis.com` and OpenStreetMap tile servers (plus `weather.googleapis.com` only if you configure the optional Google WeatherNext 3 key)
 
 ## Installation
@@ -416,7 +425,10 @@ sw.js               service worker: offline catalogue files and opened photos
 assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
 api/db.php          SQLite connection (WAL), JSON helpers, HTTP client, error handling
 api/forecast.php    multi-model forecast aggregation + 30 min cache
-api/verify.php      model verification against ERA5 + METAR observations, 24 h cache
+api/verify.php      model verification endpoint: serves the cache (stale-while-revalidate)
+api/verify_lib.php  the verification itself: ERA5 + METAR, lead times
+api/models.php      the catalogue of weather models (names, resolution, family) used everywhere
+tools/verify-cron.php  nightly job that fills the verification cache
 api/observed.php    latest METAR observation near the location
 api/astro.php       atmosphere inputs for the Sky Conditions tab (multi-model mean + aerosols), 30 min cache
 api/aviation.php    METAR / TAF of the airports near given points (aviationweather.gov), 15 min cache
@@ -454,7 +466,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 | `GET api/geocode.php?q=TEXT&lang=en\|el` | search places |
 | `GET api/geocode.php?lat=..&lon=..&lang=en\|el` | reverse geocode a point |
 | `GET api/forecast.php?lat=..&lon=..[&refresh=1]` | normalised hourly forecasts from all providers |
-| `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights and the METAR station used |
+| `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights (also `weights_by_lead`) and the METAR station used; served from the cache, `stale: true` when older than 24 h |
 | `GET api/aviation.php?pts=lat,lon;…` | for each point the nearest METAR (latest report) and TAF station with their cloud layers |
 | `GET api/skypoints.php?pts=lat,lon;lat,lon;…` | low/mid/high cloud (3-model mean) at up to 64 points, 7 days hourly, plus aerosol, visibility, humidity and rain at the first point |
 | `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Sky Conditions tab |

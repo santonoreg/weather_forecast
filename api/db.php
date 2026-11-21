@@ -77,6 +77,7 @@ function db(): PDO
     // Bortle dark-sky class 1..9 of the place (NULL = not known), used by the Astronomy tab
     if (!in_array('bortle', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN bortle INTEGER');
     // 1 = set by an admin (beats the light-pollution atlas); 0 = just the seeded guess for the Greek towns
+    if (!in_array('elevation', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN elevation REAL');   // optional height (m) the forecast is corrected to; null = the model's own terrain
     if (!in_array('bortle_set', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN bortle_set INTEGER NOT NULL DEFAULT 0');
     $pdo->exec('CREATE TABLE IF NOT EXISTS cache (
         k TEXT PRIMARY KEY,

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261193">
+<link rel="stylesheet" href="css/style.css?v=20261195">
 </head>
 <body>
 <header class="topbar">
@@ -220,6 +220,9 @@
           <label><span data-i18n="pl.lat">Latitude</span><input id="latInput" type="number" step="0.0001" min="-90" max="90" placeholder="37.9838"></label>
           <label><span data-i18n="pl.lon">Longitude</span><input id="lonInput" type="number" step="0.0001" min="-180" max="180" placeholder="23.7275"></label>
         </div>
+        <label class="full"><span data-i18n="pl.elev">Elevation (m)</span>
+          <input id="elevInput" type="number" step="1" min="-500" max="9000" data-i18n-title="pl.elev.tip" title="Optional. The forecast temperature is corrected to this height; leave empty to use the terrain height of the weather models.">
+        </label>
         <label class="full"><span data-i18n="pl.name">Location name</span>
           <input id="nameInput" type="text" maxlength="120" data-i18n-ph="pl.name.ph" placeholder="e.g. Athens">
         </label>
@@ -321,12 +324,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261193"></script>
-<script src="js/icons.js?v=20261193"></script>
-<script src="js/app.js?v=20261193"></script>
-<script src="js/astro.js?v=20261193"></script>
-<script src="js/sunset.js?v=20261193"></script>
-<script src="js/dso.js?v=20261193"></script>
-<script src="js/trip.js?v=20261193"></script>
+<script src="js/i18n.js?v=20261195"></script>
+<script src="js/icons.js?v=20261195"></script>
+<script src="js/app.js?v=20261195"></script>
+<script src="js/astro.js?v=20261195"></script>
+<script src="js/sunset.js?v=20261195"></script>
+<script src="js/dso.js?v=20261195"></script>
+<script src="js/trip.js?v=20261195"></script>
 </body>
 </html>
