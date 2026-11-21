@@ -188,7 +188,7 @@ function app_config(): array
     $f = __DIR__ . '/config.php';
     $file = is_file($f) ? (require $f) : [];
     $cfg = is_array($file) ? $file : [];
-    foreach (['google_weather_api_key' => 'WEFO_GOOGLE_WEATHER_API_KEY', 'admin_user' => 'WEFO_ADMIN_USER', 'admin_password_hash' => 'WEFO_ADMIN_PASSWORD_HASH', 'ors_api_key' => 'WEFO_ORS_API_KEY'] as $key => $env) {
+    foreach (['google_weather_api_key' => 'WEFO_GOOGLE_WEATHER_API_KEY', 'ssl_verify' => 'WEFO_SSL_VERIFY', 'admin_user' => 'WEFO_ADMIN_USER', 'admin_password_hash' => 'WEFO_ADMIN_PASSWORD_HASH', 'ors_api_key' => 'WEFO_ORS_API_KEY'] as $key => $env) {
         $v = getenv($env);
         if ($v !== false && $v !== '') $cfg[$key] = $v;
     }
@@ -203,6 +203,15 @@ function json_out($data, int $code = 200): void
     exit;
 }
 
+// Should outgoing HTTPS calls verify the server certificate? Yes, unless config.php (or WEFO_SSL_VERIFY) says
+// 'ssl_verify' => false / 0 / "false" — only meant for a local Laragon without a CA bundle (see config.example.php).
+function ssl_verify(): bool
+{
+    $v = app_config()['ssl_verify'] ?? true;
+    if (is_string($v)) $v = !in_array(strtolower(trim($v)), ['0', 'false', 'off', 'no', ''], true);
+    return (bool)$v;
+}
+
 function http_get(string $url, int $timeout = 20): ?string
 {
     $ch = curl_init($url);
@@ -212,7 +221,7 @@ function http_get(string $url, int $timeout = 20): ?string
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_USERAGENT => 'wefo-weather-compare/1.0 (personal project)',
         CURLOPT_ENCODING => '',
-        CURLOPT_SSL_VERIFYPEER => false, // τοπικό Laragon χωρίς CA bundle
+        CURLOPT_SSL_VERIFYPEER => ssl_verify(),
     ]);
     $body = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);

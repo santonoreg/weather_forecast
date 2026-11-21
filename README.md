@@ -476,7 +476,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 - ERA5 is a reanalysis produced with ECMWF's model, so on its own it slightly favours ECMWF; real METAR observations reduce this bias where a station is near, but an airport is a single point that may not represent your exact spot.
 - Archived forecasts mostly represent short lead times, so the score reflects short-range skill more than day-5 skill.
 - Weather icons for models without a weather code are derived heuristically.
-- cURL certificate verification is disabled in `api/db.php` (`CURLOPT_SSL_VERIFYPEER => false`) so it works out of the box on Windows without a CA bundle. On a production server, remove that line (or point cURL at a CA bundle).
+- cURL verifies TLS certificates by default (`ssl_verify`, see `api/config.example.php` / env `WEFO_SSL_VERIFY`). A local Windows/Laragon PHP without a CA bundle fails with "SSL certificate problem": point `curl.cainfo` and `openssl.cafile` in `php.ini` at a `cacert.pem`, or, for development only, set `'ssl_verify' => false` in `api/config.php`.
 - No authentication (see the note above).
 - Google WeatherNext 3's `weatherCondition.type` values don't map 1:1 onto the WMO codes used elsewhere in the app (Google's set is more fine-grained, e.g. several rain-intensity steps); the closest bucket is used (see `google_wmo_code()` in `api/google_weather.php`).
 

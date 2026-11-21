@@ -41,6 +41,13 @@ return [
     //   Leave empty to disable the Trip tab route search - nothing else in the app is affected.
     'ors_api_key' => '',
 
+    // Verify the TLS certificates of the services WeFO calls (Open-Meteo, MET Norway, aviationweather.gov …).
+    // Keep it true (the default) on a server. On a local Laragon/XAMPP whose PHP has no CA bundle every call fails with
+    // "SSL certificate problem": the proper fix is a bundle (download cacert.pem from https://curl.se/ca/cacert.pem and point
+    // `curl.cainfo` and `openssl.cafile` at it in php.ini); only as a last resort set this to false for local development.
+    //   Env var: WEFO_SSL_VERIFY (0 / false disables)
+    'ssl_verify' => true,
+
     'admin_user' => '',
     'admin_password_hash' => '',
 

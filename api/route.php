@@ -51,7 +51,7 @@ function ors_directions(string $key, array $body): array
         CURLOPT_POSTFIELDS => json_encode($body),
         CURLOPT_HTTPHEADER => ['Authorization: ' . $key, 'Content-Type: application/json; charset=utf-8', 'Accept: application/geo+json'],
         CURLOPT_USERAGENT => 'wefo-weather-compare/1.0 (personal project)',
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => ssl_verify(),
     ]);
     $out = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);

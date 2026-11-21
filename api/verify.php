@@ -95,7 +95,7 @@ function http_get_multi(array $urls, int $timeout = 60): array
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout, CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_USERAGENT => 'wefo-weather-compare/1.0 (personal project)', CURLOPT_ENCODING => '',
-            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYPEER => ssl_verify(),
         ]);
         curl_multi_add_handle($mh, $ch);
         $handles[$k] = $ch;
