@@ -106,6 +106,13 @@ function db(): PDO
         cons REAL NOT NULL,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )');
+    // per-user settings kept on the server (which models are switched off, weighting, bias correction ...), so they follow the user to another browser
+    $pdo->exec('CREATE TABLE IF NOT EXISTS user_prefs (
+        user_id INTEGER NOT NULL,
+        k TEXT NOT NULL,
+        v TEXT NOT NULL,
+        PRIMARY KEY (user_id, k)
+    ) WITHOUT ROWID');
     if (!in_array('user_id', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN user_id INTEGER');
     seed_admin($pdo);
     sync_cities($pdo);

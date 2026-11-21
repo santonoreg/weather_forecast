@@ -84,6 +84,7 @@ if ($method === 'DELETE') {
         }
         $pdo->prepare("DELETE FROM locations WHERE kind = 'saved' AND user_id = ?")->execute([$id]);
         $pdo->prepare('DELETE FROM user_cars WHERE user_id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM user_prefs WHERE user_id = ?')->execute([$id]);
         $pdo->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$id]);
         $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
         $pdo->exec('COMMIT');

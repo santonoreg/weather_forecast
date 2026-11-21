@@ -1051,6 +1051,7 @@ function renderModels() {
 }
 function saveDisabled() {
   try { localStorage.setItem('wefo.disabled', JSON.stringify([...state.disabled])); } catch (e) { /* ignore */ }
+  Prefs.save('wefo.disabled', JSON.stringify([...state.disabled]));
 }
 $('relTable').addEventListener('change', (e) => {
   const id = e.target.dataset.mid; if (!id) return;
@@ -1168,6 +1169,7 @@ $('weightChk').checked = state.weighted;
 $('weightChk').addEventListener('change', (e) => {
   state.weighted = e.target.checked;
   try { localStorage.setItem('wefo.weighted', state.weighted ? '1' : '0'); } catch (err) { /* ignore */ }
+  Prefs.save('wefo.weighted', state.weighted ? '1' : '0');
   if (state.data) renderAll();
 });
 
@@ -1175,12 +1177,14 @@ $('biasChk').checked = state.bias;
 $('biasChk').addEventListener('change', (e) => {
   state.bias = e.target.checked;
   try { localStorage.setItem('wefo.bias', state.bias ? '1' : '0'); } catch (err) { /* ignore */ }
+  Prefs.save('wefo.bias', state.bias ? '1' : '0');
   if (state.data) renderAll();
 });
 $('oneVoteChk').checked = state.oneVote;
 $('oneVoteChk').addEventListener('change', (e) => {
   state.oneVote = e.target.checked;
   try { localStorage.setItem('wefo.oneVote', state.oneVote ? '1' : '0'); } catch (err) { /* ignore */ }
+  Prefs.save('wefo.oneVote', state.oneVote ? '1' : '0');
   if (state.data) renderAll();
 });
 
@@ -1769,7 +1773,35 @@ if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', sync
 syncThemeBtn();
 
 $('brandIcon').innerHTML = WI.svg(2, false);
+/* Per-user settings on the server (api/prefs.php). localStorage stays the working copy; at login the server's values win, and anything
+   this browser has that the server does not know yet is uploaded once. A failing server just leaves localStorage in charge. */
+const PREF_KEYS = ['wefo.disabled', 'wefo.weighted', 'wefo.bias', 'wefo.oneVote'];
+const Prefs = {
+  save(k, v) {
+    if (!state.user) return;
+    api('api/prefs.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefs: { [k]: v } }) }).catch(() => { /* kept locally */ });
+  },
+  async sync() {
+    try {
+      const srv = (await api('api/prefs.php')).prefs || {};
+      const up = {};
+      PREF_KEYS.forEach((k) => {
+        if (srv[k] != null) { try { localStorage.setItem(k, srv[k]); } catch (e) { /* ignore */ } }
+        else { let v = null; try { v = localStorage.getItem(k); } catch (e) { /* ignore */ } if (v != null) up[k] = v; }
+      });
+      if (Object.keys(up).length) await api('api/prefs.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefs: up }) });
+    } catch (e) { /* offline or old server: localStorage only */ }
+    try {
+      state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]'));
+      state.weighted = localStorage.getItem('wefo.weighted') !== '0';
+      state.bias = localStorage.getItem('wefo.bias') !== '0';
+      state.oneVote = localStorage.getItem('wefo.oneVote') === '1';
+    } catch (e) { /* ignore */ }
+    $('weightChk').checked = state.weighted; $('biasChk').checked = state.bias; $('oneVoteChk').checked = state.oneVote;
+  },
+};
 async function startApp() {
+  await Prefs.sync();
   await loadLocations();
   const v = location.hash.slice(1);
   if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'account' || v === 'places' || v === 'cars' || v === 'password' || (v === 'users' && state.admin)) showView(v); else showView('forecast');

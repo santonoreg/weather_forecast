@@ -379,6 +379,8 @@ Then hard-refresh the browser (Ctrl+F5). The CSS/JS URLs carry a `?v=` version p
 
 ## Users and login
 
+Per-user settings (the models you switched off in the Reliability window, *Weight by reliability*, *Correct systematic error*, *One vote per model family*) are stored in the `user_prefs` table through `api/prefs.php`, so they follow you to another browser. The browser's localStorage stays the working copy: at login the server's values win; if the server has none yet, this browser's values are uploaded once.
+
 The whole app sits behind a login: until you are logged in you see only the login screen, and every API endpoint (except `api/auth.php`) answers `401`. There are two roles:
 
 - **User** – everything in the app. Clicking their **name** in the header opens *My account*, with tabs for *Locations & Map* (their own saved locations), *Cars* (their cars with fuel / energy consumption, listed first in the Trip tab) and *Password*. Saved locations and cars are private to each user.
@@ -462,6 +464,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 | `GET api/locations.php` | `{cities, saved}`; `saved` = the logged-in user's own |
 | `GET/POST api/auth.php` | status; `{action:'login'\|'logout'\|'password', user, password, remember}` |
 | `GET/POST/DELETE api/users.php` | administrators only: list, `{action:'create'\|'password'\|'role'}`, delete |
+| `GET/POST api/prefs.php` | the user's own settings kept on the server: `{prefs: {"wefo.disabled", "wefo.weighted", "wefo.bias", "wefo.oneVote"}}` (which models are switched off, weighting, bias correction, one vote per family) |
 | `GET/POST/DELETE api/cars.php` | the user's own cars `{name, kind p\|d\|h\|e, cons}` |
 | `POST api/locations.php` | body `{"name","lat","lon"}` – save a location |
 | `POST api/locations.php` | body `{"action":"bortle","id","bortle":1-9\|null}` – set a location's dark-sky class |
