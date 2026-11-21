@@ -145,7 +145,7 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
    |---|---|---|---|
    | **Weather** | weather icon + temperature | *(see the five-lane dashboard above instead)* | every weather category predicted by the models with its share (e.g. *Clear 55 %, Overcast 27 %, Partly cloudy 18 %*) is what the **Weather** lane's icon summarises; the **Agree** lane is its share |
    | **Temperature** | °C, colour-coded | average, min–max | agreement % and ± standard deviation |
-   | **Rain** | mm per step | average, max | chance of rain (share of models giving ≥ 0.2 mm in the step) |
+   | **Rain** | mm per step | average, max | chance of rain (share of models above the step's threshold: 0.2 / 0.5 / 1 mm for 1 / 3 / 6–12 h) |
    | **Wind** | 10 m speed km/h, arrow = direction the wind blows towards, gust in brackets | average and range, mean direction | chance of strong wind (share of models ≥ 30 km/h) and of gusts ≥ 60 km/h |
    | **Thunderstorm** | CAPE (J/kg) and a bolt when the model forecasts a thunderstorm | average CAPE | chance of thunderstorm |
    | **Cloud cover / Humidity / Pressure** | value, colour-coded | average, min–max | agreement % |
@@ -215,12 +215,12 @@ For every time step and every parameter WeFO collects one value per active provi
 
 - **Average / range** – (weighted) mean, min and max of the provider values.
 - **Weather category** – WMO weather codes are grouped into *clear, partly cloudy, overcast, fog, drizzle, rain, snow, thunderstorm*. Each provider votes for its category; the shares are shown as percentages. If a provider gives no weather code it is derived from precipitation, temperature (snow), CAPE and cloud cover.
-- **Chance of rain** – share of providers with ≥ **0.2 mm** in the step.
+- **Chance of rain** – share of providers with at least a threshold of rain in the step. The threshold grows with the step, because over a long block a mere trace adds up: **0.2 mm** for a 1 h step, **0.5 mm** for 3 h, **1 mm** for 6 h and 12 h (the *Days ahead* card, 24 h, uses the same 1 mm).
 - **Chance of strong wind** – share of providers with ≥ **30 km/h** (Beaufort 5).
 - **Chance of thunderstorm** – each provider gives a signal: weather code 95–99 = 1, CAPE ≥ 1000 J/kg = 0.5, otherwise 0; the chance is the (weighted) mean signal.
 - **Agreement** (temperature, cloud, humidity, pressure) – `100 % × (1 − σ / tolerance)`, where σ is the standard deviation between providers and the tolerance is 4 °C, 50 %, 25 %, 4 hPa respectively (0 % when σ ≥ tolerance).
 
-The thresholds are constants at the top of `js/app.js` (`RAIN_THR`, `WIND_THR`, `TOL`).
+The thresholds are constants at the top of `js/app.js` (`RAIN_THR_BY_HOURS`, `WIND_THR`, `TOL`).
 
 ### Model verification (Reliability tab)
 
@@ -395,7 +395,7 @@ Most settings are constants in the PHP files below. One optional file, `api/conf
 | `api/verify.php` | `$TOL` | error at which a parameter's skill reaches 0 |
 | `api/db.php` | `http_get()` | User-Agent and cURL options |
 | `api/google_weather.php` | `GOOGLE_CACHE_TTL`, `GOOGLE_HOURS`, `GOOGLE_PAGE_SIZE`, `GOOGLE_DAILY_CALL_CAP`, `GOOGLE_FAIL_COOLDOWN` | Google WeatherNext 3 cache lifetime, hours requested per fetch, Google's page size cap, hard daily call cap, retry backoff after a failure |
-| `js/app.js` | `RAIN_THR`, `WIND_THR`, `TOL` | thresholds for the probabilities |
+| `js/app.js` | `RAIN_THR_BY_HOURS`, `WIND_THR`, `TOL` | thresholds for the probabilities |
 | `js/app.js` | `HEADLINE_MODEL_IDS` | which models get their own named line in the "WeFO vs AI" comparison |
 
 **Please change the User-Agent** in `api/db.php` (`wefo-weather-compare/1.0 …`) to identify your own installation with a contact address – [MET Norway requires this](https://api.met.no/doc/TermsOfService).

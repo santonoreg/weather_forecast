@@ -115,7 +115,11 @@ const heatRain = (v) => (v == null ? 'var(--muted)' : `hsla(215,85%,50%,${0.35 +
 /* ================= Παράμετροι ================= */
 // Τυπική απόκλιση μεταξύ παρόχων στην οποία η συμφωνία μηδενίζεται
 const TOL = { temperature_2m: 4, wind_speed_10m: 15, cloud_cover: 50, relative_humidity_2m: 25, pressure_msl: 4 };
-const RAIN_THR = 0.2;   // mm ανά βήμα για να θεωρηθεί «βροχή»
+// mm that make a block of hours "rainy": the longer the block, the more a trace of rain adds up, so a 12 h step
+// must not count a mere 0.2 mm. Same 1 mm as the 24 h "Days ahead" card.
+const RAIN_THR_BY_HOURS = [[1, 0.2], [3, 0.5], [Infinity, 1.0]];   // [block length up to (h), threshold mm]
+const rainThr = (hours) => RAIN_THR_BY_HOURS.find(([h]) => hours <= h)[1];
+const RAIN_THR = rainThr(1);   // hourly threshold (hero outlook, meteogram)
 const WIND_THR = 30;    // km/h (5 μποφόρ)
 
 const PARAMS = {
@@ -261,7 +265,7 @@ function buildRows(param, cols) {
     prob = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, 'precip', c.a, c.b)));
       if (!v.length) return cell('–');
-      const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
+      const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a));
       return cell(`<div class="pct">${Math.round(pr * 100)}%</div>`, `hsla(215,85%,50%,${pr * 0.55})`);
     });
   } else if (param === 'wind') {
@@ -497,7 +501,7 @@ const tempWindRainCell = (c) => {
   const g = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
   const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
   const wind = ws != null ? `<small class="wnd">${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(ws)}${g != null ? ` (${fmt(g)})` : ''} km/h</small>` : '';
-  const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
+  const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a));
   const mm = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
   const rain = pr != null ? `<small class="rn${Math.round(pr * 100) === 0 ? ' dim' : ''}">${Math.round(pr * 100)}%${mm != null && mm >= 0.05 ? ` · ${fmt(mm, 1)} mm` : ''}</small>` : '';
   const avg = (k) => wmean(wpairs(k, (p) => agg(p, k, c.a, c.b)));
@@ -650,7 +654,7 @@ function buildWeatherLanes(cols) {
     return cell(`<b>${fmt(m)}°</b>`);   // no heat tint here: the Weather tab stays plain, like Glett
   });
   const rain = cols.map((c) => {
-    const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= RAIN_THR);
+    const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a));
     if (pr == null) return cell('–');
     const m = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
     return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${m != null && m >= 0.05 ? `<small>${fmt(m, 1)} mm</small>` : ''}`);
@@ -730,7 +734,7 @@ function renderGrid() {
     setModelsToggle(rows.length + (extraRows || []).length);
   }
   const compareNote = state.modelsOpen && extraRows && extraRows.length ? t('lg.compare') : '';
-  $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? RAIN_THR : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote;
+  $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? rainThr(state.step) : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote;
 }
 // icon-only button inside the view switch: the tooltip carries the text, "active" = all models shown
 function setModelsToggle(n) {
