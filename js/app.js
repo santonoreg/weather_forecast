@@ -209,6 +209,22 @@ const TOL = { temperature_2m: 4, wind_speed_10m: 15, cloud_cover: 50, relative_h
 // must not count a mere 0.2 mm. Same 1 mm as the 24 h "Days ahead" card.
 const RAIN_THR_BY_HOURS = [[1, 0.2], [3, 0.5], [Infinity, 1.0]];   // [block length up to (h), threshold mm]
 const rainThr = (hours) => RAIN_THR_BY_HOURS.find(([h]) => hours <= h)[1];
+/* Ensemble probabilities (api/ensemble.php): the share of ensemble members that rain / blow hard is a real probability, unlike
+   "how many models agree". The chances shown are P = ENS_BETA * P_ensemble + (1 - ENS_BETA) * P_consensus; without ensemble
+   data (still loading, or the service failed) they are the consensus alone, as before. */
+const ENS_BETA = 0.7;
+const ENS_SPREAD_MID = 4;    // hero verdict: temperature P10-P90 spread (deg C) from which the models "partly" agree ...
+const ENS_SPREAD_LOW = 8;    // ... and from which they are "split"
+const blendP = (det, ens) => (det == null || ens == null ? det : ENS_BETA * ens + (1 - ENS_BETA) * det);
+// the ensemble probability of the block a..b ("rain" | "wind" | "gust"); null unless the ensemble has that block for this step
+function ensP(kind, a, b) {
+  const e = state.ens;
+  if (!e || !state.data || e.time[a] !== state.data.time[a]) return null;
+  const n = b - a, arr = e[`p_${kind}`]?.[n];
+  if (!arr || a % n !== 0) return null;
+  const v = arr[a / n];
+  return v == null ? null : v;
+}
 const RAIN_THR = rainThr(1);   // hourly threshold (hero outlook, meteogram)
 const WIND_THR = 30;    // km/h (5 μποφόρ)
 
@@ -397,7 +413,7 @@ function buildRows(param, cols) {
     prob = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, 'precip', c.a, c.b)));
       if (!v.length) return cell('–');
-      const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a));
+      const pr = blendP(wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a)), ensP('rain', c.a, c.b));
       return cell(`<div class="pct">${Math.round(pr * 100)}%</div>`, `hsla(215,85%,50%,${pr * 0.55})`);
     });
   } else if (param === 'wind') {
@@ -417,9 +433,9 @@ function buildRows(param, cols) {
     prob = cols.map((c) => {
       const v = nn(P.map((p) => agg(p, 'wind_speed_10m', c.a, c.b)));
       if (!v.length) return cell('–');
-      const pr = wshare(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)), (x) => x >= WIND_THR);
+      const pr = blendP(wshare(wpairs('wind', (p) => agg(p, 'wind_speed_10m', c.a, c.b)), (x) => x >= WIND_THR), ensP('wind', c.a, c.b));
       const g = nn(P.map((p) => agg(p, 'gust', c.a, c.b)));
-      const gp = g.length ? `<small>${t('g.gusts', { v: Math.round(g.filter((x) => x >= 60).length / g.length * 100) })}</small>` : '';
+      const gp = g.length ? `<small>${t('g.gusts', { v: Math.round(blendP(g.filter((x) => x >= 60).length / g.length, ensP('gust', c.a, c.b)) * 100) })}</small>` : '';
       return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${gp}`, `hsla(170,70%,40%,${pr * 0.5})`);
     });
   } else if (param === 'storm') {
@@ -544,7 +560,7 @@ function rainOutlook(c0) {
   const { data } = state;
   const start = c0.a, horizon = Math.min(24, data.time.length - start);
   if (horizon <= 1) return null;
-  const wetAt = (i) => { const s = wshare(wpairs('precip', (p) => agg(p, 'precip', i, i + 1)), (x) => x >= RAIN_THR); return s != null && s >= 0.5; };
+  const wetAt = (i) => { const s = blendP(wshare(wpairs('precip', (p) => agg(p, 'precip', i, i + 1)), (x) => x >= RAIN_THR), ensP('rain', i, i + 1)); return s != null && s >= 0.5; };
   const nowWet = wetAt(start);
   const when = (i) => (data.time[i].slice(0, 10) === data.time[start].slice(0, 10) ? '' : t('hero.rain.tomorrow') + ' ') + data.time[i].slice(11, 16);   // "tomorrow 21:00", not a bare 21:00
   for (let k = 1; k < horizon; k++) {
@@ -573,11 +589,21 @@ function renderHero() {
       <div class="wind">${ws != null ? `${dirs.length ? WI.arrow(circMean(dirs, dirs.map(() => 1))) : ''}${fmt(ws)}${gust != null ? ` (${fmt(gust)})` : ''} km/h` : ''}</div>
     </div>`;
   if (top) {
-    const level = top[1] >= 0.8 ? 'hi' : top[1] >= 0.5 ? 'mid' : 'lo';
+    let level = top[1] >= 0.8 ? 'hi' : top[1] >= 0.5 ? 'mid' : 'lo';
+    // the ensemble spread can only lower the confidence: a coin-flip chance of rain, or a wide temperature spread, means the models do not really agree
+    const ens = state.ens && state.ens.time[c.a] === state.data.time[c.a] ? state.ens : null;
+    const pRain = ens ? blendP(wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a)), ensP('rain', c.a, c.b)) : null;
+    const spread = ens && ens.t_p10[c.a] != null && ens.t_p90[c.a] != null ? ens.t_p90[c.a] - ens.t_p10[c.a] : null;
+    if (ens) {
+      const ensLevel = (pRain != null && pRain >= 0.35 && pRain <= 0.65) || (spread != null && spread >= ENS_SPREAD_LOW) ? 'lo'
+        : (pRain != null && pRain >= 0.2 && pRain <= 0.8) || (spread != null && spread >= ENS_SPREAD_MID) ? 'mid' : 'hi';
+      const rank = { lo: 0, mid: 1, hi: 2 };
+      if (rank[ensLevel] < rank[level]) level = ensLevel;
+    }
     const dots = Math.max(1, Math.round(top[1] * 5));
     const tv = nn(activeProviders().map((p) => agg(p, 'temperature_2m', c.a, c.b)));
     $('heroVerdict').className = `verdict ${level}`;
-    $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { time: state.data.time[c.a].slice(11, 16), k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}</small></div>`;
+    $('heroVerdict').innerHTML = `<span class="dots ${level}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < dots ? 'on' : ''}"></i>`).join('')}</span><div><b>${t('hero.verdict.' + level)}</b><small>${t('hero.verdict.detail', { time: state.data.time[c.a].slice(11, 16), k: kTop, n: nAll, cat: t('cat.' + top[0]).toLowerCase(), min: fmt(Math.min(...tv)), max: fmt(Math.max(...tv)) })}${ens && pRain != null ? ` ${t('hero.ens', { p: Math.round(pRain * 100), s: spread != null ? fmt(spread, 1) : '–' })}` : ''}</small></div>`;
     $('heroVerdict').hidden = false;
   } else { $('heroVerdict').hidden = true; }
   const obs = state.observed;
@@ -639,7 +665,7 @@ const tempWindRainCell = (c) => {
   const g = wmean(wpairs('wind', (p) => agg(p, 'gust', c.a, c.b)));
   const dd = nn(activeProviders().map((p) => agg(p, 'dir', c.a, c.b)));
   const wind = ws != null ? `<small class="wnd">${dd.length ? WI.arrow(circMean(dd, dd.map(() => 1))) : ''}${fmt(ws)}${g != null ? ` (${fmt(g)})` : ''} km/h</small>` : '';
-  const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a));
+  const pr = blendP(wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a)), ensP('rain', c.a, c.b));
   const mm = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
   const rain = pr != null ? `<small class="rn${Math.round(pr * 100) === 0 ? ' dim' : ''}">${Math.round(pr * 100)}%${mm != null && mm >= 0.05 ? ` · ${fmt(mm, 1)} mm` : ''}</small>` : '';
   const avg = (k) => wmean(wpairs(k, (p) => agg(p, k, c.a, c.b)));
@@ -708,12 +734,12 @@ document.addEventListener('click', (e) => {
 /* A small hourly line/bar chart for the meteogram: x = hour of the selected day. `band` (optional) shades
    the min–max spread between providers behind the average line; `nowI` (optional) draws a dashed marker
    at the current hour. Deliberately independent of the Step selector — a meteogram is always hourly. */
-function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, heat = null, fixed = null }) {
+function hourChart(points, { kind, color, unit, d = 1, band = null, band2 = null, nowI = -1, heat = null, fixed = null }) {
   const n = points.length;
   if (n < 2) return '';
   const label0 = (i) => points[i].label;
   const W = 1200, H = kind === 'bar' ? 110 : 170, pl = 40, pr = 12, pt = 10, pb = 22;
-  const vals = nn(points.map((p) => p.v).concat(band ? band.flat() : []));
+  const vals = nn(points.map((p) => p.v).concat(band ? band.flat() : [], band2 ? band2.flat() : []));
   let lo, hi;
   if (kind === 'bar') { lo = 0; hi = Math.max(2, (vals.length ? Math.max(...vals) : 0) * 1.25); }
   else if (fixed) { [lo, hi] = fixed; }
@@ -727,6 +753,17 @@ function hourChart(points, { kind, color, unit, d = 1, band = null, nowI = -1, h
   }
   points.forEach((p, i) => { if (i % 3 === 0 || i === n - 1) g += `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="tx">${p.label}</text>`; });
   let body = '';
+  if (band2 && kind !== 'bar') {   // ensemble P10-P90: a fainter, outlined second band next to the model range
+    const ok = band2.every((b_) => b_[0] != null && b_[1] != null);
+    if (ok) {
+      const top2 = band2.map((b_, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(b_[1]).toFixed(1)}`).join('');
+      const bot2 = band2.map((b_, i) => `L${x(n - 1 - i).toFixed(1)} ${y(band2[n - 1 - i][0]).toFixed(1)}`).join('');
+      body += `<path d="${top2}${bot2}Z" fill="#8b5cf6" opacity=".09" stroke="#8b5cf6" stroke-opacity=".35" stroke-dasharray="4 3"/>`;
+    }
+  }
+  if (band2 && kind === 'bar') {   // ensemble: a whisker from P10 to P90 on each bar
+    body += band2.map((b_, i) => (b_[1] == null || b_[1] <= 0.01 ? '' : `<line x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${y(b_[1]).toFixed(1)}" y2="${y(b_[0] ?? 0).toFixed(1)}" stroke="#8b5cf6" stroke-width="2.2" opacity=".6"><title>${label0(i)}: P10–P90 ${(b_[0] ?? 0).toFixed(d)}–${b_[1].toFixed(d)}${unit}</title></line>`)).join('');
+  }
   if (band && kind === 'bar') {
     const bw0 = Math.max(2, (W - pl - pr) / n - 3);
     body += band.map((b_, i) => (b_[1] == null || b_[1] <= 0.01 ? '' : `<rect x="${(x(i) - bw0 / 2).toFixed(1)}" y="${y(b_[1]).toFixed(1)}" width="${bw0.toFixed(1)}" height="${(y(0) - y(b_[1])).toFixed(1)}" fill="${color}" opacity=".22"><title>${label0(i)}: max ${b_[1].toFixed(d)}${unit}</title></rect>`)).join('');
@@ -760,13 +797,15 @@ function meteoHtml() {
   const temps = idx.map((i) => ({ v: wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', i, i + 1))), label: label(i) }));
   const rng = (key, k2) => idx.map((i) => { const v = nn(activeProviders().map((p) => agg(p, k2 || key, i, i + 1))); return v.length ? [Math.min(...v), Math.max(...v)] : [null, null]; });
   const band = rng('temperature_2m');
+  const e = state.ens && state.ens.time[idx[0]] === data.time[idx[0]] ? state.ens : null;   // ensemble percentiles for the same hours
+  const eb = (lo, hi) => (e ? idx.map((i) => [e[lo][i], e[hi][i]]) : null);
   const precs = idx.map((i) => ({ v: wmean(wpairs('precip', (p) => agg(p, 'precip', i, i + 1))), label: label(i) }));
   const winds = idx.map((i) => ({ v: wmean(wpairs('wind', (p) => agg(p, 'wind_speed_10m', i, i + 1))), label: label(i) }));
 
   const clouds = idx.map((i) => ({ v: wmean(wpairs('cloud_cover', (p) => agg(p, 'cloud_cover', i, i + 1))), label: label(i) }));
   return `
-    <div class="mg-lane"><b>${t('mg.temp')}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, nowI, heat: heatTemp })}</div>
-    <div class="mg-lane"><b>${t('mg.precip')}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI, band: rng('precip'), heat: heatRain })}</div>
+    <div class="mg-lane"><b>${t('mg.temp')}${e ? t('mg.ens') : ''}</b>${hourChart(temps, { kind: 'line', color: 'var(--accent)', unit: '°C', band, band2: eb('t_p10', 't_p90'), nowI, heat: heatTemp })}</div>
+    <div class="mg-lane"><b>${t('mg.precip')}${e ? t('mg.ens.bar') : ''}</b>${hourChart(precs, { kind: 'bar', color: 'var(--rain)', unit: 'mm', nowI, band: rng('precip'), band2: eb('r_p10', 'r_p90'), heat: heatRain })}</div>
     <div class="mg-lane"><b>${t('mg.wind')}</b>${hourChart(winds, { kind: 'line', color: 'var(--good)', unit: 'km/h', d: 0, nowI, band: rng('wind', 'wind_speed_10m'), heat: heatWind })}</div>
     <div class="mg-lane"><b>${t('mg.cloud')}</b>${hourChart(clouds, { kind: 'line', color: 'var(--muted)', unit: '%', d: 0, nowI, fixed: [0, 100], band: rng('cloud_cover'), heat: heatCloud })}</div>`;
 }
@@ -792,7 +831,7 @@ function buildWeatherLanes(cols) {
     return cell(`<b>${fmt(m)}°</b>`);   // no heat tint here: the Weather tab stays plain, like Glett
   });
   const rain = cols.map((c) => {
-    const pr = wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a));
+    const pr = blendP(wshare(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)), (x) => x >= rainThr(c.b - c.a)), ensP('rain', c.a, c.b));
     if (pr == null) return cell('–');
     const m = wmean(wpairs('precip', (p) => agg(p, 'precip', c.a, c.b)));
     return cell(`<div class="pct">${Math.round(pr * 100)}%</div>${m != null && m >= 0.05 ? `<small>${fmt(m, 1)} mm</small>` : ''}`);
@@ -850,7 +889,7 @@ function renderGrid() {
     // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
     // the full weighted summary on every tab; the tab's own parameter is highlighted
     buildWeatherLanes(cols).forEach((l) => {
-      html += `<tr class="lane ${l.cls}${LANE_OF[param] === l.cls ? ' sel' : ''}"><th class="rowh">${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+      html += `<tr class="lane ${l.cls}${LANE_OF[param] === l.cls ? ' sel' : ''}"><th class="rowh"${state.ens && (l.cls === 'rain' || l.cls === 'wind') ? ` title="${esc(t('ens.tip'))}"` : ''}>${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
     });
     // the individual models (AI ones first), one block per parameter: shown only with "Show all N models"
     if (state.modelsOpen) {
@@ -872,7 +911,7 @@ function renderGrid() {
     setModelsToggle(rows.length + (extraRows || []).length);
   }
   const compareNote = state.modelsOpen && extraRows && extraRows.length ? t('lg.compare') : '';
-  $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? rainThr(state.step) : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote;
+  $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? rainThr(state.step) : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote + (state.ens ? t('lg.ens', { b: Math.round(ENS_BETA * 100), n: state.ens.systems.reduce((a, x) => a + x.members, 0), k: state.ens.systems.length }) : '');
 }
 // icon-only button inside the view switch: the tooltip carries the text, "active" = all models shown
 function setModelsToggle(n) {
@@ -921,7 +960,8 @@ function renderDays() {
     const top = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0];
     const ext = (fn) => wmean(wp('temperature_2m', (p) => { const v = liveHours(p, p.hourly.temperature_2m, a, b); return v.length ? fn(...v) : null; }));
     const hi = ext(Math.max), lo = ext(Math.min);
-    const rp = wshare(wp('precip', (p) => { const v = liveHours(p, p.hourly.precipitation, a, b); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
+    const rp0 = wshare(wp('precip', (p) => { const v = liveHours(p, p.hourly.precipitation, a, b); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
+    const rp = blendP(rp0, b - a === 24 ? ensP('rain', a, b) : null);
     const rain = rp == null ? null : Math.round(rp * 100);
     const sp = wshare(wp('storm', (p) => { const v = liveHours(p, p.hourly.weather_code, a, b); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
     const storm = sp == null ? 0 : Math.round(sp * 100);
@@ -1006,11 +1046,12 @@ async function loadForecast(refresh = false) {
     if (token !== state.token) return;
     state.data = prepare(data);
     state.day = 0; state.vHours = 24;
-    state.verify = null; state.verifyErr = null; state.observed = null; state.radar = null;
+    state.verify = null; state.verifyErr = null; state.observed = null; state.radar = null; state.ens = null;
     $('loading').hidden = true; $('forecastBody').hidden = false;
     renderAll();
     loadVerify(loc, token);
     loadObserved(loc, token);
+    loadEnsemble(loc, token);
     // Radar nowcast ("Next break") is built (see loadRadar/api/radar.php) but turned off for now: the
     // hero card is meant to hold exactly three boxes — agreement, measured now, and the outlook —
     // per request. Re-add a `loadRadar(loc, token);` call here to bring it back.
@@ -1045,6 +1086,15 @@ async function loadRadar(loc, token) {
   } catch (err) { /* silent */ }
 }
 
+// Ensemble probabilities arrive after the page is already usable; any failure leaves the consensus-only behaviour
+async function loadEnsemble(loc, token) {
+  try {
+    const e = await api(`api/ensemble.php?lat=${loc.lat}&lon=${loc.lon}${loc.elevation != null ? `&elevation=${loc.elevation}` : ''}`);
+    if (token !== state.token || !e || !e.time) return;
+    state.ens = e;
+    renderAll();
+  } catch (err) { /* silent: the deterministic consensus stays */ }
+}
 async function loadVerify(loc, token) {
   $('vfStatus').textContent = t('vf.loading');
   try {
