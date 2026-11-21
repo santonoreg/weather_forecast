@@ -6,7 +6,11 @@ declare(strict_types=1);
 require __DIR__ . '/db.php';
 
 const ASTRO_TTL = 1800;   // 30 minutes, like the forecast
-define('ASTRO_MODELS', array_keys(array_filter(require __DIR__ . '/models.php', fn($m) => in_array('astro', $m['use'], true))));   // from api/models.php
+define('ASTRO_MODELS', array_keys(array_filter(require __DIR__ . '/models.php', fn($m) => in_array('astro', $m['use'], true))));   // the default set, from api/models.php
+// The DSO Explorer lets the visitor choose the models (?models=a,b,c). Only these ids are accepted; all of them were checked with a real
+// Open-Meteo call to return cloud layers, humidity and the winds aloft for Greece (visibility and CAPE are missing for some: the mean is then
+// taken over the models that have them).
+const ASTRO_ALLOWED = ['ecmwf_ifs025', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless', 'jma_seamless', 'cma_grapes_global'];
 const ASTRO_LEVELS = [850, 700, 500, 300, 250];
 
 $lat = filter_var($_GET['lat'] ?? null, FILTER_VALIDATE_FLOAT);
@@ -16,7 +20,9 @@ $lat = round($lat, 3);
 $lon = round($lon, 3);
 
 $pdo = db();
-$key = "astro:$lat:$lon";
+$req = array_values(array_intersect(ASTRO_ALLOWED, array_filter(explode(',', (string)($_GET['models'] ?? '')))));   // allowed ids, in the allowed order
+$MODELS = $req ?: ASTRO_MODELS;
+$key = "astro:$lat:$lon" . ($MODELS === ASTRO_MODELS ? '' : ':' . implode(',', $MODELS));
 if (empty($_GET['refresh'])) {
     $st = $pdo->prepare('SELECT body, fetched_at FROM cache WHERE k = ?');
     $st->execute([$key]);
@@ -36,7 +42,7 @@ foreach (ASTRO_LEVELS as $l) { $vars[] = "wind_speed_{$l}hPa"; $vars[] = "wind_d
 
 $body = http_get('https://api.open-meteo.com/v1/forecast?' . http_build_query([
     'latitude' => $lat, 'longitude' => $lon, 'hourly' => implode(',', $vars),
-    'models' => implode(',', ASTRO_MODELS), 'timezone' => 'auto', 'forecast_days' => 5,
+    'models' => implode(',', $MODELS), 'timezone' => 'auto', 'forecast_days' => 5,
 ]), 25);
 $om = $body ? json_decode($body, true) : null;
 if (!$om || !isset($om['hourly']['time'])) json_out(['error' => 'Failed to fetch data from Open-Meteo'], 502);
@@ -46,9 +52,9 @@ $n = count($time);
 $H = $om['hourly'];
 
 // values of one variable from every model that has it, at hour $i
-$vals = function (string $v, int $i) use ($H): array {
+$vals = function (string $v, int $i) use ($H, $MODELS): array {
     $out = [];
-    foreach (ASTRO_MODELS as $m) {
+    foreach ($MODELS as $m) {
         $x = $H["{$v}_{$m}"][$i] ?? null;
         if ($x !== null) $out[] = (float)$x;
     }
@@ -111,7 +117,7 @@ $out = json_encode([
     'timezone' => $om['timezone'] ?? null,
     'utc_offset_seconds' => (int)($om['utc_offset_seconds'] ?? 0),
     'elevation' => $om['elevation'] ?? null,
-    'models' => ASTRO_MODELS,
+    'models' => $MODELS,
     'aerosols' => (bool)($aqj && isset($aqj['hourly']['time'])),
     'time' => $time,
     'hourly' => $hourly,

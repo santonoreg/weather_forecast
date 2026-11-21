@@ -191,6 +191,10 @@
       <label><span data-i18n="tb.location">Location</span>
         <select id="dsoLoc"></select>
       </label>
+      <div class="fld wxm"><span class="lbl" data-i18n="dso.models">Weather models</span>
+        <details class="models" id="wxModels"><summary id="wxModelsSum"></summary><div class="mdl-panel" id="wxModelsPanel"></div></details>
+      </div>
+      <button id="dsoMapBtn" class="btn ghost mapbtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7zM9 4v13M15 7v13"/></svg> <span data-i18n="dso.map.btn">Map</span></button>
       <span id="dsoMeta" class="meta"></span>
     </div>
     <div id="dsoEmpty" class="notice" data-i18n="as.empty" hidden></div>
@@ -340,6 +344,18 @@
     <h2 id="dsoModalTitle"></h2>
     <div class="seg2" id="dsoPM"><button type="button" class="on" data-pm="photo" data-i18n="dso.photo">Photo</button><button type="button" data-pm="map" data-i18n="dso.map">Finder chart</button></div>
     <div id="dsoPMBox"></div>
+  </div>
+</div>
+
+<!-- DSO Explorer: light pollution map -->
+<div id="lpModal" class="modal" hidden>
+  <div class="modal-card wide lp-card">
+    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
+    <h2 data-i18n="as.lp.title">Light pollution map</h2>
+    <p class="legend" data-i18n="as.lp.hint">Night lights seen from space.</p>
+    <div id="lpMap" class="map lpm"></div>
+    <div class="lpkey" id="lpKey"></div>
+    <p class="legend"><span data-i18n="as.lp.note"></span> <a id="lpLink" href="https://www.lightpollutionmap.info/" target="_blank" rel="noopener" data-i18n="as.lp.open">Open the full light pollution atlas</a></p>
   </div>
 </div>
 

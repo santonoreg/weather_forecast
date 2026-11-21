@@ -1253,6 +1253,7 @@ function setCurrent(loc, go = false) {
   if (go && state.view !== 'astro' && state.view !== 'dso') showView('forecast');
   loadForecast();
   if (state.view === 'astro') Astro.load();
+  if (typeof LpMap !== 'undefined' && LpMap.isOpen) LpMap.sync();
   if (state.view === 'dso') Dso.refreshLocation();
 }
 $('locSelect').addEventListener('change', (e) => {
@@ -1817,6 +1818,8 @@ function onLangChange() {
   if (state.data) renderAll();
   Astro.render();
   Dso.render();
+  WxModels.render();
+  if (LpMap.isOpen) LpMap.sync();
   Trip.render();
   Trip.renderModels();
 }

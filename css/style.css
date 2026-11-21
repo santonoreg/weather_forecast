@@ -1279,3 +1279,15 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .trm input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .trm.nodata span { opacity: .5; text-decoration: line-through; }
 .tr-models .linkbtn[disabled] { opacity: .4; cursor: default; }
+
+/* DSO Explorer: weather-model drop-down and the Map button */
+.wxm .models { padding: 0; } .wxm .models summary { min-width: 132px; }
+.mdl-panel .mdl-note { margin: 6px 8px 4px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.mdl-panel .mdl-def { margin: 6px 8px 0; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; text-align: left; }
+.mdl-panel .mdl-def:hover { text-decoration: underline; }
+#view-dso .mdl { margin: 0; align-items: center; } #view-dso .mdl input { margin-top: 0; }
+.mapbtn { display: inline-flex; align-items: center; gap: 7px; }
+.mapbtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.lp-card { max-width: 980px; }
+.lp-card .legend { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 6px 0 10px; }
+.lp-card .map.lpm { height: min(520px, 62vh); }

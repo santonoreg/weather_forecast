@@ -1,7 +1,7 @@
 /* ================= DSO Explorer =================
    Catalogue of 2936 deep-sky objects (Messier, Caldwell, Best NGC, Herschel 400 flagged), tonight's best targets,
    a per-object screen with DSS2 photo and a finding chart. Sun/Moon/object positions are computed here with the
-   helpers of js/astro.js; cloud comes from api/astro.php (mean of ECMWF IFS / GFS / ICON). The visibility class is a
+   helpers of js/astro.js; cloud comes from api/astro.php (mean of the models ticked in the toolbar, ECMWF IFS / GFS / ICON by default). The visibility class is a
    heuristic and is labelled as an estimate in the UI. */
 const Dso = (() => {
   const RAD = Math.PI / 180, MOON_ARCMIN = 31;
@@ -119,7 +119,7 @@ const Dso = (() => {
     const key = loc.lat + ',' + loc.lon;
     if (S.night && S.nightKey === key) return S.night;
     let data = null;
-    try { data = await api(`api/astro.php?lat=${loc.lat}&lon=${loc.lon}`); } catch (e) { /* no forecast: clouds are reported as unavailable */ }
+    try { data = await api(`api/astro.php?lat=${loc.lat}&lon=${loc.lon}&models=${WxModels.param()}`); } catch (e) { /* no forecast: clouds are reported as unavailable */ }
     const o = data ? data.utc_offset_seconds || 0 : -new Date().getTimezoneOffset() * 60;
     const night = pickNight(o, loc.lat, loc.lon);
     // hourly mean cloud cover keyed by epoch ms
@@ -608,4 +608,88 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
 
   return { init, show, render, refreshLocation, vis, prep, computeNight, pickNight, TYPE_EN, get data() { return D; } };
 })();
+/* ---- weather models: which ones the cloud / seeing / transparency forecast of this page is averaged over ---- */
+const WX_MODELS = [['ecmwf_ifs025', 'ECMWF IFS'], ['gfs_seamless', 'NOAA GFS'], ['icon_seamless', 'DWD ICON'], ['meteofrance_seamless', 'Météo-France'], ['ukmo_seamless', 'UK Met Office'], ['gem_seamless', 'Canada GEM'], ['jma_seamless', 'JMA'], ['cma_grapes_global', 'CMA GRAPES']];
+const WX_DEFAULT = ['ecmwf_ifs025', 'gfs_seamless', 'icon_seamless'];
+const WxModels = (() => {
+  const KEY = 'wefo.dso.models', ids = WX_MODELS.map((m) => m[0]);
+  let sel = WX_DEFAULT.slice(), timer = null;
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (Array.isArray(s)) { const ok = ids.filter((x) => s.includes(x)); if (ok.length) sel = ok; } } catch (e) { /* ignore */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(sel)); } catch (e) { /* ignore */ } };
+  function render() {
+    $('wxModelsSum').textContent = sel.length === 1 ? t('dso.models.1') : t('dso.models.n', { n: sel.length });
+    $('wxModelsPanel').innerHTML = WX_MODELS.map(([id, name]) => `<label class="mdl"><input type="checkbox" data-m="${id}"${sel.includes(id) ? ' checked' : ''}><span>${esc(name)}</span></label>`).join('')
+      + `<button type="button" class="mdl-def" id="wxDef">${esc(t('dso.models.default'))}</button><p class="mdl-note">${esc(t('dso.models.note'))}</p>`;
+  }
+  function changed() {                                    // the forecast is fetched again a moment after the last tick
+    save(); render();
+    clearTimeout(timer);
+    timer = setTimeout(() => Dso.refreshLocation(), 700);
+  }
+  $('wxModelsPanel').addEventListener('change', (e) => {
+    const id = e.target.dataset && e.target.dataset.m; if (!id) return;
+    if (e.target.checked) sel = ids.filter((x) => x === id || sel.includes(x));
+    else if (sel.length > 1) sel = sel.filter((x) => x !== id);
+    else { e.target.checked = true; return; }              // at least one model stays on
+    changed();
+  });
+  $('wxModelsPanel').addEventListener('click', (e) => { if (e.target.id === 'wxDef') { sel = WX_DEFAULT.slice(); changed(); } });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#wxModels')) $('wxModels').open = false; });
+  render();
+  return { render, param: () => sel.join(',') };
+})();
+
+/* ---- light pollution map (dialog): David Lorenz's atlas over a dark map, NASA night lights as a second overlay; click = look at that spot ---- */
+const LpMap = (() => {
+  let map = null, marker = null, layers = null, control = null, opacity = 0.7, lastKey = null;
+  try { const v = +localStorage.getItem('wefo.lpop'); if (v >= 0.1 && v <= 1) opacity = v; } catch (e) { /* ignore */ }
+  function build(loc) {
+    const osm = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    map = L.map('lpMap', { worldCopyJump: true, minZoom: 3 }).setView([loc.lat, loc.lon], 7);
+    layers = {
+      dark: L.tileLayer(osm, { maxZoom: 18, className: 'lp-dark', attribution: '© OpenStreetMap' }),
+      osm: L.tileLayer(osm, { maxZoom: 18, attribution: '© OpenStreetMap' }),
+      atlas: L.tileLayer(Astro.ATLAS, { minZoom: 2, maxNativeZoom: 8, maxZoom: 18, tileSize: 1024, zoomOffset: -2, opacity, attribution: 'Sky brightness atlas © D. Lorenz (VIIRS 2025)' }),
+      night: L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png', { maxNativeZoom: 8, maxZoom: 18, opacity, className: 'lp-night', attribution: 'Night lights © NASA GIBS / VIIRS Black Marble' }),
+    };
+    layers.dark.addTo(map); layers.atlas.addTo(map);
+    map.on('baselayerchange', (e) => map.getContainer().classList.toggle('lp-lightbase', e.layer === layers.osm));
+    map.on('click', async (e) => {
+      const lat = +e.latlng.lat.toFixed(4), lon = +(((e.latlng.lng + 540) % 360) - 180).toFixed(4);
+      setCurrent({ id: null, name: await adhocName(lat, lon), lat, lon });
+    });
+    const Op = L.Control.extend({
+      onAdd() {
+        const dv = L.DomUtil.create('div', 'leaflet-bar lp-op');
+        dv.innerHTML = '<label><span id="lpOpLabel"></span><input type="range" min="10" max="100" step="5"></label>';
+        const r = dv.querySelector('input'); r.value = Math.round(opacity * 100);
+        r.addEventListener('input', () => { opacity = r.value / 100; layers.atlas.setOpacity(opacity); layers.night.setOpacity(opacity); try { localStorage.setItem('wefo.lpop', opacity); } catch (e) { /* ignore */ } });
+        L.DomEvent.disableClickPropagation(dv);
+        return dv;
+      },
+    });
+    new Op({ position: 'bottomleft' }).addTo(map);
+  }
+  async function sync() {                                  // draw the current place (and re-label on a language change)
+    const loc = state.current;
+    if (!loc || typeof L === 'undefined') return;
+    if (!map) build(loc);
+    if (control) map.removeControl(control);
+    control = L.control.layers({ [t('as.lp.base.dark')]: layers.dark, 'OpenStreetMap': layers.osm }, { [t('as.lp.atlas')]: layers.atlas, [t('as.lp.night')]: layers.night }, { collapsed: false }).addTo(map);
+    $('lpOpLabel').textContent = t('as.lp.opacity');
+    $('lpKey').innerHTML = `<span>${t('as.lp.dark')}</span>` + Astro.ZONES.map((z) => `<i title="${z[2].toFixed(1)} mag/arcsec²" style="background:rgb(${z[1]})"></i>`).join('') + `<span>${t('as.lp.bright')}</span>`;
+    const pos = [loc.lat, loc.lon], key = pos.join(',');
+    let b = null; try { b = await Astro.bortleFor(loc); } catch (e) { /* atlas unreachable */ }
+    const label = `<b>${esc(locName(loc))}</b>${b ? `<br>Bortle ${b}` : ''}`;
+    if (marker) marker.setLatLng(pos).setPopupContent(label); else marker = L.marker(pos).addTo(map).bindPopup(label);
+    if (lastKey !== key) { lastKey = key; map.setView(pos, Math.max(map.getZoom(), 7)); }   // only when the place changes, so panning survives
+    $('lpLink').href = `https://www.lightpollutionmap.info/#zoom=8&lat=${loc.lat}&lon=${loc.lon}`;
+    setTimeout(() => map.invalidateSize(), 60);
+  }
+  $('dsoMapBtn').addEventListener('click', () => { $('lpModal').hidden = false; sync(); });
+  $('lpModal').addEventListener('click', (e) => { if (e.target === $('lpModal') || e.target.closest('[data-close]')) $('lpModal').hidden = true; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('lpModal').hidden = true; });
+  return { sync, get isOpen() { return !$('lpModal').hidden; } };
+})();
+
 Dso.init();
