@@ -1239,3 +1239,4 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 
 /* hours where a model only repeats another model's data (see markDuplicates in app.js) */
 .grid td.dupc { opacity: .4; }
+.mdl .mtxt small.warn { color: var(--warn, #b45309); }

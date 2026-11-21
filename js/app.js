@@ -21,6 +21,8 @@ async function api(path, opts) {
 
 const state = { view: 'forecast', locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
+state.oneVote = false;   // "one vote per model family" (off by default)
+try { state.oneVote = localStorage.getItem('wefo.oneVote') === '1'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
 // Models shown or hidden is remembered per layout: hidden by default across, shown by default in the time-down view (where only "hide" is wanted)
 let modelsAcross = false;
@@ -88,6 +90,42 @@ function markDuplicates(data) {
     if (first && valid.every((i) => q.dupHours[i] === first)) q.dupOf = first;
   });
 }
+/* Yr (MET Norway) is built on ECMWF outside the Nordics, so it is not an independent opinion. Its temperature is
+   compared with ECMWF IFS over the whole forecast: when it follows it almost exactly (correlation above
+   ECMWF_COPY_R and the same direction of change in at least ECMWF_COPY_TREND of the hours) its weight is cut
+   by ECMWF_COPY_FACTOR. p.corr = { ref, r, trend, cut } is also shown in the Reliability window. */
+const ECMWF_COPY_R = 0.97;
+const ECMWF_COPY_TREND = 0.9;
+const ECMWF_COPY_FACTOR = 0.5;
+function markDerived(data) {
+  data.providers.forEach((p) => {
+    const ref = p.derives_from && data.providers.find((x) => x.id === p.derives_from && !x.dupOf);
+    if (!ref || p.dupOf) return;
+    const a = p.hourly.temperature_2m, b = ref.hourly.temperature_2m;
+    const idx = a.map((_, i) => i).filter((i) => a[i] != null && b[i] != null);
+    if (idx.length < 24) return;
+    const ma = mean(idx.map((i) => a[i])), mb = mean(idx.map((i) => b[i]));
+    let sab = 0, saa = 0, sbb = 0;
+    idx.forEach((i) => { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; });
+    const r = saa && sbb ? sab / Math.sqrt(saa * sbb) : 0;
+    let ok = 0, n = 0;
+    for (let k = 1; k < idx.length; k++) {
+      if (idx[k] !== idx[k - 1] + 1) continue;
+      const da = a[idx[k]] - a[idx[k - 1]], db = b[idx[k]] - b[idx[k - 1]];
+      if (da === 0 || db === 0) continue;
+      n++; if (Math.sign(da) === Math.sign(db)) ok++;
+    }
+    const trend = n ? ok / n : 0;
+    p.corr = { ref: ref.id, r, trend, cut: r > ECMWF_COPY_R && trend >= ECMWF_COPY_TREND };
+  });
+}
+/* "One vote per family": the weight of a family (ECMWF = IFS + AIFS + Yr, …) is shared between its active members */
+let famCount = null;
+const familyShare = (p) => {
+  if (!state.oneVote || !p.family) return 1;
+  if (!famCount) { famCount = {}; activeProviders().forEach((x) => { if (x.family) famCount[x.family] = (famCount[x.family] || 0) + 1; }); }
+  return 1 / (famCount[p.family] || 1);
+};
 /* Tooltip for a dimmed (copied) hour: "Same data as X from 21/11 06:00" — the start of the run of copied hours */
 function dupNote(p, i) {
   const src = p.dupHours && p.dupHours[i];
@@ -104,6 +142,7 @@ function prepare(data) {
     p.hourly.code = p.hourly.weather_code.map((c, i) => (c != null ? c : deriveCode(p, i)));
   });
   markDuplicates(data);
+  markDerived(data);
   data.isDay = Array.from({ length: n }, (_, i) => {
     for (const p of data.providers) if (p.hourly.is_day[i] != null) return p.hourly.is_day[i];
     const hr = +data.time[i].slice(11, 13);
@@ -250,7 +289,8 @@ const cell = (html, bg = '', cls = '') => ({ html, bg, cls });
 
 /* Reliability weighting: κάθε πάροχος έχει βάρος ανά παράμετρο (1 = ουδέτερο) */
 const weightsOn = () => state.weighted && !!state.verify;
-const W = (p, key) => (weightsOn() && state.verify.models[p.id]?.weights?.[key]) || 1;
+const W = (p, key) => ((weightsOn() && state.verify.models[p.id]?.weights?.[key]) || 1)
+  * (state.weighted && p.corr?.cut ? ECMWF_COPY_FACTOR : 1) * familyShare(p);
 const wpairs = (key, fn) => activeProviders().map((p) => ({ v: fn(p), w: W(p, key) })).filter((x) => x.v != null && !Number.isNaN(x.v));
 const wsum = (pr) => pr.reduce((a, x) => a + x.w, 0);
 const wmean = (pr) => (pr.length ? pr.reduce((a, x) => a + x.v * x.w, 0) / wsum(pr) : null);
@@ -414,9 +454,10 @@ function renderRelModal() {
   const v = state.verify;
   const all = state.data.providers;
   const region = (id) => (hasT('mi.' + id) ? `<small>${t('mi.' + id)}</small>` : '');
+  const corrNote = (p) => (p.corr ? `<small class="${p.corr.cut ? 'warn' : ''}">${esc(t(p.corr.cut ? 'm.corr.cut' : 'm.corr', { n: nameById(p.corr.ref), r: p.corr.r.toFixed(2), tr: Math.round(p.corr.trend * 100), f: ECMWF_COPY_FACTOR }))}</small>` : '');
   const nameCell = (p) => (p.dupOf
     ? `<span class="mdl off"><span class="mtxt"><b>${esc(pname(p))}</b><small>${esc(t('m.dup', { n: nameById(p.dupOf) }))}</small></span></span>`
-    : `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${relDraft.has(p.id) ? '' : 'checked'}><span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}</span></label>`);
+    : `<label class="mdl"><input type="checkbox" data-mid="${p.id}" ${relDraft.has(p.id) ? '' : 'checked'}><span class="mtxt"><b>${esc(pname(p))}</b>${region(p.id)}${corrNote(p)}</span></label>`);
   const missing = ALL_MODEL_IDS.filter((id) => !all.some((p) => p.id === id) && !OPTIONAL_MODEL_IDS.includes(id));
   const ncol = 9;
   const note = v ? '' : `<tr><td class="pad" colspan="${ncol - 1}">${state.verifyErr ? esc(t('r.unavailable', { e: state.verifyErr })) : t('r.loading')}</td></tr>`;
@@ -896,6 +937,7 @@ $('relSave').addEventListener('click', () => {
 });
 
 function renderAll() {
+  famCount = null;
   renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid();
   const d = state.data, loc = state.current;
   $('meta').textContent = t('meta', { name: locName(loc), lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
@@ -983,6 +1025,13 @@ $('weightChk').checked = state.weighted;
 $('weightChk').addEventListener('change', (e) => {
   state.weighted = e.target.checked;
   try { localStorage.setItem('wefo.weighted', state.weighted ? '1' : '0'); } catch (err) { /* ignore */ }
+  if (state.data) renderAll();
+});
+
+$('oneVoteChk').checked = state.oneVote;
+$('oneVoteChk').addEventListener('change', (e) => {
+  state.oneVote = e.target.checked;
+  try { localStorage.setItem('wefo.oneVote', state.oneVote ? '1' : '0'); } catch (err) { /* ignore */ }
   if (state.data) renderAll();
 });
 

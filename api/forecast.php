@@ -114,7 +114,7 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $h['is_day'][] = null;
         $h['precip_6h_block'][] = $prec !== null ? $smeared : 0;
     }
-    $providers[] = ['id' => 'yr', 'name' => 'MET Norway / Yr', 'res' => '~1–9 km (ECMWF-based outside the Nordics)', 'area' => 'global', 'family' => 'ecmwf', 'hourly' => $h];
+    $providers[] = ['id' => 'yr', 'name' => 'MET Norway / Yr', 'res' => '~1–9 km (ECMWF-based outside the Nordics)', 'area' => 'global', 'family' => 'ecmwf', 'derives_from' => 'ecmwf_ifs025', 'hourly' => $h];   // Yr is ECMWF-based outside the Nordics
 }
 
 // Optional: Google WeatherNext 3 via the Google Maps Platform Weather API — only if a key is
