@@ -80,6 +80,7 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $pts[] = ['t' => strtotime($p['time']), 'd' => $p['data']];
     }
     $h = array_fill_keys($VARS, []);
+    $h['precip_6h_block'] = [];   // 1 = this hour's rain is a 6 h Yr total split evenly ("smeared"), not a real hourly value
     $j = 0;
     foreach ($time as $localStr) {
         $t = strtotime($localStr . ' UTC') - $offset; // τοπική ώρα -> UTC
@@ -87,15 +88,16 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $p = $pts[$j];
         if ($t < $pts[0]['t'] || $t - $p['t'] > 6 * 3600) {
             foreach ($VARS as $v) $h[$v][] = null;
+            $h['precip_6h_block'][] = 0;
             continue;
         }
         $d = $p['d'];
         $i = $d['instant']['details'];
         $hasHour = isset($d['next_1_hours']);
         $blk = $d['next_1_hours'] ?? $d['next_6_hours'] ?? null;
-        $prec = null;
+        $prec = null; $smeared = 0;
         if ($hasHour && $p['t'] === $t) $prec = $d['next_1_hours']['details']['precipitation_amount'] ?? null;
-        elseif (isset($d['next_6_hours']['details']['precipitation_amount'])) $prec = $d['next_6_hours']['details']['precipitation_amount'] / 6;
+        elseif (isset($d['next_6_hours']['details']['precipitation_amount'])) { $prec = $d['next_6_hours']['details']['precipitation_amount'] / 6; $smeared = 1; }
         elseif ($hasHour) $prec = $d['next_1_hours']['details']['precipitation_amount'] ?? null;
         $sym = $blk['summary']['symbol_code'] ?? null;
         $h['temperature_2m'][] = $i['air_temperature'] ?? null;
@@ -110,6 +112,7 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $h['weather_code'][] = $sym ? yr_code($sym) : null;
         $h['cape'][] = null;
         $h['is_day'][] = null;
+        $h['precip_6h_block'][] = $prec !== null ? $smeared : 0;
     }
     $providers[] = ['id' => 'yr', 'name' => 'MET Norway / Yr', 'res' => '~1–9 km (ECMWF-based outside the Nordics)', 'area' => 'global', 'family' => 'ecmwf', 'hourly' => $h];
 }

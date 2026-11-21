@@ -215,7 +215,7 @@ For every time step and every parameter WeFO collects one value per active provi
 
 - **Average / range** – (weighted) mean, min and max of the provider values.
 - **Weather category** – WMO weather codes are grouped into *clear, partly cloudy, overcast, fog, drizzle, rain, snow, thunderstorm*. Each provider votes for its category; the shares are shown as percentages. If a provider gives no weather code it is derived from precipitation, temperature (snow), CAPE and cloud cover.
-- **Chance of rain** – share of providers with at least a threshold of rain in the step. The threshold grows with the step, because over a long block a mere trace adds up: **0.2 mm** for a 1 h step, **0.5 mm** for 3 h, **1 mm** for 6 h and 12 h (the *Days ahead* card, 24 h, uses the same 1 mm).
+- **Chance of rain** – share of providers with at least a threshold of rain in the step. The threshold grows with the step, because over a long block a mere trace adds up: **0.2 mm** for a 1 h step, **0.5 mm** for 3 h, **1 mm** for 6 h and 12 h (the *Days ahead* card, 24 h, uses the same 1 mm). Yr only publishes a 6-hourly rain total for the later hours; the API spreads it evenly over those hours and flags them (`precip_6h_block`), and the UI ignores such hours in steps shorter than 6 h.
 - **Chance of strong wind** – share of providers with ≥ **30 km/h** (Beaufort 5).
 - **Chance of thunderstorm** – each provider gives a signal: weather code 95–99 = 1, CAPE ≥ 1000 J/kg = 0.5, otherwise 0; the chance is the (weighted) mean signal.
 - **Agreement** (temperature, cloud, humidity, pressure) – `100 % × (1 − σ / tolerance)`, where σ is the standard deviation between providers and the tolerance is 4 °C, 50 %, 25 %, 4 hPa respectively (0 % when σ ≥ tolerance).

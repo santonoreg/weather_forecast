@@ -83,7 +83,11 @@ function circMean(dirs, weights) {
 function agg(p, param, a, b) {
   const h = p.hourly, sl = (arr) => nn(arr.slice(a, b));
   switch (param) {
-    case 'precip': { const v = sl(h.precipitation); return v.length ? v.reduce((s, x) => s + x, 0) : null; }
+    case 'precip': {
+      // Yr only gives a 6 h total for later hours, spread evenly over them: fine for blocks of >= 6 h, not as an hourly value
+      const sm = h.precip_6h_block;
+      const v = sm && b - a < 6 ? nn(h.precipitation.slice(a, b).filter((_, k) => !sm[a + k])) : sl(h.precipitation);
+      return v.length ? v.reduce((s, x) => s + x, 0) : null; }
     case 'gust': { const v = sl(h.wind_gusts_10m); return v.length ? Math.max(...v) : null; }
     case 'cape': { const v = sl(h.cape); return v.length ? Math.max(...v) : null; }
     case 'code': { const v = sl(h.code); return v.length ? Math.max(...v) : null; }
