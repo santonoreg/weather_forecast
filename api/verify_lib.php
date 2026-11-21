@@ -190,7 +190,9 @@ function greece_stations(PDO $pdo): array
             if (count($stations) >= GREECE_MAX_STATIONS) break;
         }
     }
-    $pdo->prepare('INSERT OR REPLACE INTO cache (k, body, fetched_at) VALUES (?, ?, ?)')->execute([$key, json_encode($stations), time()]);
+    // a failed or empty answer is not cached (it would block the Greece-wide method until the TTL ran out)
+    if (count($stations) >= MIN_GREECE_STATIONS) $pdo->prepare('INSERT OR REPLACE INTO cache (k, body, fetched_at) VALUES (?, ?, ?)')->execute([$key, json_encode($stations), time()]);
+    elseif (PHP_SAPI === 'cli') fwrite(STDERR, 'verify: station list from aviationweather.gov has ' . count($stations) . ' Greek stations' . ($body ? '' : ' (no answer)') . "\n");
     return $stations;
 }
 
@@ -516,7 +518,10 @@ function compute_greece(PDO $pdo, array $cfg, string $start, string $fcEnd, stri
         if (count($obsRows) >= MIN_OBS) { $obsGroups[] = $og = ['fc' => $fc, 'rows' => $obsRows, 'prev' => $prev, 'obs' => true]; $used[] = $stn['name']; }
         if ($eg) $perStation[] = [$stn, $eg, $og];
     }
-    if (!$eraGroups) return null;
+    if (!$eraGroups) {
+        if (PHP_SAPI === 'cli') fwrite(STDERR, sprintf("verify: no station had usable data (%d stations; archive answered %d, previous-runs %d)\n", count($stations), count(array_filter($fcBodies)), count(array_filter($prevBodies))));
+        return null;
+    }
 
     [$models, $wbl] = add_leads($cfg, score_models($cfg, $eraGroups, $obsGroups), $eraGroups, $obsGroups, $leads);
     // each station on its own (lead 0): the nationwide weights can then be tilted towards the stations near the visitor (local_blend)
