@@ -9,8 +9,16 @@ const Trip = (() => {
   try { T.wide = localStorage.getItem('wefo.trip.wide') === '1'; } catch (e) { /* ignore */ }
   const CAT_COL = { clear: '#f5b301', partly: '#f5b301', cloudy: '#94a3b8', fog: '#a8b4c8', drizzle: '#7fb4f5', rain: '#3b82f6', snow: '#38bdf8', thunder: '#a855f7' };
   const SEV_COL = ['#16a34a', '#d9a406', '#ea7a14', '#dc2626'];
-  const MODEL_IDS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];
+  const MODEL_IDS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];   // what api/tripweather.php returns (the 'trip' models of api/models.php)
+  const MODEL_FALLBACK = { ecmwf_ifs025: 'ECMWF IFS', ecmwf_aifs025_single: 'ECMWF AIFS (AI)', gfs_seamless: 'NOAA GFS', icon_seamless: 'DWD ICON', meteofrance_seamless: 'Météo-France', ukmo_seamless: 'UK Met Office', gem_seamless: 'Environment Canada GEM' };
+  const modelLabel = (id) => (typeof nameById === 'function' && nameById(id) !== id ? nameById(id) : MODEL_FALLBACK[id] || id);
+  const MODELS_KEY = 'wefo.trip.models';
   const clampN = (x, a, b) => Math.min(b, Math.max(a, x));
+  /* The models the weather is based on: one, several or all (the choice is kept in this browser). Changing it re-analyses the forecast that is
+     already loaded (r.raw) – the map, the warnings, the weather along the route and the stage list all update at once, with no new request. */
+  const SEL = new Set(MODEL_IDS);
+  try { const s = JSON.parse(localStorage.getItem(MODELS_KEY) || 'null'); if (Array.isArray(s)) { const ok = s.filter((x) => MODEL_IDS.includes(x)); if (ok.length) { SEL.clear(); ok.forEach((x) => SEL.add(x)); } } } catch (e) { /* ignore */ }
+  const saveSel = () => { try { localStorage.setItem(MODELS_KEY, JSON.stringify([...SEL])); } catch (e) { /* ignore */ } };
   /* fuel / energy estimate: units = distance × consumption + an allowance for climbing (0.15 L or 0.1 kWh per 100 m); the car comes from
      assets/cars.json (US EPA data, see tools/build-cars.py) or from "Typical cars", and the numbers can always be typed in by hand.
      Default prices: 95-octane 2.05 €/L and diesel 2.09 €/L (Greek averages, 11 Nov 2026); electricity 0.30 €/kWh is a guess (home cheaper, fast chargers dearer). */
@@ -95,6 +103,7 @@ const Trip = (() => {
     if (!pt || !pt.m) return null;
     const f = pt.f, rows = [], seen = new Set();
     for (const id of MODEL_IDS) {
+      if (!SEL.has(id)) continue;
       const m = pt.m[id];
       if (!m) continue;
       const tm = lv(m.temperature_2m, f), pr = lv(m.precipitation, f), g = lv(m.wind_gusts_10m, f), cl = lv(m.cloud_cover, f), cape = lv(m.cape, f), hum = lv(m.relative_humidity_2m, f);
@@ -179,6 +188,37 @@ const Trip = (() => {
     return best.d < 3 ? name : t('trip.near', { p: name });
   }
 
+  function analyseRoute(r) {
+    r.wx = r.raw.map(analyse);
+    r.warn = warnings(r);
+    r.score = score(r);
+    r.verdict = verdict(r);
+  }
+  function markBest() {                                           // flags the route with the least trouble; returns its index
+    const best = T.routes.reduce((b, r, i) => (r.score < T.routes[b].score - 0.05 ? i : b), 0);
+    T.routes.forEach((r, i) => { r.best = T.routes.length > 1 && i === best; });
+    return best;
+  }
+  /* the model chips (in the form, so they are there before a route is planned too) */
+  function renderModels() {
+    const box = $t('tripModels');
+    if (!box) return;
+    const has = new Set();                                         // models that actually answered somewhere on the planned routes
+    T.routes.forEach((r) => (r.raw || []).forEach((p) => p && p.m && Object.keys(p.m).forEach((id) => has.add(id))));
+    const known = T.routes.length > 0;
+    box.innerHTML = `<span class="trm-l">${esc(t('trip.models'))}</span>`
+      + MODEL_IDS.map((id) => `<label class="trm${SEL.has(id) ? ' on' : ''}${known && !has.has(id) ? ' nodata' : ''}" title="${esc(known && !has.has(id) ? t('trip.models.nodata') : modelLabel(id))}"><input type="checkbox" data-m="${id}"${SEL.has(id) ? ' checked' : ''}><span>${esc(modelLabel(id))}</span></label>`).join('')
+      + `<button type="button" class="linkbtn" id="trmAll"${SEL.size === MODEL_IDS.length ? ' disabled' : ''}>${esc(t('trip.models.all'))}</button>`;
+  }
+  function modelsChanged() {
+    saveSel(); renderModels();
+    if (!T.routes.length || T.loading) return;
+    T.routes.forEach((r) => { if (r.raw) analyseRoute(r); });
+    markBest();
+    T.mapFitted = true;                                            // keep the map where the user has put it
+    render();
+  }
+
   /* ---------- data loading ---------- */
   async function plan() {
     if (!T.from || !T.to) { T.error = { text: t('trip.need') }; render(); return; }
@@ -198,17 +238,13 @@ const Trip = (() => {
       await Promise.all(T.routes.map(async (r) => {
         const pts = r.sampleKm.map((km) => `${r.latAt(km).toFixed(2)},${r.lonAt(km).toFixed(2)},${Math.round((T.dep + r.timeAt(km)) / 1000)}`).join(';');
         const w = await api('api/tripweather.php?pts=' + encodeURIComponent(pts));
-        r.wx = w.pts.map(analyse);
+        r.raw = w.pts;
         r.places = r.sampleKm.map((km) => placeNear(r.latAt(km), r.lonAt(km)));
-        r.warn = warnings(r);
-        r.score = score(r);
-        r.verdict = verdict(r);
+        analyseRoute(r);
       }));
       if (token !== T.token) return;
-      const best = T.routes.reduce((b, r, i) => (r.score < T.routes[b].score - 0.05 ? i : b), 0);
-      T.routes.forEach((r, i) => { r.best = T.routes.length > 1 && i === best; });
-      T.sel = best;
-      T.loading = ''; T.mapFitted = false; render();
+      T.sel = markBest();
+      T.loading = ''; T.mapFitted = false; render(); renderModels();
     } catch (e) {
       if (token !== T.token) return;
       T.loading = ''; T.routes = [];
@@ -660,8 +696,16 @@ const Trip = (() => {
     const lim = () => { const n = new Date(); at.min = loc(n); at.max = loc(new Date(n.getTime() + 6 * 86400e3)); if (!at.value) at.value = loc(new Date(n.getTime() + 3600e3)); };
     sel.addEventListener('change', () => { T.when = sel.value; at.hidden = sel.value === 'now'; lim(); });
     $t('tripGo').addEventListener('click', plan);
+    const mb = $t('tripModels');
+    renderModels();
+    mb.addEventListener('change', (e) => {
+      const id = e.target.dataset && e.target.dataset.m; if (!id) return;
+      if (e.target.checked) SEL.add(id); else if (SEL.size > 1) SEL.delete(id); else { e.target.checked = true; return; }   // at least one model stays on
+      modelsChanged();
+    });
+    mb.addEventListener('click', (e) => { if (e.target.id === 'trmAll') { MODEL_IDS.forEach((x) => SEL.add(x)); modelsChanged(); } });
   }
   function show() { loadMine().then(() => { if ($t('trMake')) fillCars(); }); if (T.map) setTimeout(() => T.map && T.map.invalidateSize(), 50); }
-  return { init, render, show };
+  return { init, render, show, renderModels };
 })();
 Trip.init();

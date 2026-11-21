@@ -1818,6 +1818,7 @@ function onLangChange() {
   Astro.render();
   Dso.render();
   Trip.render();
+  Trip.renderModels();
 }
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
 applyStaticI18n();

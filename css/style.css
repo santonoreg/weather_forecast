@@ -1267,3 +1267,15 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .log-tbl .lg-k { font-weight: 600; } .log-tbl tr.lg-bad .lg-k { color: var(--bad); } .log-tbl tr.lg-warn .lg-k { color: var(--warn, #b45309); } .log-tbl tr.lg-ok .lg-k { color: var(--good); }
 #logMore { margin: 10px 0; }
 .log-wrap { overflow-x: auto; } .log-tbl .lg-m { min-width: 220px; } .log-tbl th, .log-tbl td { padding: 6px 8px; }
+
+/* Trip: choose the forecast models */
+.tr-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
+.tr-models .trm-l { font-size: 12.5px; color: var(--muted); margin-right: 2px; }
+.trm { position: relative; flex-direction: row; align-items: center; gap: 0; padding: 0; font-size: 13px; color: var(--muted); cursor: pointer; }
+.trm input { position: absolute; opacity: 0; pointer-events: none; }
+.trm span { padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); transition: background .12s, color .12s, border-color .12s; }
+.trm:hover span { border-color: var(--accent); }
+.trm.on span { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-color: var(--accent); color: var(--text); font-weight: 600; }
+.trm input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.trm.nodata span { opacity: .5; text-decoration: line-through; }
+.tr-models .linkbtn[disabled] { opacity: .4; cursor: default; }

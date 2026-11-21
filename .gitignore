@@ -2,3 +2,7 @@ data/*.sqlite
 data/*.sqlite-*
 api/config.php
 tools/.cache-eu/
+
+# Markdown notes are not kept in the repository (README.md is the GitHub front page)
+*.md
+!README.md
