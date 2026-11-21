@@ -9,7 +9,9 @@ const CACHE_TTL = 1800; // 30 λεπτά
 $CATALOG = require __DIR__ . '/models.php';   // id => name, resolution, area, family … (single source of truth)
 $MODELS = array_map(fn($m) => $m['name'], $CATALOG);
 $VARS = ['temperature_2m', 'apparent_temperature', 'precipitation', 'wind_speed_10m', 'wind_gusts_10m',
-         'wind_direction_10m', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl', 'weather_code', 'cape', 'is_day'];
+         'wind_direction_10m', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl', 'weather_code', 'cape', 'lifted_index', 'convective_inhibition', 'is_day'];
+// lifted_index: GFS and CMA only; convective_inhibition: GFS, ICON, UKMO, CMA, KNMI, DMI, MET Nordic (checked for Greece); lightning_potential: no model returns it there
+
 
 $lat = filter_var($_GET['lat'] ?? null, FILTER_VALIDATE_FLOAT);
 $lon = filter_var($_GET['lon'] ?? null, FILTER_VALIDATE_FLOAT);
@@ -114,6 +116,8 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $h['pressure_msl'][] = $i['air_pressure_at_sea_level'] ?? null;
         $h['weather_code'][] = $sym ? yr_code($sym) : null;
         $h['cape'][] = null;
+        $h['lifted_index'][] = null;
+        $h['convective_inhibition'][] = null;
         $h['is_day'][] = null;
         $h['precip_6h_block'][] = $prec !== null ? $smeared : 0;
     }

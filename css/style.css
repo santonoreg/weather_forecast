@@ -1246,3 +1246,6 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .byl span { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1px; }
 .byl i { display: block; width: 9px; border-radius: 2px 2px 0 0; background: var(--muted); opacity: .75; } .byl i.hi { background: var(--good, #2e9e5b); } .byl i.mid { background: #d49b1c; } .byl i.lo { background: #d4553b; }
 .byl small { font-size: 9.5px; color: var(--muted); line-height: 1; }
+
+/* a model value that was corrected for the model's systematic error */
+.grid td.corrc { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 55%, transparent); }

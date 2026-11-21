@@ -255,9 +255,9 @@ function metar_hourly(string $icao): array
    that *same* group's own `fc`, since every station has its own archived-forecast fetch. */
 function evaluate(array $groups, string $m, array $KEYS): array
 {
-    $s = ['mae' => [], 'bias' => [], 'n' => 0];
+    $s = ['mae' => [], 'bias' => [], 'n' => 0, 'tmean' => [], 'mmean' => []];
     foreach ($KEYS as $var => $k) {
-        $sum = 0.0; $bias = 0.0; $cnt = 0;
+        $sum = 0.0; $bias = 0.0; $cnt = 0; $tsum = 0.0; $msum = 0.0;
         foreach ($groups as $g) {
             $a = $g['fc']['hourly']["{$var}_{$m}"] ?? null;
             if (!$a) continue;
@@ -271,10 +271,10 @@ function evaluate(array $groups, string $m, array $KEYS): array
                 }
                 if (!isset($a[$r['j']]) || $r[$k] === null) continue;
                 $d = $a[$r['j']] - $r[$k];
-                $sum += abs($d); $bias += $d; $cnt++;
+                $sum += abs($d); $bias += $d; $cnt++; $tsum += $r[$k]; $msum += $a[$r['j']];
             }
         }
-        if ($cnt >= 24) { $s['mae'][$var] = $sum / $cnt; $s['bias'][$var] = $bias / $cnt; $s['n'] = max($s['n'], $cnt); }
+        if ($cnt >= 24) { $s['mae'][$var] = $sum / $cnt; $s['bias'][$var] = $bias / $cnt; $s['n'] = max($s['n'], $cnt); $s['tmean'][$var] = $tsum / $cnt; $s['mmean'][$var] = $msum / $cnt; }
     }
     // Rain: critical success index over wet hours (model >= 0.1 mm), pooled across groups
     $hit = $miss = $fa = 0;
@@ -325,6 +325,23 @@ function norm_weights(array $vals): array
     return array_map(fn($x) => round(min(1.8, max(0.5, $x / $mean)), 3), $raw);
 }
 
+/* What the browser may subtract from a model to remove its systematic error (js/app.js, "Correct systematic error"):
+   bias = model - truth for temperature, pressure and humidity (additive), wind_ratio = truth mean / model mean (multiplicative).
+   METAR (a real measurement) is preferred, ERA5 is the fallback. Rain and cloud are not corrected. */
+function correction_of(array $era, ?array $obs): array
+{
+    $bias = []; $ratio = null;
+    foreach (['temperature_2m', 'pressure_msl', 'relative_humidity_2m'] as $v) {
+        $b = $obs['bias'][$v] ?? $era['bias'][$v] ?? null;
+        if ($b !== null) $bias[$v] = round($b, 2);
+    }
+    foreach ([$obs, $era] as $src) {
+        $v = 'wind_speed_10m';
+        if ($src && isset($src['tmean'][$v], $src['mmean'][$v]) && $src['mmean'][$v] > 0.5) { $ratio = round($src['tmean'][$v] / $src['mmean'][$v], 3); break; }
+    }
+    return ['bias' => $bias, 'wind_ratio' => $ratio];
+}
+
 /* Builds the { score, mae, bias, csi, code_acc, obs, weights } block for every model from pooled
    era/obs groups (one location = one group each; Greece-wide = one group per station). Per (model,
    station) pairs the archive sometimes just echoes ERA5 back (a model with no real coverage there) —
@@ -356,6 +373,7 @@ function score_models(array $cfg, array $eraGroupsByStation, array $obsGroupsByS
             'name' => $cfg['catalog'][$m]['name'] ?? $m,
             'score' => $sk ? (int)round(array_sum($sk) / count($sk) * 100) : null,
             'n' => $era['n'],
+            'corr' => correction_of($era, $obs),
             'mae' => array_map(fn($x) => round($x, 2), $era['mae']),
             'bias' => array_map(fn($x) => round($x, 2), $era['bias']),
             'csi' => isset($era['csi']) ? round($era['csi'], 3) : null,
@@ -430,7 +448,7 @@ function add_leads(array $cfg, array $result0, array $eraGroups, array $obsGroup
     $wbl = ['0' => []];
     foreach ($models as $m => $o) {
         $wbl['0'][$m] = $o['weights'];
-        $models[$m]['by_lead'] = ['0' => ['score' => $o['score'], 'n' => $o['n']]];
+        $models[$m]['by_lead'] = ['0' => ['score' => $o['score'], 'n' => $o['n'], 'corr' => $o['corr']]];
     }
     if ($leads) {
         foreach (LEADS as $d) {
@@ -441,7 +459,7 @@ function add_leads(array $cfg, array $result0, array $eraGroups, array $obsGroup
                 if (!isset($models[$m])) continue;   // never scored at lead 0: not listed at all
                 $f = min(1.0, $o['n'] / SHRINK_N);
                 $wbl[(string)$d][$m] = array_map(fn($w) => $w === null ? null : round(1 + ($w - 1) * $f, 3), $o['weights']);
-                $models[$m]['by_lead'][(string)$d] = ['score' => $o['score'], 'n' => $o['n']];
+                $models[$m]['by_lead'][(string)$d] = ['score' => $o['score'], 'n' => $o['n'], 'corr' => $o['corr']];
             }
         }
     }

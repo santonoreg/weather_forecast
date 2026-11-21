@@ -21,6 +21,8 @@ async function api(path, opts) {
 
 const state = { view: 'forecast', locations: [], cities: [], admin: false, current: null, data: null, verify: null, observed: null, radar: null, weighted: true, day: 0, step: 1, param: 'weather', token: 0, orient: 'h', modelsOpen: false, vHours: 24 };
 try { state.weighted = localStorage.getItem('wefo.weighted') !== '0'; } catch (e) { /* ignore */ }
+state.bias = true;   // "Correct systematic error" (on by default)
+try { state.bias = localStorage.getItem('wefo.bias') !== '0'; } catch (e) { /* ignore */ }
 state.oneVote = false;   // "one vote per model family" (off by default)
 try { state.oneVote = localStorage.getItem('wefo.oneVote') === '1'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
@@ -166,7 +168,7 @@ function agg(p, param, a, b) {
   lastAggA = a;
   const h = p.hourly;
   const keep = []; for (let i = a; i < Math.min(b, h.temperature_2m.length); i++) if (AGG_RAW || !p.dupHours || !p.dupHours[i]) keep.push(i);
-  const sl = (arr) => nn(keep.map((i) => arr[i]));
+  const sl = (arr, key) => nn(keep.map((i) => (key ? fixValue(p, key, i, arr[i]) : arr[i])));
   switch (param) {
     case 'precip': {
       // Yr only gives a 6 h total for later hours, spread evenly over them: fine for blocks of >= 6 h, not as an hourly value
@@ -174,14 +176,16 @@ function agg(p, param, a, b) {
       const v = sm && b - a < 6 ? nn(keep.filter((i) => !sm[i]).map((i) => h.precipitation[i])) : sl(h.precipitation);
       return v.length ? v.reduce((s, x) => s + x, 0) : null;
     }
-    case 'gust': { const v = sl(h.wind_gusts_10m); return v.length ? Math.max(...v) : null; }
+    case 'gust': { const v = sl(h.wind_gusts_10m, 'wind_gusts_10m'); return v.length ? Math.max(...v) : null; }
+    case 'li': { const v = sl(h.lifted_index || []); return v.length ? Math.min(...v) : null; }   // most unstable hour of the block
+    case 'cin': { const v = sl(h.convective_inhibition || []); return v.length ? Math.max(...v.map(Math.abs)) : null; }   // strongest inhibition (Open-Meteo gives it as a positive J/kg)
     case 'cape': { const v = sl(h.cape); return v.length ? Math.max(...v) : null; }
     case 'code': { const v = sl(h.code); return v.length ? Math.max(...v) : null; }
     case 'dir': {
       const idx = keep.filter((i) => h.wind_direction_10m[i] != null);
       return idx.length ? circMean(idx.map((i) => h.wind_direction_10m[i]), idx.map((i) => h.wind_speed_10m[i] || 1)) : null;
     }
-    default: { const v = sl(h[param]); return mean(v); }
+    default: { const v = sl(h[param], param); return mean(v); }
   }
 }
 
@@ -224,6 +228,47 @@ function ensP(kind, a, b) {
   if (!arr || a % n !== 0) return null;
   const v = arr[a / n];
   return v == null ? null : v;
+}
+/* Thunderstorm signal of one model for one block, 0..1:
+     weather code 95-99                      -> 1
+     otherwise  clamp((CAPE - 300) / 1500)   x 0.4 if CIN is strong (> 100 J/kg: a lid on the atmosphere)
+                                             x 1.2 if the lifted index is below -3 (very unstable)
+                                             x 1.3 if the block has >= 0.5 mm of rain (a storm is likely to show it), x 0.6 if it has none
+   A model that gives neither a weather code nor CAPE gives no signal. */
+const STORM_CAPE0 = 300, STORM_CAPE_SPAN = 1500, STORM_CIN_STRONG = 100, STORM_CIN_FACTOR = 0.4, STORM_LI_UNSTABLE = -3, STORM_LI_FACTOR = 1.2, STORM_RAIN_MM = 0.5, STORM_RAIN_UP = 1.3, STORM_DRY_DOWN = 0.6;
+/* Systematic-error correction. The verification measures how much too warm / too windy each model runs (api/verify_lib.php
+   correction_of, per lead day). With "Correct systematic error" on, the bias is removed from every value BEFORE any average,
+   share or agreement is computed: temperature, pressure and humidity are shifted, wind and gusts are multiplied by truth/model.
+   Rain and cloud are not touched. Limits keep a bad estimate harmless. */
+const BIAS_MAX = { temperature_2m: 3, pressure_msl: 4, relative_humidity_2m: 15 };   // largest shift applied (deg C / hPa / %)
+const WIND_RATIO_MIN = 0.7, WIND_RATIO_MAX = 1.3;
+const BIAS_KEYS = ['temperature_2m', 'apparent_temperature', 'pressure_msl', 'relative_humidity_2m', 'wind_speed_10m', 'wind_gusts_10m'];
+const biasVar = (key) => (key === 'apparent_temperature' ? 'temperature_2m' : key === 'wind_gusts_10m' ? 'wind_speed_10m' : key);
+/* the correction of one model for one variable at forecast hour i: { add } or { mul } (null = none), interpolated between lead days */
+function correctionAt(p, key, i) {
+  const v = state.verify; if (!state.bias || !v) return null;
+  const m = v.models?.[p.id]; if (!m) return null;
+  const vr = biasVar(key), wind = vr === 'wind_speed_10m';
+  v._lc = v._lc || {};
+  const ck = `${p.id}|${vr}`;
+  if (!v._lc[ck]) {
+    const pick = (c) => (wind ? c?.wind_ratio : c?.bias?.[vr]);
+    const pts = Object.keys(m.by_lead || {}).map(Number).sort((x, y) => x - y).map((d) => [d, pick(m.by_lead[d].corr)]).filter(([, x]) => x != null);
+    if (!pts.length) { const x = wind ? m.corr?.wind_ratio : m.corr?.bias?.[vr] ?? m.obs?.bias?.[vr] ?? m.bias?.[vr]; if (x != null) pts.push([0, x]); }
+    v._lc[ck] = pts;
+  }
+  const pts = v._lc[ck]; if (!pts.length) return null;
+  const L = leadHoursOf(i) / 24;
+  let x = pts[pts.length - 1][1];
+  if (L <= pts[0][0]) x = pts[0][1];
+  else for (let k = 1; k < pts.length; k++) if (L <= pts[k][0]) { const [d0, a0] = pts[k - 1], [d1, a1] = pts[k]; x = a0 + ((a1 - a0) * (L - d0)) / (d1 - d0); break; }
+  return wind ? { mul: clamp(x, WIND_RATIO_MIN, WIND_RATIO_MAX) } : { add: -clamp(x, -BIAS_MAX[vr], BIAS_MAX[vr]) };
+}
+function fixValue(p, key, i, x) {
+  if (x == null || !BIAS_KEYS.includes(key)) return x;
+  const c = correctionAt(p, key, i); if (!c) return x;
+  const y = c.mul != null ? x * c.mul : x + c.add;
+  return key === 'relative_humidity_2m' ? clamp(y, 0, 100) : y;
 }
 const RAIN_THR = rainThr(1);   // hourly threshold (hero outlook, meteogram)
 const WIND_THR = 30;    // km/h (5 μποφόρ)
@@ -368,6 +413,7 @@ function buildRows(param, cols) {
     try {
       const x = fn(p, c);
       for (let i = c.a; p.dupHours && i < c.b; i++) if (p.dupHours[i]) { x.cls = `${x.cls || ''} dupc`; x.title = dupNote(p, i); break; }
+      if (x.fix && state.bias) { const k = correctionAt(p, x.fix, c.a); if (k) { x.cls = `${x.cls || ''} corrc`; x.title = x.title || t('m.corrcell', { v: k.mul != null ? `×${k.mul.toFixed(2)}` : `${k.add >= 0 ? '+' : '−'}${Math.abs(k.add).toFixed(1)}` }); } }
       return x;
     } finally { AGG_RAW = false; }
   };
@@ -419,7 +465,7 @@ function buildRows(param, cols) {
   } else if (param === 'wind') {
     rows.push(...perProvider((p, c) => {
       const s = agg(p, 'wind_speed_10m', c.a, c.b), g = agg(p, 'gust', c.a, c.b), d = agg(p, 'dir', c.a, c.b);
-      return { has: s != null, html: s == null ? '<span class="na">–</span>' : `${d != null ? WI.arrow(d) : ''}${fmt(s)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`, bg: bgWind(s), cls: 'cell' };
+      return { has: s != null, html: s == null ? '<span class="na">–</span>' : `${d != null ? WI.arrow(d) : ''}${fmt(s)}${g != null ? `<small>(${fmt(g)})</small>` : ''}`, bg: bgWind(s), cls: 'cell', fix: 'wind_speed_10m' };
     }));
     summaryLabel = t('g.avg_kmh');
     summary = cols.map((c) => {
@@ -444,12 +490,19 @@ function buildRows(param, cols) {
       const raw = (AGG_RAW ? p.hourly.weather_code.slice(c.a, c.b).filter((x) => x != null) : liveHours(p, p.hourly.weather_code, c.a, c.b)).length > 0;
       const thunder = raw ? code >= 95 : null;
       if (thunder == null && cape == null) return { s: null, cape };
-      return { s: thunder ? 1 : cape != null && cape >= 1000 ? 0.5 : 0, cape };
+      if (thunder) return { s: 1, cape };
+      if (cape == null) return { s: 0, cape };
+      let sig = clamp((cape - STORM_CAPE0) / STORM_CAPE_SPAN);
+      const cin = agg(p, 'cin', c.a, c.b), li = agg(p, 'li', c.a, c.b), rain = agg(p, 'precip', c.a, c.b);
+      if (cin != null && cin > STORM_CIN_STRONG) sig *= STORM_CIN_FACTOR;
+      if (li != null && li < STORM_LI_UNSTABLE) sig *= STORM_LI_FACTOR;
+      if (rain != null) sig *= rain >= STORM_RAIN_MM ? STORM_RAIN_UP : STORM_DRY_DOWN;
+      return { s: clamp(sig), cape };
     };
     rows.push(...perProvider((p, c) => {
       const { s, cape } = signal(p, c);
-      const html = s == null ? '<span class="na">–</span>' : `${s === 1 ? WI.bolt24 + ' ' : ''}${cape != null ? fmt(cape) : ''}<small>${s === 1 ? t('g.storm_yes') : s === 0.5 ? t('g.storm_maybe') : cape != null ? 'J/kg' : t('g.storm_no')}</small>`;
-      return { has: s != null, html, bg: s ? `hsla(35,95%,50%,${0.15 + s * 0.4})` : '', cls: 'cell' };
+      const html = s == null ? '<span class="na">–</span>' : `${s === 1 ? WI.bolt24 + ' ' : ''}${cape != null ? fmt(cape) : ''}<small>${s >= 0.99 ? t('g.storm_yes') : s >= 0.3 ? t('g.storm_maybe') : cape != null ? 'J/kg' : t('g.storm_no')}</small>`;
+      return { has: s != null, html, bg: s > 0.02 ? `hsla(35,95%,50%,${0.15 + s * 0.4})` : '', cls: 'cell' };
     }));
     summaryLabel = t('g.cape_avg');
     summary = cols.map((c) => {
@@ -467,7 +520,7 @@ function buildRows(param, cols) {
     const def = PARAMS[param];
     rows.push(...perProvider((p, c) => {
       const v = agg(p, param, c.a, c.b);
-      return { has: v != null, html: v == null ? '<span class="na">–</span>' : fmt(v, def.d) + (def.unit === '°C' ? '°' : ''), bg: def.bg(v), cls: 'cell' };
+      return { has: v != null, html: v == null ? '<span class="na">–</span>' : fmt(v, def.d) + (def.unit === '°C' ? '°' : ''), bg: def.bg(v), cls: 'cell', fix: param };
     }));
     summaryLabel = def.unit === '%' ? t('g.avg_pct') : def.unit === '°C' ? t('g.avg_c') : t('g.avg_hpa');
     summary = cols.map((c) => {
@@ -1118,6 +1171,12 @@ $('weightChk').addEventListener('change', (e) => {
   if (state.data) renderAll();
 });
 
+$('biasChk').checked = state.bias;
+$('biasChk').addEventListener('change', (e) => {
+  state.bias = e.target.checked;
+  try { localStorage.setItem('wefo.bias', state.bias ? '1' : '0'); } catch (err) { /* ignore */ }
+  if (state.data) renderAll();
+});
 $('oneVoteChk').checked = state.oneVote;
 $('oneVoteChk').addEventListener('change', (e) => {
   state.oneVote = e.target.checked;
