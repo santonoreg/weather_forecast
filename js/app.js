@@ -53,18 +53,57 @@ function deriveCode(p, i) {
   return c < 20 ? 0 : c < 45 ? 1 : c < 75 ? 2 : 3;
 }
 
+/* Some "seamless" models (KNMI, DMI, MET Nordic, sometimes UKMO / Météo-France) hand back another model's data —
+   usually ECMWF IFS — outside their own domain or beyond their own forecast range. That model would then be counted
+   twice. Found per HOUR: provider q is a copy of an earlier provider p at hour i when temperature, rain, wind and
+   pressure are identical over the whole window i-3..i+3 (a window, so a coincidence of one hour is not enough).
+   p.dupHours[i] = id of the original (or null); those hours are ignored in every average, share and agreement
+   (see agg), but still listed — dimmed — on the provider's own row. p.dupOf = the original when ALL of its hours are copies. */
+const DUP_WINDOW = 3;                 // hours either side that must also be identical
+const DUP_EPS = 1e-6;
+const DUP_VARS = ['temperature_2m', 'precipitation', 'wind_speed_10m', 'pressure_msl'];
+function markDuplicates(data) {
+  const P = data.providers, n = data.time.length;
+  const same = (x, y) => (x == null || y == null ? x == null && y == null : Math.abs(x - y) <= DUP_EPS);
+  P.forEach((q, qi) => {
+    const eq = [];   // eq[pi][i]: hour i identical to provider pi
+    for (let pi = 0; pi < qi; pi++) {
+      const p = P[pi];
+      eq[pi] = Array.from({ length: n }, (_, i) => q.hourly.temperature_2m[i] != null && p.hourly.temperature_2m[i] != null && DUP_VARS.every((k) => same(q.hourly[k][i], p.hourly[k][i])));
+    }
+    q.dupHours = Array(n).fill(null);
+    let any = false;
+    for (let i = 0; i < n; i++) {
+      if (q.hourly.temperature_2m[i] == null) continue;
+      const lo = Math.max(0, i - DUP_WINDOW), hi = Math.min(n - 1, i + DUP_WINDOW);
+      for (let pi = 0; pi < qi; pi++) {
+        let all = true;
+        for (let j = lo; j <= hi && all; j++) all = eq[pi][j];
+        if (all) { q.dupHours[i] = P[pi].id; any = true; break; }   // the earliest provider in the list is the original
+      }
+    }
+    if (!any) { q.dupHours = null; return; }
+    const valid = []; for (let i = 0; i < n; i++) if (q.hourly.temperature_2m[i] != null) valid.push(i);
+    const first = q.dupHours[valid[0]];
+    if (first && valid.every((i) => q.dupHours[i] === first)) q.dupOf = first;
+  });
+}
+/* Tooltip for a dimmed (copied) hour: "Same data as X from 21/11 06:00" — the start of the run of copied hours */
+function dupNote(p, i) {
+  const src = p.dupHours && p.dupHours[i];
+  if (!src) return '';
+  let j = i; while (j > 0 && p.dupHours[j - 1] === src) j--;
+  const tm = state.data.time[j];
+  return t('m.duphour', { n: nameById(src), when: `${tm.slice(8, 10)}/${tm.slice(5, 7)} ${tm.slice(11, 16)}` });
+}
+
 function prepare(data) {
   const n = data.time.length;
   data.providers.forEach((p) => {
     if (p.name) MODEL_NAMES[p.id] = p.name;
     p.hourly.code = p.hourly.weather_code.map((c, i) => (c != null ? c : deriveCode(p, i)));
   });
-  // Μοντέλα εκτός περιοχής κάλυψης επιστρέφουν αντίγραφο ενός άλλου μοντέλου: εντοπισμός ταυτόσημων προβλέψεων
-  const seen = new Map();
-  data.providers.forEach((p) => {
-    const sig = ['temperature_2m', 'precipitation', 'wind_speed_10m', 'pressure_msl'].map((k) => p.hourly[k].join(',')).join('|');
-    if (seen.has(sig)) p.dupOf = seen.get(sig); else seen.set(sig, p.id);
-  });
+  markDuplicates(data);
   data.isDay = Array.from({ length: n }, (_, i) => {
     for (const p of data.providers) if (p.hourly.is_day[i] != null) return p.hourly.is_day[i];
     const hr = +data.time[i].slice(11, 13);
@@ -80,19 +119,25 @@ function circMean(dirs, weights) {
   dirs.forEach((d, i) => { const w = weights[i] || 1; x += Math.cos(d * Math.PI / 180) * w; y += Math.sin(d * Math.PI / 180) * w; });
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
+// hourly values of a provider over a..b without the hours that merely copy another model (for code that reads p.hourly directly)
+const liveHours = (p, arr, a, b) => nn(arr.slice(a, b).filter((_, k) => !(p.dupHours && p.dupHours[a + k])));
+let AGG_RAW = false;   // true while building a provider's own row: copied hours are shown (dimmed) instead of skipped
 function agg(p, param, a, b) {
-  const h = p.hourly, sl = (arr) => nn(arr.slice(a, b));
+  const h = p.hourly;
+  const keep = []; for (let i = a; i < Math.min(b, h.temperature_2m.length); i++) if (AGG_RAW || !p.dupHours || !p.dupHours[i]) keep.push(i);
+  const sl = (arr) => nn(keep.map((i) => arr[i]));
   switch (param) {
     case 'precip': {
       // Yr only gives a 6 h total for later hours, spread evenly over them: fine for blocks of >= 6 h, not as an hourly value
       const sm = h.precip_6h_block;
-      const v = sm && b - a < 6 ? nn(h.precipitation.slice(a, b).filter((_, k) => !sm[a + k])) : sl(h.precipitation);
-      return v.length ? v.reduce((s, x) => s + x, 0) : null; }
+      const v = sm && b - a < 6 ? nn(keep.filter((i) => !sm[i]).map((i) => h.precipitation[i])) : sl(h.precipitation);
+      return v.length ? v.reduce((s, x) => s + x, 0) : null;
+    }
     case 'gust': { const v = sl(h.wind_gusts_10m); return v.length ? Math.max(...v) : null; }
     case 'cape': { const v = sl(h.cape); return v.length ? Math.max(...v) : null; }
     case 'code': { const v = sl(h.code); return v.length ? Math.max(...v) : null; }
     case 'dir': {
-      const idx = []; for (let i = a; i < b; i++) if (h.wind_direction_10m[i] != null) idx.push(i);
+      const idx = keep.filter((i) => h.wind_direction_10m[i] != null);
       return idx.length ? circMean(idx.map((i) => h.wind_direction_10m[i]), idx.map((i) => h.wind_speed_10m[i] || 1)) : null;
     }
     default: { const v = sl(h[param]); return mean(v); }
@@ -227,7 +272,16 @@ function buildRows(param, cols) {
   const rows = [];   // ενδιάμεσες γραμμές παρόχων
   let summary, prob, summaryLabel, probLabel;
 
-  const perProvider = (fn, list = P) => list.map((p) => ({ name: pname(p), id: p.id, cells: cols.map((c) => fn(p, c)) }))
+  // a provider's own row shows every hour, also the ones that are copies of another model (dimmed, with a tooltip)
+  const ownCell = (fn, p, c) => {
+    AGG_RAW = true;
+    try {
+      const x = fn(p, c);
+      for (let i = c.a; p.dupHours && i < c.b; i++) if (p.dupHours[i]) { x.cls = `${x.cls || ''} dupc`; x.title = dupNote(p, i); break; }
+      return x;
+    } finally { AGG_RAW = false; }
+  };
+  const perProvider = (fn, list = P) => list.map((p) => ({ name: pname(p), id: p.id, cells: cols.map((c) => ownCell(fn, p, c)) }))
     .filter((r) => r.cells.some((c) => c.has));
   let extraRows;   // only set for 'weather': the named AI models, shown as their own rows right after "Most likely weather"
 
@@ -297,7 +351,7 @@ function buildRows(param, cols) {
   } else if (param === 'storm') {
     const signal = (p, c) => {
       const code = agg(p, 'code', c.a, c.b), cape = agg(p, 'cape', c.a, c.b);
-      const raw = p.hourly.weather_code.slice(c.a, c.b).some((x) => x != null);
+      const raw = (AGG_RAW ? p.hourly.weather_code.slice(c.a, c.b).filter((x) => x != null) : liveHours(p, p.hourly.weather_code, c.a, c.b)).length > 0;
       const thunder = raw ? code >= 95 : null;
       if (thunder == null && cape == null) return { s: null, cape };
       return { s: thunder ? 1 : cape != null && cape >= 1000 ? 0.5 : 0, cape };
@@ -710,7 +764,7 @@ function renderGrid() {
     $('vFooter').hidden = true;
     $('grid').hidden = false;
     const cls = (c) => `${c.past ? 'past' : ''}${c.now ? ' now' : ''}`;
-    const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+    const rowHtml = (r, extraCls = '') => `<tr class="${extraCls}"><th class="rowh">${esc(r.name)}${badge(r.id)}</th>${r.cells.map((c, i) => `<td class="${c.cls || ''} ${cls(cols[i])}" style="background:${c.bg || ''}"${c.title ? ` title="${esc(c.title)}"` : ''}>${c.html}</td>`).join('')}</tr>`;
     let html = `<thead><tr><th class="rowh">${t('g.provider')}</th>${cols.map((c) => `<th class="${cls(c)}">${c.label}</th>`).join('')}</tr></thead><tbody>`;
     // Consensus-first, matching Glett: the weighted answer (lanes / summary+prob) comes first, then the
     // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
@@ -782,15 +836,15 @@ function renderDays() {
   $('days').innerHTML = data.dates.map((date, d) => {
     const a = d * 24, b = Math.min(a + 24, data.time.length);
     const cnt = {};
-    wpairs('weather', (p) => dayCategory(p.hourly.code.slice(a + 6, a + 22))).forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
+    wpairs('weather', (p) => dayCategory(liveHours(p, p.hourly.code, a + 6, a + 22))).forEach((x) => (cnt[x.v] = (cnt[x.v] || 0) + x.w));
     const top = Object.entries(cnt).sort((x, y) => y[1] - x[1])[0];
-    const ext = (fn) => wmean(wpairs('temperature_2m', (p) => { const v = nn(p.hourly.temperature_2m.slice(a, b)); return v.length ? fn(...v) : null; }));
+    const ext = (fn) => wmean(wpairs('temperature_2m', (p) => { const v = liveHours(p, p.hourly.temperature_2m, a, b); return v.length ? fn(...v) : null; }));
     const hi = ext(Math.max), lo = ext(Math.min);
-    const rp = wshare(wpairs('precip', (p) => { const v = nn(p.hourly.precipitation.slice(a, b)); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
+    const rp = wshare(wpairs('precip', (p) => { const v = liveHours(p, p.hourly.precipitation, a, b); return v.length ? v.reduce((s, x) => s + x, 0) : null; }), (x) => x >= 1);
     const rain = rp == null ? null : Math.round(rp * 100);
-    const sp = wshare(wpairs('storm', (p) => { const v = nn(p.hourly.weather_code.slice(a, b)); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
+    const sp = wshare(wpairs('storm', (p) => { const v = liveHours(p, p.hourly.weather_code, a, b); return v.length ? (v.some((x) => x >= 95) ? 1 : 0) : null; }), (x) => x === 1);
     const storm = sp == null ? 0 : Math.round(sp * 100);
-    const gm = wmean(wpairs('wind', (p) => { const v = nn(p.hourly.wind_gusts_10m.slice(a, b)); return v.length ? Math.max(...v) : null; }));
+    const gm = wmean(wpairs('wind', (p) => { const v = liveHours(p, p.hourly.wind_gusts_10m, a, b); return v.length ? Math.max(...v) : null; }));
     const dt = new Date(date + 'T12:00:00');
     const name = d === 0 ? t('today') : dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
     return `<button class="d ${d === state.day ? 'sel' : ''}" data-day="${d}">

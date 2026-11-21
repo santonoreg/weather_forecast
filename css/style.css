@@ -1236,3 +1236,6 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 #relModal .modal-card { max-width: 1500px; width: 96vw; max-height: 94vh; overflow: hidden; }
 #relModal .table-wrap { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
 #relTable .rowh { min-width: 270px; max-width: none; white-space: normal; }
+
+/* hours where a model only repeats another model's data (see markDuplicates in app.js) */
+.grid td.dupc { opacity: .4; }

@@ -194,7 +194,7 @@ A page for deep-sky observing, next to *Sky Conditions*. Everything is computed 
 - Disabled models disappear from the tables and from all averages and probabilities. At least one model must stay enabled.
 - The choice is **per browser** (saved in `localStorage`, see [privacy](#data-privacy-and-external-services)) and applies to all locations.
 - Models that cannot cover the selected location are listed under *No coverage for this location*.
-- Some regional models (KNMI, DMI, MET Norway Nordic) silently return a **copy of a global model** outside their domain. WeFO detects identical series and counts them **only once**; they are shown greyed out with the note *Same data as …*.
+- Some regional models (KNMI, DMI, MET Norway Nordic) silently return a **copy of a global model** outside their domain. WeFO detects this **hour by hour**: a model is a copy of an earlier one at hour *i* when temperature, rain, wind and pressure are identical over the window *i*−3 … *i*+3 (a one-hour coincidence is not enough). Copied hours are left out of every average, share and agreement, and are shown dimmed on the model's own row with the tooltip *Same data as X from DD/MM HH:00* — so a seamless model that is genuine for the first two days and an ECMWF copy afterwards counts for the first two days only. A model that is a copy for the whole period is greyed out with the note *Same data as …* (as before).
 
 ---
 
