@@ -238,7 +238,7 @@ For each model and reference it computes: mean absolute error and bias for tempe
 
 The Reliability window states **how fresh and how solid** the numbers are: when they were computed, the method (nationwide pool / single place, the tilt towards the nearest stations, whether weights are per forecast day), the comparison window and number of matched hours, the number of hours behind each model's score, and a *stale* warning when the cache is older than 24 h.
 
-In the Reliability table every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table explains which method was used — the list of pooled stations for Greece, or the single nearest station (name, distance, report count) elsewhere.
+In the Reliability window every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table explains which method was used — the list of pooled stations for Greece, or the single nearest station (name, distance, report count) elsewhere.
 
 Notes and caveats:
 
@@ -618,7 +618,7 @@ Open `js/i18n.js`, copy the `en` block to a new key (for example `de: { ... }`),
 | *Error 500* when saving a location | `data/` not writable by the web-server user, or `pdo_sqlite` missing. The error message in the app names the cause. |
 | *Failed to fetch data from Open-Meteo* | no outbound HTTPS from the server, or the API rate limit was hit – retry later |
 | Table looks old after an update | hard refresh (Ctrl+F5); check the `?v=` version in `index.html` |
-| Reliability tab empty / "unavailable" | the historical APIs could not be reached; the forecast tabs still work |
+| Reliability window empty / "unavailable" | the historical APIs could not be reached; the forecast tabs still work |
 | Reliability note says "ERA5 only" | no METAR station with enough recent reports within 60 km – normal for remote locations |
 | KNMI / DMI / MET Norway Nordic rows are "greyed out" | they do not cover your location and returned a copy of another model; they are counted once |
 | "Google WeatherNext 3" never appears | expected unless you configured `api/config.php` or `WEFO_GOOGLE_WEATHER_API_KEY` with a working, billing-enabled API key (see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison)); it also disappears silently once the daily call cap or your monthly free quota is reached |
