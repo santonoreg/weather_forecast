@@ -28,8 +28,8 @@ const GREECE_STATIONS_TTL = 7 * 86400;  // the set of reporting stations barely 
 const GREECE_MAX_STATIONS = 40;    // safety cap on how many stations one verification run fetches
 const MIN_GREECE_STATIONS = 3;     // fall back to the single-point method if fewer than this report
 
-$MODELS = ['ecmwf_aifs025_single', 'ecmwf_ifs025', 'gfs_seamless', 'icon_seamless', 'gem_seamless', 'meteofrance_seamless', 'ukmo_seamless',
-           'jma_seamless', 'cma_grapes_global', 'knmi_seamless', 'dmi_seamless', 'metno_seamless'];
+$CATALOG = require __DIR__ . '/models.php';   // shared with forecast.php
+$MODELS = array_keys(array_filter($CATALOG, fn($m) => $m['verify']));
 $VARS = ['temperature_2m', 'precipitation', 'wind_speed_10m', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl', 'weather_code'];
 // Error at which the skill of a continuous parameter drops to 0
 $TOL = ['temperature_2m' => 4.0, 'wind_speed_10m' => 15.0, 'cloud_cover' => 50.0, 'relative_humidity_2m' => 25.0, 'pressure_msl' => 4.0];
@@ -330,6 +330,7 @@ function score_models(array $MODELS, array $KEYS, array $TOL, array $eraGroupsBy
         }
         $blend[$m] = $sk;
         $out[$m] = [
+            'name' => $GLOBALS['CATALOG'][$m]['name'] ?? $m,
             'score' => $sk ? (int)round(array_sum($sk) / count($sk) * 100) : null,
             'mae' => array_map(fn($x) => round($x, 2), $era['mae']),
             'bias' => array_map(fn($x) => round($x, 2), $era['bias']),

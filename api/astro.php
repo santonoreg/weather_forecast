@@ -6,7 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/db.php';
 
 const ASTRO_TTL = 1800;   // 30 minutes, like the forecast
-const ASTRO_MODELS = ['ecmwf_ifs025', 'gfs_seamless', 'icon_seamless'];
+define('ASTRO_MODELS', array_keys(array_filter(require __DIR__ . '/models.php', fn($m) => in_array('astro', $m['use'], true))));   // from api/models.php
 const ASTRO_LEVELS = [850, 700, 500, 300, 250];
 
 $lat = filter_var($_GET['lat'] ?? null, FILTER_VALIDATE_FLOAT);

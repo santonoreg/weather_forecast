@@ -32,12 +32,8 @@ state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* ignore */ }
 // Πάροχοι με ταυτόσημα δεδομένα με άλλον (p.dupOf) μετρούν μόνο μία φορά
 const uniqueProviders = () => state.data.providers.filter((p) => !p.dupOf);
-const MODEL_NAMES = {
-  ecmwf_aifs025_single: 'ECMWF AIFS (AI)', ecmwf_ifs025: 'ECMWF IFS', gfs_seamless: 'NOAA GFS', icon_seamless: 'DWD ICON', gem_seamless: 'Environment Canada GEM',
-  meteofrance_seamless: 'Météo-France', ukmo_seamless: 'UK Met Office', jma_seamless: 'JMA (Japan)', cma_grapes_global: 'CMA GRAPES (China)',
-  bom_access_global: 'BOM ACCESS (Australia)', knmi_seamless: 'KNMI (Netherlands)', dmi_seamless: 'DMI (Denmark)', metno_seamless: 'MET Norway (Nordic)', yr: 'MET Norway / Yr',
-  google_weathernext: 'Google WeatherNext 3',
-};
+// display names come from the server (api/models.php via the forecast / verify responses); i18n "mn.<id>" overrides
+const MODEL_NAMES = {};
 const nameById = (id) => (hasT('mn.' + id) ? t('mn.' + id) : MODEL_NAMES[id] || id);
 const pname = (p) => nameById(p.id);
 const activeProviders = () => {
@@ -60,6 +56,7 @@ function deriveCode(p, i) {
 function prepare(data) {
   const n = data.time.length;
   data.providers.forEach((p) => {
+    if (p.name) MODEL_NAMES[p.id] = p.name;
     p.hourly.code = p.hourly.weather_code.map((c, i) => (c != null ? c : deriveCode(p, i)));
   });
   // Μοντέλα εκτός περιοχής κάλυψης επιστρέφουν αντίγραφο ενός άλλου μοντέλου: εντοπισμός ταυτόσημων προβλέψεων
@@ -910,6 +907,7 @@ async function loadVerify(loc, token) {
     const v = await api(`api/verify.php?lat=${loc.lat}&lon=${loc.lon}`);
     if (token !== state.token) return;
     state.verify = v;
+    Object.entries(v.models || {}).forEach(([id, m]) => { if (m.name && !MODEL_NAMES[id]) MODEL_NAMES[id] = m.name; });
     $('vfStatus').textContent = '';
     renderAll();
   } catch (err) {

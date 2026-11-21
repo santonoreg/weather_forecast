@@ -6,21 +6,8 @@ require __DIR__ . '/google_weather.php';
 
 const CACHE_TTL = 1800; // 30 λεπτά
 
-$MODELS = [
-    'ecmwf_aifs025_single' => 'ECMWF AIFS (AI)',
-    'ecmwf_ifs025'      => 'ECMWF IFS',
-    'gfs_seamless'      => 'NOAA GFS',
-    'icon_seamless'     => 'DWD ICON',
-    'gem_seamless'      => 'Environment Canada GEM',
-    'meteofrance_seamless' => 'Météo-France',
-    'ukmo_seamless'     => 'UK Met Office',
-    'jma_seamless'      => 'JMA (Japan)',
-    'cma_grapes_global' => 'CMA GRAPES (China)',
-    'bom_access_global' => 'BOM ACCESS (Australia)',
-    'knmi_seamless'     => 'KNMI (Netherlands)',
-    'dmi_seamless'      => 'DMI (Denmark)',
-    'metno_seamless'    => 'MET Norway (Nordic)',
-];
+$CATALOG = require __DIR__ . '/models.php';   // id => name, resolution, area, family … (single source of truth)
+$MODELS = array_map(fn($m) => $m['name'], $CATALOG);
 $VARS = ['temperature_2m', 'apparent_temperature', 'precipitation', 'wind_speed_10m', 'wind_gusts_10m',
          'wind_direction_10m', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl', 'weather_code', 'cape', 'is_day'];
 
@@ -65,7 +52,8 @@ foreach ($MODELS as $id => $name) {
         $h[$v] = $arr;
         if ($v !== 'is_day' && array_filter($arr, fn($x) => $x !== null)) $has = true;
     }
-    if ($has) $providers[] = ['id' => $id, 'name' => $name, 'hourly' => $h];
+    $c = $CATALOG[$id];
+    if ($has) $providers[] = ['id' => $id, 'name' => $name, 'res' => $c['res'], 'area' => $c['area'], 'family' => $c['family'], 'hourly' => $h];
 }
 
 // Άμεσα από MET Norway (Yr) – ανεξάρτητος πάροχος με παγκόσμια κάλυψη
@@ -123,7 +111,7 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $h['cape'][] = null;
         $h['is_day'][] = null;
     }
-    $providers[] = ['id' => 'yr', 'name' => 'MET Norway / Yr', 'hourly' => $h];
+    $providers[] = ['id' => 'yr', 'name' => 'MET Norway / Yr', 'res' => '~1–9 km (ECMWF-based outside the Nordics)', 'area' => 'global', 'family' => 'ecmwf', 'hourly' => $h];
 }
 
 // Optional: Google WeatherNext 3 via the Google Maps Platform Weather API — only if a key is

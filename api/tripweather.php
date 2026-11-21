@@ -6,7 +6,7 @@ require __DIR__ . '/db.php';
 
 const TRIP_TTL = 1800;
 const TRIP_MAX_POINTS = 40;
-const TRIP_MODELS = ['ecmwf_ifs025', 'ecmwf_aifs025_single', 'gfs_seamless', 'icon_seamless', 'meteofrance_seamless', 'ukmo_seamless', 'gem_seamless'];
+define('TRIP_MODELS', array_keys(array_filter(require __DIR__ . '/models.php', fn($m) => in_array('trip', $m['use'], true))));   // from api/models.php
 const TRIP_VARS = ['temperature_2m', 'precipitation', 'wind_gusts_10m', 'wind_speed_10m', 'weather_code', 'cloud_cover', 'cape', 'relative_humidity_2m', 'is_day'];
 
 $pts = [];

@@ -6,7 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/db.php';
 
 const SKY_TTL = 1800;
-const SKY_MODELS = ['ecmwf_ifs025', 'gfs_seamless', 'icon_seamless'];
+define('SKY_MODELS', array_keys(array_filter(require __DIR__ . '/models.php', fn($m) => in_array('astro', $m['use'], true))));   // from api/models.php
 const SKY_MAX_POINTS = 64;
 
 $raw = (string)($_GET['pts'] ?? '');
