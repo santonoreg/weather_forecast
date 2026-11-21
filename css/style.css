@@ -1271,14 +1271,6 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 /* Trip: choose the forecast models */
 .tr-models { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
 .tr-models .trm-l { font-size: 12.5px; color: var(--muted); margin-right: 2px; }
-.trm { position: relative; flex-direction: row; align-items: center; gap: 0; padding: 0; font-size: 13px; color: var(--muted); cursor: pointer; }
-.trm input { position: absolute; opacity: 0; pointer-events: none; }
-.trm span { padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); transition: background .12s, color .12s, border-color .12s; }
-.trm:hover span { border-color: var(--accent); }
-.trm.on span { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-color: var(--accent); color: var(--text); font-weight: 600; }
-.trm input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-.trm.nodata span { opacity: .5; text-decoration: line-through; }
-.tr-models .linkbtn[disabled] { opacity: .4; cursor: default; }
 
 /* DSO Explorer: weather-model drop-down and the Map button */
 .wxm .models { padding: 0; } .wxm .models summary { min-width: 132px; }
@@ -1291,3 +1283,10 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .lp-card { max-width: 980px; }
 .lp-card .legend { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 6px 0 10px; }
 .lp-card .map.lpm { height: min(520px, 62vh); }
+
+/* Trip: the model drop-down replaces the chips */
+.tr-models .models { padding: 0; } .tr-models .models summary { min-width: 140px; }
+.tr-models .mdl { margin: 0; align-items: center; } .tr-models .mdl input { margin-top: 0; }
+.tr-models .mdl.nodata span { opacity: .5; text-decoration: line-through; }
+.tr-models .mdl-def { margin: 6px 8px 2px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; text-align: left; }
+.tr-models .mdl-def:hover { text-decoration: underline; } .tr-models .mdl-def[disabled] { opacity: .4; cursor: default; text-decoration: none; }

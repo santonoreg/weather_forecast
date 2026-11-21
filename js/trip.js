@@ -205,10 +205,11 @@ const Trip = (() => {
     if (!box) return;
     const has = new Set();                                         // models that actually answered somewhere on the planned routes
     T.routes.forEach((r) => (r.raw || []).forEach((p) => p && p.m && Object.keys(p.m).forEach((id) => has.add(id))));
-    const known = T.routes.length > 0;
+    const known = T.routes.length > 0, wasOpen = !!box.querySelector('details[open]');
+    const row = (id) => { const nd = known && !has.has(id); return `<label class="mdl${nd ? ' nodata' : ''}" title="${esc(nd ? t('trip.models.nodata') : modelLabel(id))}"><input type="checkbox" data-m="${id}"${SEL.has(id) ? ' checked' : ''}><span>${esc(modelLabel(id))}</span></label>`; };
     box.innerHTML = `<span class="trm-l">${esc(t('trip.models'))}</span>`
-      + MODEL_IDS.map((id) => `<label class="trm${SEL.has(id) ? ' on' : ''}${known && !has.has(id) ? ' nodata' : ''}" title="${esc(known && !has.has(id) ? t('trip.models.nodata') : modelLabel(id))}"><input type="checkbox" data-m="${id}"${SEL.has(id) ? ' checked' : ''}><span>${esc(modelLabel(id))}</span></label>`).join('')
-      + `<button type="button" class="linkbtn" id="trmAll"${SEL.size === MODEL_IDS.length ? ' disabled' : ''}>${esc(t('trip.models.all'))}</button>`;
+      + `<details class="models"${wasOpen ? ' open' : ''}><summary>${esc(SEL.size === 1 ? t('trip.models.1') : t('trip.models.n', { n: SEL.size }))}</summary><div class="mdl-panel">${MODEL_IDS.map(row).join('')}`
+      + `<button type="button" class="mdl-def" id="trmAll"${SEL.size === MODEL_IDS.length ? ' disabled' : ''}>${esc(t('trip.models.all'))}</button></div></details>`;
   }
   function modelsChanged() {
     saveSel(); renderModels();
@@ -704,6 +705,7 @@ const Trip = (() => {
       modelsChanged();
     });
     mb.addEventListener('click', (e) => { if (e.target.id === 'trmAll') { MODEL_IDS.forEach((x) => SEL.add(x)); modelsChanged(); } });
+    document.addEventListener('click', (e) => { const d = mb.querySelector('details'); if (d && !e.target.closest('#tripModels')) d.open = false; });
   }
   function show() { loadMine().then(() => { if ($t('trMake')) fillCars(); }); if (T.map) setTimeout(() => T.map && T.map.invalidateSize(), 50); }
   return { init, render, show, renderModels };
