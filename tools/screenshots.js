@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Takes the README screenshots with a headless Edge/Chrome driven over the DevTools protocol.
+/* Takes the README screenshots (forecast, hourly charts, reliability window, sky, DSO, admin log, themes) with a headless Edge/Chrome driven over the DevTools protocol.
      node tools/screenshots.js [base-url] [admin-user] [admin-password]
    Needs a running copy of the app (default http://127.0.0.1:8901/) and, for the Locations / History shots, an admin login.
    Output: docs/screenshots/*.png */
@@ -62,27 +62,26 @@ const want = (n) => !only || only.includes(n);
   if (want('forecast')) {
   console.log('forecast');
   await shot('forecast-weather', { from: '.toolbar', to: '#forecastBody .hours' });
-  // the reliability weighting + models drop-down
-  await js("document.getElementById('models').open = true"); await sleep(500);
-  await shot('models-dropdown', { top: 0, to: '#models .mdl-panel', pad: 40 });
-  await js("document.getElementById('models').open = false");
   await click('#orientSeg [data-orient=v]'); await sleep(1200);
   await shot('forecast-timedown', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1000 });
-  await click('#orientSeg [data-orient=m]'); await sleep(1500);
-  await shot('forecast-meteogram', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1100 });
   await click('#orientSeg [data-orient=s]');
   await waitFor("document.querySelector('.ss-card') || document.querySelector('#sunsetBox .notice')", 60000); await sleep(800);
   await shot('forecast-sunset', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1500 });
   await click('#orientSeg [data-orient=h]'); await sleep(800);
-  await click('#modelsToggle'); await sleep(800);                                      // rain / wind / reliability show the individual models
+  await click('#chartsToggle'); await sleep(1800);                                       // the hourly charts under the table (temperature, rain, wind, cloud, with the model range and the ensemble band)
+  await shot('forecast-charts', { from: '#view-forecast .hours', to: '#hcharts', maxH: 2200 });
+  await click('#chartsToggle'); await sleep(600);
+  await click('#modelsToggle'); await sleep(800);                                      // rain and wind show the individual models
   await click('.tab[data-param=precip]'); await sleep(1000);
   await shot('forecast-rain', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1100 });
   await click('.tab[data-param=wind]'); await sleep(1000);
   await shot('forecast-wind', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1200 });
-  await click('#modelsToggle'); await sleep(600);
-  await click('.tab[data-param=reliability]'); await sleep(1500);
-  await shot('reliability', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1300 });
   await click('.tab[data-param=weather]'); await sleep(600);
+  if (await js("!!(state.verify && state.verify.weights_by_lead)")) {          // the Reliability window: scores by forecast day, how fresh the numbers are
+    await click('#relBtn'); await sleep(1200);
+    await shot('reliability-window', { top: 0, to: '#relModal .modal-card', pad: 20, maxH: 1500 });
+    await js("document.getElementById('relModal').hidden = true");
+  } else console.log('  (no lead-time verification data: reliability-window skipped)');
 
   }
   if (want('astronomy')) {
@@ -97,17 +96,23 @@ const want = (n) => !only || only.includes(n);
   console.log('dso');
   await click('[data-view=dso]');
   await waitFor("document.querySelector('.dso-line')", 120000);
-    await waitFor("(() => { const i = document.querySelector('#dsoNight .ln-photo img'); return i && i.complete && i.naturalWidth > 0; })()", 90000); await sleep(1500);
+    try { await waitFor("(() => { const i = document.querySelector('#dsoNight .ln-photo img'); return i && i.complete && i.naturalWidth > 0; })()", 40000); } catch (e) { console.log('  (photos did not load)'); }
+    await sleep(1500);
   await shot('dso-tonight', { from: '#view-dso .toolbar', to: '#dsoNight .dso-line', maxH: 1700 });
 
   }
   if (USER && want('admin')) {
     console.log('admin');
-    await click('[data-view=places]'); await sleep(2500);
+    await js("showView('account'); Account.show('places')"); await sleep(2500);
     await shot('locations-map', { from: '.places-layout', to: '.places-layout', maxH: 800 });
     await js(`(() => { const l = state.locations[0] || state.cities.find((c) => c.name === 'Athens'); openHistory(l); })()`);
-    await waitFor("document.querySelector('#histBody .h-chart, #histBody svg, #histBody table')", 120000); await sleep(3000);
-    await shot('history', { from: '#histSec', to: '#histSec', maxH: 1600 });
+    try {
+      await waitFor("document.querySelector('#histBody .h-chart, #histBody svg, #histBody table')", 60000); await sleep(3000);
+      await shot('history', { from: '#histSec', to: '#histSec', maxH: 1600 });
+    } catch (e) { console.log('  (history data not available: history.png kept)'); }
+    await js("showView('account'); Account.show('log')");
+    await waitFor("document.querySelector('#logList tbody tr')", 30000); await sleep(600);
+    await shot('admin-log', { from: '#view-account .acc-tabs', to: '#logList', pad: 24, width: 1100, maxH: 900 });
   }
 
   if (want('theme')) {

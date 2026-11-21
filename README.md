@@ -17,13 +17,29 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 
 ## Screenshots
 
-**Forecast – weather** (hero card with rain outlook and days-ahead on the left; on the right, the Weather tab's five-lane dashboard – Weather, Agree, Temp, Rain, Wind – with the individual providers collapsed behind "Show all models"; the current interval is highlighted)
+**Forecast – weather** (hero card with the rain outlook and EMY warnings, the *Days ahead* card with high / low, the chance of rain – a blend of the ensemble and the model vote, see [Methodology](#methodology) – and the peak gust; below, the Weather tab's five-lane dashboard – Weather, Agree, Temp, Rain, Wind – with the individual models collapsed behind *Show all models*; the current interval is highlighted)
 
 ![Forecast – weather](docs/screenshots/forecast-weather.png)
+
+**Hourly charts** – the *Charts* button under the table opens temperature, precipitation, wind and cloud cover for the selected day: the line is the (weighted) average, the shaded band is the range of the models, the dashed band the P10–P90 of the ensemble
+
+![Hourly charts](docs/screenshots/forecast-charts.png)
+
+**Time down** – the same table transposed to one row per hour (consensus only; follows the day you pick)
+
+![Time down](docs/screenshots/forecast-timedown.png)
 
 **Sunset & sunrise colours** – the last icon of the *Hour by hour* switch: a 0–100 outlook for the next seven sunsets (or sunrises) from the cloud layers along the Sun's direction, with golden/blue hour windows
 
 ![Sunset and sunrise outlook](docs/screenshots/forecast-sunset.png)
+
+**Rain** – per-model rainfall per step, average and chance of rain
+
+![Forecast – rain](docs/screenshots/forecast-rain.png)
+
+**Wind** – speed, direction arrow and gusts per model, chance of strong wind
+
+![Forecast – wind](docs/screenshots/forecast-wind.png)
 
 **Sky Conditions** – light pollution map on top, one card per night (Moon, astronomical darkness, best three hours), then the hour-by-hour table with Sun/Moon altitude charts, twilight bands, seeing, transparency and the deep-sky score
 
@@ -37,35 +53,7 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 
 ![DSO Explorer](docs/screenshots/dso-tonight.png)
 
-**See what the models say** – a per-provider spaghetti chart (temperature, next 48h) and precipitation bars, expandable below the table
-
-![See what the models say](docs/screenshots/forecast-expert.png)
-
-**Time down** – the same table transposed to one row per hour (Show all models collapsed to the consensus-only view)
-
-![Time down](docs/screenshots/forecast-timedown.png)
-
-**Meteogram** – temperature (with the model-spread band), precipitation and wind for the selected day as charts, independent of the parameter tab
-
-![Meteogram](docs/screenshots/forecast-meteogram.png)
-
-**Rain** – per-model rainfall per step, average and chance of rain
-
-![Forecast – rain](docs/screenshots/forecast-rain.png)
-
-**Wind** – speed, direction arrow and gusts per model, chance of strong wind
-
-![Forecast – wind](docs/screenshots/forecast-wind.png)
-
-**Reliability** – per-model score, error and bias against ERA5 (last 28 days) and, in blue, against real METAR observations of the nearest airport
-
-![Reliability](docs/screenshots/reliability.png)
-
-**Models drop-down** – enable/disable models, regional notes and reliability scores
-
-![Models drop-down](docs/screenshots/models-dropdown.png)
-
-**Locations & Map** – pick a point on the map, search, save locations
+**Locations & Map** – pick a point on the map, search, save locations (with an optional elevation)
 
 ![Locations & Map](docs/screenshots/locations-map.png)
 
@@ -96,16 +84,17 @@ _The screenshots are regenerated with `node tools/screenshots.js` (headless Edge
 1. [Screenshots](#screenshots)
 2. [What it shows](#what-it-shows)
 3. [How it works](#how-it-works)
-4. [Requirements](#requirements)
-5. [Installation](#installation)
-6. [Users and login](#users-and-login)
-7. [Configuration](#configuration)
-8. [Project structure](#project-structure)
-9. [HTTP API](#http-api)
-10. [Data, privacy and external services](#data-privacy-and-external-services)
-11. [Limitations](#limitations)
-12. [Adding a language](#adding-a-language)
-13. [Troubleshooting](#troubleshooting)
+4. [Methodology](#methodology)
+5. [Requirements](#requirements)
+6. [Installation](#installation)
+7. [Users and login](#users-and-login)
+8. [Configuration](#configuration)
+9. [Project structure](#project-structure)
+10. [HTTP API](#http-api)
+11. [Data, privacy and external services](#data-privacy-and-external-services)
+12. [Limitations](#limitations)
+13. [Adding a language](#adding-a-language)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -139,7 +128,7 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
 
 1. **Hero card**: current conditions right now (icon, temperature, feels-like, wind) and a **verdict** strip — a 1–5 dot scale plus a sentence saying how much the models agree (*"The models mostly/partly agree" / "are split"*), with the temperature range behind it. Below it, three lines built from three different sources, from most to least "real-time": a **"Measured now"** line with real METAR observations (temperature, wind, humidity, rain) from the nearest airport station (`api/observed.php`, via aviationweather.gov — the same source `api/verify.php` uses for reliability scoring), a **radar "Next break"** line sampled from RainViewer's live radar composite at the exact point (`api/radar.php`, needs the `gd` PHP extension — degrades silently without it), and finally the model-based one-line **rain outlook** (*"Rain expected from 13:00"*, *"Next break: dry from …"*, *"No rain expected in the next Nh"*), computed by scanning the next 24 hours for the next change in the rain-probability consensus. Each line only appears when its data source actually has something for that location. A **View full history** link jumps straight to that location's [long-term history](#location-history).
 2. **Days ahead** (7 days): one row per day with icon, high/low, chance of rain (≥ 1 mm) and peak gust; click a day to jump the table below to it.
-3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: on the **Weather** tab it shows a five-row dashboard — **Weather** (top category icon), **Agree** (its share), **Temp**, **Rain** (chance + mm) and **Wind** (speed, gusts, direction) — all at once; every other tab shows its own average/agreement pair (see the table below). A **"Show all N models"** button reveals every individual provider's row underneath (plus, on the Weather tab, the named AI models, which stay visible either way). A **→ Time across / ↓ Time down / 〰 Meteogram** switch changes how the table is shown: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda (average + probability only, better for narrow screens or scanning many hours at once); *Meteogram* replaces the table with charts – temperature (with a shaded band for the spread between providers), precipitation and wind speed for the selected day, all at once and independent of which tab is selected. All three always reflect the same underlying **Weight by reliability** setting.
+3. **Parameter tabs**, each showing one table (the Weather tab also shows a colour legend for the category icons above the table). By default each table is **consensus-first**: on the **Weather** tab it shows a five-row dashboard — **Weather** (top category icon), **Agree** (its share), **Temp**, **Rain** (chance + mm) and **Wind** (speed, gusts, direction) — all at once; every other tab shows its own average/agreement pair (see the table below). A **"Show all N models"** button reveals every individual provider's row underneath (plus, on the Weather tab, the named AI models, which stay visible either way). A **Time across / Time down / Sunset** switch changes how the table is shown: *across* keeps time as columns with one row per provider (as below); *down* turns it into a one-row-per-hour agenda for the selected day (average + probability only, better for narrow screens or scanning many hours at once; clicking another day in *Days ahead* moves it there); *Sunset* opens the [sunset & sunrise outlook](#sunset--sunrise-colours-forecast-tab). The **Charts** button above the table (time-across layout) draws temperature, precipitation, wind and cloud cover for the selected day under the table: a line for the weighted average, a band for the range of the models and a dashed P10–P90 band from the ensemble. Everything reflects the same **Weight by reliability** setting.
 
    | Tab | Provider cells | Second-to-last row | **Last row (probability)** |
    |---|---|---|---|
@@ -150,13 +139,12 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
    | **Thunderstorm** | CAPE (J/kg) and a bolt when the model forecasts a thunderstorm | average CAPE | chance of thunderstorm |
    | **Cloud cover / Humidity / Pressure** | value, colour-coded | average, min–max | agreement % |
 
-   Below the table, a collapsible **"See what the models say"** panel plots the next 48 hours independent of the tab/day/step selection: a spaghetti chart with every active provider's own temperature line (thin) plus the weighted average (highlighted) – tight lines mean the models agree, spread-out lines mean uncertainty – and a precipitation-per-hour bars pair (model average vs. the single wettest model).
-   | **Reliability** | see [Model verification](#model-verification-reliability-tab) | | |
+   The **Reliability** button above the table opens the [Reliability window](#model-verification-reliability-window) (scores, per-day scores, and the switches for individual models).
 
 4. **Step**: 1, 3, 6 or 12 hours. Values are aggregated per step (rain = sum, gust/CAPE = max, weather code = most severe, wind direction = speed-weighted circular mean, others = mean).
 5. The **current time interval is highlighted** (whole column) and, when the table needs horizontal scrolling, it is **automatically centred**. Past intervals are slightly dimmed.
-6. **Models** drop-down: enable/disable individual models (see below).
-7. **Weight by reliability** checkbox: turn reliability weighting on/off.
+6. **Reliability** button: the model scores, and the switches that turn individual models on and off (see below).
+7. Three checkboxes: **Weight by reliability** (on/off), **Correct systematic error** and **One vote per model family** – see [Methodology](#methodology). Your choices are kept in the browser and, once you are logged in, on the server (`user_prefs`) so they follow you to another device.
 8. **Refresh** forces a fresh download (otherwise data is cached for 30 minutes).
 
 ### Sky Conditions (open to everyone)
@@ -172,11 +160,11 @@ A separate tab next to *Forecast* with the observing conditions for the selected
 
 ### Sunset & sunrise colours (Forecast tab)
 
-The last icon of the *Hour by hour* switch (a half sun over the horizon, right after the meteogram) opens a seven-day outlook for **sunset** and **sunrise**: a 0–100 score per day (Weak / Low / Fair / Good / Spectacular), the time and direction of the Sun, the golden and blue hour windows, and the factors behind the score. It is an estimate: high and mid cloud catch the light (best at about 45 % cover), the horizon on the Sun's side has to be open (low cloud at 80–150 km along its azimuth hides it — `api/skypoints.php` forecasts points along that direction), a little aerosol deepens the reds, and rain or poor visibility spoil it. For the events of the next 30 hours the low and mid cloud is also pulled towards **real airport data** along the Sun's direction (`api/aviation.php`: METAR observations of the last hours and TAF forecasts valid for about 9–30 h, from aviationweather.gov; the nearest station within 70 / 90 km of each horizon point; the TAF counts for 40–60 %, a METAR only for the next ~3 hours). Automatic stations only see cloud below ~12 000 ft, so they cannot see high cirrus: they tell whether the horizon will be blocked, not how much cloud there is to catch the light. The *I saw it* stars are kept only in your browser.
+The last icon of the *Hour by hour* switch (a half sun over the horizon) opens a seven-day outlook for **sunset** and **sunrise**: a 0–100 score per day (Weak / Low / Fair / Good / Spectacular), the time and direction of the Sun, the golden and blue hour windows, and the factors behind the score. It is an estimate: high and mid cloud catch the light (best at about 45 % cover), the horizon on the Sun's side has to be open (low cloud at 80–150 km along its azimuth hides it — `api/skypoints.php` forecasts points along that direction), a little aerosol deepens the reds, and rain or poor visibility spoil it. For the events of the next 30 hours the low and mid cloud is also pulled towards **real airport data** along the Sun's direction (`api/aviation.php`: METAR observations of the last hours and TAF forecasts valid for about 9–30 h, from aviationweather.gov; the nearest station within 70 / 90 km of each horizon point; the TAF counts for 40–60 %, a METAR only for the next ~3 hours). Automatic stations only see cloud below ~12 000 ft, so they cannot see high cirrus: they tell whether the horizon will be blocked, not how much cloud there is to catch the light. The *I saw it* stars are kept only in your browser.
 
 ### Trip (Greece only, open to everyone, needs a free OpenRouteService key)
 
-A tab next to *Forecast*: pick a start and a destination (and "now" or a departure time within the next 6 days) and it shows up to three driving routes with distance, driving time, arrival, climb, the length on toll roads and the **toll cost**, a map coloured by how bad the weather is along the way, the "what to expect" warnings, a chart of temperature / rain / elevation and a stage-by-stage table. The weather is the **multi-model consensus**: `api/tripweather.php` reads ECMWF IFS and AIFS, GFS, ICON, Météo-France, UK Met Office and GEM at points about every 20 km, each at the time you will really be there (the route's own timetable), and shows the weather most models agree on with the share that agrees. "Slippery", fog and gust notes are estimates from the forecast, not road-authority reports. Routes come from OpenRouteService through `api/route.php` (cached for 6 hours; put a free key in `api/config.php` as `ors_api_key`, or in the `WEFO_ORS_API_KEY` environment variable). The search is limited to Greece. **Toll costs** come from our own table, `data/tolls_gr.json`: about 110 plazas of the Greek motorways (Egnatia, A1 / Aegean Motorway / Kentriki Odos, Olympia Odos, Ionia Odos, Moreas, E65 and the Rio–Antirrio bridge) with their OpenStreetMap positions and class-1 (car) prices; a route is charged for every plaza it passes within ~120 m. Attiki Odos is not in the table yet and the prices must be updated by hand when the operators change them (the file has an `asof` date). `php tools/test-route.php` checks the parsing and the toll matching offline. **Fuel / energy**: pick petrol, diesel, hybrid or electric, then a make and model from `assets/cars.json` (about 5,250 entries from the US EPA fuel-economy data, built by `python tools/build-cars.py`, combined cycle converted to L/100 km and kWh/100 km), or one of the "Typical cars", or type your own consumption and price — the numbers always stay editable. The EPA list has no European-only models; `assets/cars_eu.json` adds those, currently Škoda (80 versions) and the Hyundai i10 with the official WLTP combined figures (read from autotijd.be by `python tools/build-cars-eu.py skoda hyundai:i10`), and the Alfa Romeo 147 with the real-world consumption owners report on auto-abc.eu (`python tools/build-cars-abc.py "Alfa Romeo" 147`), and the typical cars and manual entry cover the rest.
+A tab next to *Forecast*: pick a start and a destination (and "now" or a departure time within the next 6 days) and it shows up to three driving routes with distance, driving time, arrival, climb, the length on toll roads and the **toll cost**, a map coloured by how bad the weather is along the way, the "what to expect" warnings, a chart of temperature / rain / elevation and a stage-by-stage table. The weather is the **multi-model consensus**: `api/tripweather.php` reads ECMWF IFS and AIFS, GFS, ICON, Météo-France, UK Met Office and GEM at points about every 20 km, each at the time you will really be there (the route's own timetable), and shows the weather most models agree on with the share that agrees. **You choose the models**: a row of chips in the form (one, several or all; at least one stays on; the choice is remembered in the browser). Changing it re-analyses the forecast that is already loaded, so the map colours, the warnings, the weather along the route, the chart and the *Stage by stage* list all update at once, without a new request; a model that returned nothing for the route is struck through. "Slippery", fog and gust notes are estimates from the forecast, not road-authority reports. Routes come from OpenRouteService through `api/route.php` (cached for 6 hours; put a free key in `api/config.php` as `ors_api_key`, or in the `WEFO_ORS_API_KEY` environment variable). The search is limited to Greece. **Toll costs** come from our own table, `data/tolls_gr.json`: about 110 plazas of the Greek motorways (Egnatia, A1 / Aegean Motorway / Kentriki Odos, Olympia Odos, Ionia Odos, Moreas, E65 and the Rio–Antirrio bridge) with their OpenStreetMap positions and class-1 (car) prices; a route is charged for every plaza it passes within ~120 m. Attiki Odos is not in the table yet and the prices must be updated by hand when the operators change them (the file has an `asof` date). `php tools/test-route.php` checks the parsing and the toll matching offline. **Fuel / energy**: pick petrol, diesel, hybrid or electric, then a make and model from `assets/cars.json` (about 5,250 entries from the US EPA fuel-economy data, built by `python tools/build-cars.py`, combined cycle converted to L/100 km and kWh/100 km), or one of the "Typical cars", or type your own consumption and price — the numbers always stay editable. The EPA list has no European-only models; `assets/cars_eu.json` adds those, currently Škoda (80 versions) and the Hyundai i10 with the official WLTP combined figures (read from autotijd.be by `python tools/build-cars-eu.py skoda hyundai:i10`), and the Alfa Romeo 147 with the real-world consumption owners report on auto-abc.eu (`python tools/build-cars-abc.py "Alfa Romeo" 147`), and the typical cars and manual entry cover the rest.
 
 ### DSO Explorer (open to everyone)
 
@@ -188,17 +176,19 @@ A page for deep-sky observing, next to *Sky Conditions*. Everything is computed 
 - **Offline:** `sw.js` (a small service worker) keeps the data files and every photo you have opened; the finding chart needs no network at all. Photos: Digitized Sky Survey (DSS2), STScI/NASA via CDS.
 - `node tools/test-dso.js` checks the maths: transit altitude/azimuth of M31, M42 and M45, the visibility classes of the reference objects, the night figures and the Moon-strip values.
 
-### Models drop-down
+### Choosing the models
 
-- Each model has a checkbox, a short note about **which regions it is best for**, and its reliability score (0–100) once verification has loaded.
-- Disabled models disappear from the tables and from all averages and probabilities. At least one model must stay enabled.
-- The choice is **per browser** (saved in `localStorage`, see [privacy](#data-privacy-and-external-services)) and applies to all locations.
+- In the **Reliability window** each model has a checkbox, a short note about **which regions it is best for** and its reliability score (0–100) once verification has loaded.
+- Disabled models disappear from the tables and from all averages and probabilities. At least one model must stay enabled; the new choice is applied when you close the window.
+- The choice is saved in your browser (`localStorage`) and, when you are logged in, also on the server (`user_prefs`, `api/prefs.php`), and applies to all locations.
 - Models that cannot cover the selected location are listed under *No coverage for this location*.
 - Some regional models (KNMI, DMI, MET Norway Nordic) silently return a **copy of a global model** outside their domain. WeFO detects this **hour by hour**: a model is a copy of an earlier one at hour *i* when temperature, rain, wind and pressure are identical over the window *i*−3 … *i*+3 (a one-hour coincidence is not enough). Copied hours are left out of every average, share and agreement, and are shown dimmed on the model's own row with the tooltip *Same data as X from DD/MM HH:00* — so a seamless model that is genuine for the first two days and an ECMWF copy afterwards counts for the first two days only. A model that is a copy for the whole period is greyed out with the note *Same data as …* (as before).
 
 ---
 
 ## How it works
+
+A short tour follows; the step-by-step description of every calculation, with all the constants, is in [Methodology](#methodology).
 
 ### Data sources
 
@@ -207,7 +197,7 @@ A page for deep-sky observing, next to *Sky Conditions*. Everything is computed 
 | **ECMWF AIFS** (AI / neural-network forecast), ECMWF IFS, NOAA GFS, DWD ICON, Environment Canada GEM, Météo-France, UK Met Office, JMA, CMA GRAPES, BOM ACCESS, KNMI, DMI, MET Norway Nordic | one request to the [Open-Meteo forecast API](https://open-meteo.com/) with the `models=` parameter |
 | MET Norway / Yr (global) | directly from the [MET Norway Locationforecast API](https://api.met.no/) (converted to the same hourly format) |
 
-Real observations used only for the reliability score come from [aviationweather.gov](https://aviationweather.gov/data/api/) (METAR). Models that return no data for the location are dropped automatically. **ECMWF AIFS** is ECMWF's newer AI/neural-network forecast system (as opposed to the physics-based numerical models everything else here uses) – it is included as just another model in the comparison, weighted like the rest by the [reliability](#model-verification-reliability-tab) score. **Google WeatherNext 3** (Google DeepMind's AI model) can optionally be added the same way – see [below](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison); it needs your own API key and is off by default. Everything is fetched **server-side** (`api/forecast.php`) and cached in SQLite for **30 minutes** per location (Google WeatherNext 3 has its own, longer cache – see below).
+Real observations used only for the reliability score come from [aviationweather.gov](https://aviationweather.gov/data/api/) (METAR). Models that return no data for the location are dropped automatically. **ECMWF AIFS** is ECMWF's newer AI/neural-network forecast system (as opposed to the physics-based numerical models everything else here uses) – it is included as just another model in the comparison, weighted like the rest by the [reliability](#model-verification-reliability-window) score. **Google WeatherNext 3** (Google DeepMind's AI model) can optionally be added the same way – see [below](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison); it needs your own API key and is off by default. Everything is fetched **server-side** (`api/forecast.php`) and cached in SQLite for **30 minutes** per location (Google WeatherNext 3 has its own, longer cache – see below).
 
 ### Consensus and probability
 
@@ -226,7 +216,7 @@ For every time step and every parameter WeFO collects one value per active provi
 
 The thresholds are constants at the top of `js/app.js` (`RAIN_THR_BY_HOURS`, `WIND_THR`, `TOL`).
 
-### Model verification (Reliability tab)
+### Model verification (Reliability window)
 
 `api/verify.php` (the work itself is in `api/verify_lib.php`) compares every model's *archived forecasts* (Open-Meteo **Historical Forecast API**) with two references: the **ERA5 reanalysis** (Open-Meteo **Archive API**, last 28 days, ending 6 days ago since ERA5 is published with a delay — available everywhere, but a model product of ECMWF's own system, so it slightly favours ECMWF) and **real METAR observations** (hourly reports from [aviationweather.gov](https://aviationweather.gov/data/api/), no key needed — measured temperature, dew point → relative humidity, wind, pressure, cloud cover and present weather).
 
@@ -289,6 +279,111 @@ Pricing (as published by Google): **10,000 calls/month free**, then pay-as-you-g
 To check usage: **APIs & Services → Weather API → Metrics** (requests over time) or **Billing → Reports** filtered to the *Weather Usage* SKU (exact call counts and any cost). For a quick local check of how many calls the app itself made today: `sqlite3 data/wefo.sqlite "SELECT k, body FROM cache WHERE k LIKE 'goo:quota:%' ORDER BY k DESC LIMIT 5;"`.
 
 You are responsible for your own Google Cloud billing; check current pricing before relying on this beyond light personal use.
+
+---
+
+## Methodology
+
+This section follows one number from the model to the screen and states every constant that shapes it. The constants live at the top of the files named in brackets, so none of them is hidden in the logic. WeFO is a **comparison and consensus tool, not a forecast model**: it never runs physics, it only reads, cleans, weighs and combines what free providers publish.
+
+### 1. Getting the forecasts
+
+| Step | What happens | Where |
+|---|---|---|
+| Catalogue | One list of every model: name, native resolution, area where it is genuinely good, the family it belongs to, whether it is scored by the verification, and which small tools (astro, trip) use it. | `api/models.php` |
+| Request | One call to the Open-Meteo forecast API with `models=…` and 20-odd hourly variables (temperature, apparent temperature, precipitation, weather code, cloud cover, wind, gusts, pressure, humidity, CAPE, convective inhibition, lifted index, visibility, `is_day`). MET Norway / Yr is read from its own API and converted to the same hourly shape. | `api/forecast.php` |
+| Height | Open-Meteo corrects temperature to a terrain height. The default is the height of the model grid; if the location has an **elevation** (optional field in *Locations & Map*, filled in by `api/elevation.php`), that height is passed as `&elevation=` (and to Yr as `altitude`) and is part of the cache key. A mountain hut at 1 200 m then gets mountain temperatures, not the valley's. | `api/forecast.php`, `api/elevation.php` |
+| Cache | 30 minutes per location in SQLite (a different elevation is a different entry). *Refresh* bypasses it. | `api/db.php` (`cache` table) |
+
+A model that returns nothing for the place is dropped. Optional sources (Google WeatherNext, ensemble, radar, METAR, EMY warnings) **fail silently**: the page simply loses that line and everything else still works.
+
+### 2. Cleaning: copies and related models
+
+* **Copies, hour by hour.** "Seamless" regional models (KNMI, DMI, MET Norway Nordic) return another model's numbers outside their own domain (`region` and `fallback` in the catalogue). At hour *i* a model counts as a copy of an earlier one when temperature, precipitation, wind and pressure are all identical (tolerance 10⁻⁶) over the window *i* − 3 … *i* + 3 hours (`DUP_WINDOW`, `DUP_VARS` in `js/app.js`). A single identical hour is not enough, since a dry, calm night can coincide by chance. Copied hours are excluded from every average, share and agreement and shown dimmed with the source named.
+* **Yr's 6-hour rain.** For the later hours Yr publishes one 6-hourly rain total; the API spreads it evenly and flags it (`precip_6h_block`). The UI ignores those values for steps shorter than 6 h, otherwise they would look like steady drizzle.
+* **Families.** Every model has a `family` (ECMWF IFS, AIFS, IFS HRES and Yr outside the Nordic countries are all `ecmwf`). With **One vote per model family** ticked, a family shares one vote between its active members.
+* **Yr and ECMWF.** Yr is built on ECMWF away from Scandinavia, so it is not an independent opinion. If the temperature of Yr and of ECMWF IFS correlates above **0.97** *and* they move in the same direction in at least **90 %** of the hours, Yr's weight is halved (`ECMWF_COPY_R`, `ECMWF_COPY_TREND`, `ECMWF_COPY_FACTOR`). In Greece the correlation is about 0.8–0.9, so the cut rarely applies, and it is shown under the model in the Reliability window.
+
+### 3. Steps and aggregation
+
+The table works in steps of 1, 3, 6 or 12 hours. Inside a step: precipitation is **summed**, wind gusts and CAPE take the **maximum**, the weather code the **most severe**, wind direction the **speed-weighted circular mean**, everything else the **mean**. The same rules apply to the *Days ahead* card (24 h).
+
+### 4. Verification: how a model earns its weight
+
+Done by `api/verify_lib.php`, run every night by `tools/verify-cron.php` and served by `api/verify.php`.
+
+**References.** Two, because each has a flaw. *ERA5* (Open-Meteo Archive API) is complete and global but is itself a model of ECMWF, so it slightly flatters ECMWF; the window is the last **28 days**, ending **6 days** ago because ERA5 is published late (`WINDOW_DAYS`, `LAG_DAYS`). *METAR* (aviationweather.gov) is a real measurement but only at airports and incomplete for cloud.
+
+**Archived forecasts at the right place.** The model's archived forecast (Historical Forecast API) is fetched **at each station's own coordinates and height**, not at the visitor's. A forecast for your balcony compared with an airport 40 km away would partly measure the real difference between the two places instead of the model's skill.
+
+**Greece.** Every Greek METAR airport is discovered (`LG*` in a bounding box, up to 40 stations, ≥ 48 matched hours each) and the results of all of them are **pooled** into one score per model, so one odd station cannot decide it. Elsewhere in the world the single nearest station within 60 km is used, ERA5 alone if there is none.
+
+**Skill per parameter, 0 … 1.**
+
+| Parameter | Skill | Tolerance (`TOL`) |
+|---|---|---|
+| temperature, wind, cloud, humidity, pressure | `max(0, 1 − MAE / tolerance)` | 4 °C, 15 km/h, 50 %, 25 %, 4 hPa |
+| rain | critical success index over wet hours: hits / (hits + misses + false alarms), only when the window holds enough rain events | wet = ≥ 0.1 mm |
+| weather type | share of hours with the right category (drizzle and rain count as one) | |
+
+**How METAR is read.** (a) A METAR is an *instant*, a model rain value is an *hourly total*, so a wet report is matched if the model has ≥ 0.1 mm in the same hour **± 1 hour** (`RAIN_WINDOW_H`). (b) A report with `VCSH` or `VCTS` (showers in the vicinity) never turns a model's rain into a false alarm: it did not rain *at the airport*, but that is not proof the model was wrong. (c) METAR sees cloud only below about 12 000 ft and reports only the thickest layers, so METAR's share for cloud is cut from 0.6 to **0.3** (`OBS_WEIGHT_BY_VAR`). (d) A clear-sky report (`CAVOK`, `NSC`, `SKC`) says only that there is no low or middle cloud, so it is compared with the model's *low + mid* cloud, not its total (cirrus is invisible to the station).
+
+**Combining.** `skill = 0.6 · METAR + 0.4 · ERA5` for a parameter with at least 48 matched observations (`OBS_WEIGHT`), ERA5 alone otherwise. The **score (0–100)** is the mean skill. The **weight** of a model for a parameter is `(skill + 0.15) / mean over the models`, limited to **0.5 … 1.8** so that nobody dominates and nobody is silenced; the average model has weight 1.
+
+**Lead time.** The Historical Forecast API stitches the first hours of each model run, so on its own it measures accuracy a few hours ahead, not on day five. The **Previous Runs API** gives the forecast issued *n* days earlier, so the whole procedure is repeated for **leads 1, 2, 3, 5 and 7 days** (`LEADS`) next to lead 0. Not every model offers every lead (Météo-France stops at 3 days, CMA at 4, BOM has none); a missing lead is bridged by linear interpolation. A lead built on fewer than **300** matched hours (`SHRINK_N`) is pulled towards weight 1 in proportion `n / 300`, so a thin sample cannot move the weights much. In the browser each column of the table uses the weights that match its distance in hours from the moment the forecast was fetched, blending the two neighbouring leads linearly (`leadWeight` in `js/app.js`): a model that is excellent tomorrow but poor on day six counts for exactly that.
+
+**Local tilt.** Besides the nationwide pool the job keeps each station's own weights. For a visitor, the weights of the **4 nearest stations** (within 120 km) are averaged with weights 1/d², and the national weight is tilted towards them by `α = 0.5` when the nearest station is closer than 40 km, falling linearly to 0 at 120 km (`LOCAL_*`): `w = w_nat + α · (w_local − w_nat₀)`, limited to 0.3 … 2.2. In the interior of Epirus the models that cope with mountains are favoured a little more than on the coast of the Cyclades.
+
+**Systematic error.** From the same data the job stores, per model and lead, the mean **bias** of temperature, pressure and humidity (METAR if available, otherwise ERA5) and the **wind ratio** truth / model. With *Correct systematic error* on, the browser subtracts the bias (limits ±3 °C, ±4 hPa, ±15 %) and multiplies wind and gusts by the ratio (0.7 … 1.3) **before** any average, share or agreement is computed (`correctionAt` / `fixValue`). Rain and cloud are never corrected. Corrected values are underlined on the model's own row.
+
+**Freshness.** A result younger than 24 h is served as it is. An older one is still served at once, marked `"stale"`, and the Reliability window says so; only a completely empty cache makes the first request compute on the spot. The window also shows when it was computed, the method, the comparison period, the number of hours behind each model's score and the score for each forecast day.
+
+### 5. From values to probabilities
+
+Every probability shown is a number between 0 and 100 % built from the active models of a column. "Weighted" means each model's vote counts with its weight from section 4.
+
+| Quantity | How it is built |
+|---|---|
+| **Average / range** | weighted mean, min and max of the model values (after the corrections above) |
+| **Weather type** | WMO codes are grouped into clear, partly cloudy, overcast, fog, drizzle, rain, snow, thunderstorm. Each model votes for its group; the weighted shares are shown. A model without a code gets one derived from precipitation, temperature (snow), CAPE and cloud |
+| **Agreement** (temperature, cloud, humidity, pressure) | `100 % · (1 − σ / tolerance)`, σ the spread between models, tolerance 4 °C, 50 %, 25 %, 4 hPa; 0 % if σ ≥ tolerance |
+| **Chance of rain** — vote | weighted share of models with at least the threshold in the step: **0.2 mm** for 1 h, **0.5 mm** for 3 h, **1 mm** for 6 h, 12 h and for the day (`RAIN_THR_BY_HOURS`). A trace over a long block adds up, so the bar rises with the block |
+| **Chance of strong wind** — vote | share of models with mean wind ≥ **30 km/h** (Beaufort 5); gusts ≥ **60 km/h** separately |
+| **Ensemble probability** | the same events counted in the **ensemble members** of five systems (ECMWF IFS 51, NOAA GEFS 31, DWD ICON 40, Environment Canada GEM 21, UK Met Office 18) from the Open-Meteo Ensemble API (`api/ensemble.php`, cached 2 h); each *system* counts once, so ECMWF's 51 members do not drown the others. Also hourly **P10 / P50 / P90** of temperature and rain |
+| **Chance of rain / strong wind / gust, shown** | `P = 0.7 · P_ensemble + 0.3 · P_vote` (`ENS_BETA`). The ensemble says how often the *atmosphere* could do it, the vote how many *models* say it; if the ensemble is not available the vote alone is used |
+| **Thunderstorm** | per model a signal 0 … 1: code 95–99 → 1; otherwise `clamp((CAPE − 300) / 1500)`, × 0.4 if convective inhibition > 100 J/kg, × 1.2 if the lifted index < −3, × 1.3 if the block has ≥ 0.5 mm of rain, × 0.6 if it has none (`STORM_*`). The chance is the weighted mean of the signals |
+
+**Hero verdict.** The share of the models that show the winning weather type (weighted, as in the table) decides the first level: **≥ 80 %** *"The models mostly agree"*, **≥ 50 %** *"partly agree"*, below that *"are split"*; the five dots show the share (`round(share × 5)`, at least one). The ensemble can only **lower** the level: a rain chance of **35–65 %** or a temperature P10–P90 spread of **≥ 8 °C** means *split*; a rain chance of 20–80 % or a spread of **≥ 4 °C** means *partly agree* (`ENS_SPREAD_MID`, `ENS_SPREAD_LOW`).
+
+**The rain line.** "Rain expected from 13:00", "Next break: dry from …" is found by scanning the next 24 hours for the next change of the rain consensus. When a RainViewer radar frame is available a "Next break" line from the radar at the exact point is added, and when an airport is near, a "Measured now" line from its METAR.
+
+### 6. Warnings
+
+`api/warnings.php` reads MeteoAlarm's feed for Greece and keeps the EMY warnings that are in force or start within 48 h (yellow and above). The feed gives regions by name only, without geometry, so it cannot be matched to your exact point: the line is the list for Greece as a whole, shown only for places inside Greece.
+
+### 7. Trip
+
+Up to three routes come from OpenRouteService. Along each, a point is placed about **every 22 km** (3 … 26 points), and the multi-model forecast is read at that point **for the hour you will really be there**, from the route's own timetable (linear between the two forecast hours). Per point, per chosen model: weather type, rain, gusts, temperature. A model repeating another one's numbers is counted once. The weather shown is the type most of the *chosen* models show, with the share that agrees; changing the chosen models re-runs exactly this step on the data already downloaded. A point gets a severity from 0 (fine) to 3 (dangerous): drizzle 1; rain 1–3 by hourly amount (≥ 1.5 mm/h → 2, ≥ 4 → 3); snow 2–3; thunder 3; fog 2; gusts ≥ 40 / 55 / 80 km/h → 1 / 2 / 3; and 2 for **ice risk** (≤ 1.5 °C with rain, or humidity ≥ 92 %). A route is ranked by the mean severity plus half of the worst one. These are estimates from the forecast, not road-authority data. Tolls are matched to your route with our own table of plazas (within 120 m); fuel is `km · consumption / 100` plus 0.15 L (or 0.1 kWh) per 100 m of climb.
+
+### 8. Sky, Moon and deep-sky objects
+
+Everything astronomical is computed **in the browser**. Positions of the Sun and Moon use the low-precision series of SunCalc (accurate to a fraction of a degree, plenty for twilight and moonrise), with parallax for the Moon; the phase comes from the Sun–Moon elongation; the sky coordinates of an object come from the local sidereal time. Astronomical darkness is the Sun below −18°; where it never gets that low, the window is sunset + 90 min … sunrise − 90 min.
+
+**Atmosphere.** The mean of ECMWF IFS, NOAA GFS and DWD ICON gives hourly cloud layers, humidity, winds aloft (850 … 250 hPa), CAPE and visibility, and CAMS aerosols. Total cloud is `1 − (1 − low)(1 − mid)(1 − 0.6 · high)`: thin high cloud counts for less. *Seeing* and *transparency* are **estimates**, because no free source measures them. Seeing (″) = `0.65 + 0.035 · jet + 0.02 · shear + 0.04 · ground wind + 0.0006 · CAPE` (jet = max of the 250 and 300 hPa wind in m/s, shear between 500 and 250 hPa), limited to 0.6 … 5. Transparency starts at 100 and loses points for aerosols above 0.05 optical depth, humidity above 55 %, high cloud, poor visibility and rain.
+
+**The hourly deep-sky score** (0–100) is `100 · (1 − cloud) · darkness · (1 − 0.75 · moonlight) · (0.55 + 0.45 · transparency) · (0.85 + 0.15 · seeing) · light pollution`, where *darkness* grows from 0 at −6° to 1 at −18° of the Sun, *moonlight* is the lit fraction times a factor that grows with the Moon's altitude, and *light pollution* is a factor by Bortle class (1 → 1.0 … 9 → 0.22).
+
+**Light pollution** is read from David Lorenz's sky-brightness atlas (VIIRS 2025): the colour of the tile pixel under the place is matched to the nearest of 15 brightness zones (zenith sky brightness in mag/arcsec²) and then to a Bortle class. You can override it per place.
+
+**Deep-sky objects.** The 2 936-object catalogue gives magnitude, size and position. Surface brightness is `SB = mag + 2.5 · log₁₀(π/4 · a · b · 3600)` (a, b in arcminutes); the *effective magnitude* is `mag + 0.5 · max(0, SB − 20.5)`, so a faint, large, diffuse object counts as fainter than its magnitude says. It is a **binoculars** target up to 8.5, a **telescope** target up to 14 and otherwise very difficult. That is an estimate for a dark sky without the Moon. Tonight's list takes objects that reach **30°** and stay above it for at least an hour inside the dark window (sampled every 20 minutes), ranked by effective magnitude with a small bonus for altitude; "Moon nearby" means the Moon is up, more than 20 % lit and within 40° of the object at its best hour. `node tools/test-dso.js` checks the maths against independent values (transit altitude 90° − |φ − δ|, the night figures of a known date, the Moon strip at new and full Moon).
+
+### 9. What the numbers do not tell you
+
+* The consensus is only as good as the models: if all of them miss the same thunderstorm, WeFO misses it too. Agreement is not accuracy.
+* A score is a statement about the **last 28 days** at the Greek airports. Weights follow the season; a model that was best in a dry month may not be in a wet one. Rain weights are only used when the window holds enough rain events.
+* Airports are points, usually flat and near the coast. Mountain valleys and islands are represented by the local tilt only as far as a station is near.
+* Probabilities from the ensemble describe the atmosphere's uncertainty as the ensembles see it; they are not calibrated against observations in WeFO (a Brier-score check against METAR is possible and not built).
+* Seeing, transparency, the visibility class of an object and the "slippery road" notes are heuristics.
 
 ---
 
