@@ -246,6 +246,8 @@ For each model and reference it computes: mean absolute error and bias for tempe
 15 3 * * * php /var/www/wefo/tools/verify-cron.php >> /var/log/wefo-verify.log 2>&1
 ```
 
+The Reliability window states **how fresh and how solid** the numbers are: when they were computed, the method (nationwide pool / single place, the tilt towards the nearest stations, whether weights are per forecast day), the comparison window and number of matched hours, the number of hours behind each model's score, and a *stale* warning when the cache is older than 24 h.
+
 In the Reliability table every cell shows the error against ERA5 and, in blue, the error against METAR; the note under the table explains which method was used — the list of pooled stations for Greece, or the single nearest station (name, distance, report count) elsewhere.
 
 Notes and caveats:
@@ -254,6 +256,10 @@ Notes and caveats:
 - Pressure comes from the METAR sea-level pressure (or altimeter setting), and rain/weather from the *present-weather* code at report time – rain detection against METAR is therefore approximate.
 - Models without archived data for the area (regional models outside their domain) and Yr are not scored and count with weight 1. Rain weights are only used when the period contains enough rain events to be meaningful.
 - Outside Greece, if no METAR station with enough reports is near the location, ERA5 alone is used and the note says so.
+
+### EMY warnings (hero card)
+
+`api/warnings.php` reads MeteoAlarm's free CAP feed for Greece (`https://feeds.meteoalarm.org/api/v1/warnings/feeds-greece`; the Atom version is `…/feeds/meteoalarm-legacy-atom-greece`), keeps the warnings that are in force or start within 48 h (yellow and above), and the hero card lists them with their region names. **Limitation found while building it:** the feed names regions only by an `EMMA_ID` code and a name and carries no polygons (MeteoAlarm publishes no region geometry either), so a warning cannot be matched to the exact point — the line is the list for Greece as a whole, shown only for locations inside Greece. Cached 30 minutes; if the feed is down the line is simply absent.
 
 ### Optional: Google WeatherNext 3, and the "WeFO vs AI" comparison
 
@@ -292,7 +298,7 @@ You are responsible for your own Google Cloud billing; check current pricing bef
 - A web server that can run PHP (Apache, Nginx + PHP-FPM, or the built-in PHP server for development)
 - Write permission for the web-server user on the `data/` directory
 - A **cron job** on the server for the nightly verification: `15 3 * * * php /var/www/wefo/tools/verify-cron.php` (optional — without it the first visitor of the day-after-cache-expiry no longer waits, but the scores and lead times are only refreshed when someone triggers it)
-- Outbound HTTPS access to `open-meteo.com`, `api.met.no`, `aviationweather.gov`, `nominatim.openstreetmap.org`, `api.rainviewer.com` + `tilecache.rainviewer.com`, `unpkg.com`, `fonts.googleapis.com` and OpenStreetMap tile servers (plus `weather.googleapis.com` only if you configure the optional Google WeatherNext 3 key)
+- Outbound HTTPS access to `open-meteo.com` (forecast, ensemble, previous-runs, historical-forecast, archive and elevation sub-domains), `feeds.meteoalarm.org`, `api.met.no`, `aviationweather.gov`, `nominatim.openstreetmap.org`, `api.rainviewer.com` + `tilecache.rainviewer.com`, `unpkg.com`, `fonts.googleapis.com` and OpenStreetMap tile servers (plus `weather.googleapis.com` only if you configure the optional Google WeatherNext 3 key)
 
 ## Installation
 
@@ -475,6 +481,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 | `GET api/ensemble.php?lat=..&lon=..[&elevation=..]` | probabilities per step (rain, wind, gust) and hourly P10/P50/P90 from the ensemble systems, cached 2 h |
 | `GET api/elevation.php?lat=..&lon=..` | terrain height (m) from Open-Meteo, the default of the Locations form's Elevation field |
 | `GET api/verify.php?lat=..&lon=..` | per-model scores, errors (vs ERA5 and vs METAR), weights (also `weights_by_lead`) and the METAR station used; served from the cache, `stale: true` when older than 24 h |
+| `GET api/warnings.php` | EMY warnings in force in Greece (from MeteoAlarm), cached 30 min; `{warnings: []}` when none / feed down |
 | `GET api/aviation.php?pts=lat,lon;…` | for each point the nearest METAR (latest report) and TAF station with their cloud layers |
 | `GET api/skypoints.php?pts=lat,lon;lat,lon;…` | low/mid/high cloud (3-model mean) at up to 64 points, 7 days hourly, plus aerosol, visibility, humidity and rain at the first point |
 | `GET api/astro.php?lat=..&lon=..[&refresh=1]` | hourly cloud layers, humidity, winds at pressure levels, CAPE, aerosols for the Sky Conditions tab |
@@ -487,15 +494,15 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 ## Data, privacy and external services
 
 - **Server side:** saved locations, cached API responses and the downloaded weather history in `data/wefo.sqlite`. No personal data or cookies.
-- **Browser side (`localStorage`, never sent to the server):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.disabled` (disabled models), `wefo.weighted` (reliability weighting on/off), `wefo.loc` (last selected location).
-- **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station), (reverse geocoding) Nominatim, and — only if you configured a key — Google (`weather.googleapis.com`).
+- **Browser side (`localStorage`):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.loc` (last selected location) stay in the browser. `wefo.disabled` (disabled models), `wefo.weighted`, `wefo.bias`, `wefo.oneVote` are also stored on the server per user (`user_prefs`) so they follow the user to another browser.
+- **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station), MeteoAlarm (feeds.meteoalarm.org: warnings, no coordinates sent), (reverse geocoding) Nominatim, and — only if you configured a key — Google (`weather.googleapis.com`).
 - **Requests made by the browser:** map tiles (OpenStreetMap; DSS2 photos from alasky.cds.unistra.fr in the DSO Explorer; in the Sky Conditions tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
 - **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment. The optional Google Weather API is **not free beyond its monthly quota** and is entirely opt-in — see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison).
 
 ## Limitations
 
 - ERA5 is a reanalysis produced with ECMWF's model, so on its own it slightly favours ECMWF; real METAR observations reduce this bias where a station is near, but an airport is a single point that may not represent your exact spot.
-- Archived forecasts mostly represent short lead times, so the score reflects short-range skill more than day-5 skill.
+- The Historical Forecast archive alone represents short lead times; WeFO therefore also scores lead days 1–7 with the Previous Runs API (see *Model verification*). Open-Meteo's free API has hourly and daily call limits that depend on how many variables and models a request asks for: the nightly verification job is sized for **one run per night** — running it several times within an hour makes Open-Meteo answer "Hourly API request limit exceeded" until the next hour.
 - Weather icons for models without a weather code are derived heuristically.
 - cURL verifies TLS certificates by default (`ssl_verify`, see `api/config.example.php` / env `WEFO_SSL_VERIFY`). A local Windows/Laragon PHP without a CA bundle fails with "SSL certificate problem": point `curl.cainfo` and `openssl.cafile` in `php.ini` at a `cacert.pem`, or, for development only, set `'ssl_verify' => false` in `api/config.php`.
 - No authentication (see the note above).

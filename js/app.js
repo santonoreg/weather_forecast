@@ -578,7 +578,7 @@ function renderRelModal() {
     // score per forecast day: shows which models lose accuracy quickly (only when the nightly job has measured the leads)
     const bl = m.by_lead ? Object.keys(m.by_lead).map(Number).sort((x, y) => x - y).filter((d) => m.by_lead[d].score != null) : [];
     const lead = bl.length > 1 ? `<div class="byl" title="${esc(t('r.bylead'))}">${bl.map((d) => `<span title="${esc(t('r.bylead.day', { d, s: m.by_lead[d].score }))}"><i class="${scoreCls(m.by_lead[d].score)}" style="height:${Math.max(2, Math.round(m.by_lead[d].score * 0.22))}px"></i><small>${d}</small></span>`).join('')}</div>` : '';
-    return `<td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b>${lead}</td>
+    return `<td><div class="bar"><i style="width:${m.score ?? 0}%"></i></div><b class="score ${scoreCls(m.score)}">${m.score ?? '–'}</b>${m.n ? `<small class="nsamp" title="${esc(t('r.samples.tip'))}">${t('r.samples', { n: m.n })}</small>` : ''}${lead}</td>
       <td class="cell">${mae('temperature_2m')}</td><td class="cell">${mae('wind_speed_10m')}</td><td class="cell">${mae('cloud_cover', 0)}</td>
       <td class="cell">${mae('relative_humidity_2m', 0)}</td><td class="cell">${mae('pressure_msl', 2)}</td>
       <td class="cell">${pct(m.csi, m.obs?.csi)}</td><td class="cell">${pct(m.code_acc, m.obs?.code_acc)}</td>`;
@@ -592,7 +592,19 @@ function renderRelModal() {
   $('relTable').innerHTML = html + '</tbody>';
   const loc = v?.local;
   const localNote = loc && loc.alpha > 0 ? `<p class="hint">${t('r.local', { a: Math.round(loc.alpha * 100), list: loc.stations.map((x) => `${esc(x.name)} (${x.km} km)`).join(', ') })}</p>` : '';
-  $('relNote').innerHTML = t('r.howto') + localNote;
+  // transparency: when it was computed, how, over what, and whether it is out of date
+  let meta = '';
+  if (v) {
+    const when = v.computed_at ? new Date(v.computed_at).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
+    const parts = [
+      v.greece ? t('r.meta.gr', { n: v.greece.stations }) : v.station ? t('r.meta.pt', { name: esc(v.station.name), km: v.station.km }) : t('r.meta.era'),
+      loc && loc.alpha > 0 ? t('r.meta.loc', { a: Math.round(loc.alpha * 100) }) : '',
+      v.leads && v.leads.length > 1 ? t('r.meta.lead', { l: v.leads.join(', ') }) : t('r.meta.nolead'),
+      t('r.meta.win', { a: v.start, b: v.end, h: v.hours }),
+    ].filter(Boolean);
+    meta = `<p class="hint relmeta">${when ? `<b>${t('r.meta.when', { when })}</b> · ` : ''}${parts.join(' · ')}${v.stale ? ` <span class="stale">⚠ ${t('r.meta.stale')}</span>` : ''}</p>`;
+  }
+  $('relNote').innerHTML = t('r.howto') + localNote + meta;
 }
 const badge = (id) => { const sc = state.verify?.models?.[id]?.score; return sc != null ? `<span class="rel ${scoreCls(sc)}" title="${t('r.badge')}">${sc}</span>` : ''; };
 
@@ -677,6 +689,7 @@ function renderHero() {
   const outlook = rainOutlook(c);
   $('heroRain').hidden = !outlook;
   if (outlook) $('heroRain').innerHTML = `${RAIN_DOT}<span>${outlook}</span>`;
+  renderWarnings();
 }
 $('heroHist').addEventListener('click', () => { if (state.current && state.current.id != null) openHistory(state.current); });
 
@@ -1106,6 +1119,7 @@ async function loadForecast(refresh = false) {
     loadVerify(loc, token);
     loadObserved(loc, token);
     loadEnsemble(loc, token);
+    loadWarnings(token);
     // Radar nowcast ("Next break") is built (see loadRadar/api/radar.php) but turned off for now: the
     // hero card is meant to hold exactly three boxes — agreement, measured now, and the outlook —
     // per request. Re-add a `loadRadar(loc, token);` call here to bring it back.
@@ -1140,6 +1154,28 @@ async function loadRadar(loc, token) {
   } catch (err) { /* silent */ }
 }
 
+/* EMY warnings (api/warnings.php, from MeteoAlarm). The feed has no geometry, so they are listed for Greece as a whole, with their region
+   names, and only for a location inside Greece. Silent when the feed fails or nothing is in force. */
+const WARN_LEVEL = { 2: 'yellow', 3: 'orange', 4: 'red' };
+const inGreece = (lat, lon) => lat >= 34 && lat <= 41.8 && lon >= 19 && lon <= 29.8;
+function renderWarnings() {
+  const el = $('heroWarn'), loc = state.current, w = state.warn;
+  if (!el) return;
+  if (!loc || !w || !w.length || !inGreece(loc.lat, loc.lon)) { el.hidden = true; return; }
+  const tz = (iso) => { const d = new Date(new Date(iso).getTime() + state.data.utc_offset_seconds * 1000); return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')} ${d.toISOString().slice(11, 16)}`; };
+  const groups = new Map();   // one chip per kind and level, listing its regions
+  w.forEach((x) => { const k = `${x.type}|${x.level}`; if (!groups.has(k)) groups.set(k, { ...x, areas: [], until: x.expires }); const g = groups.get(k); const a = LANG === 'el' && x.area_el ? x.area_el : x.area; if (!g.areas.includes(a)) g.areas.push(a); if (x.expires > g.until) g.until = x.expires; });
+  el.innerHTML = `<span class="wlab" title="${esc(t('warn.tip'))}">⚠ ${t('warn.title')}</span>` + [...groups.values()].map((g) => `<span class="wchip ${WARN_LEVEL[g.level] || 'yellow'}">${esc(t('warn.type.' + g.type))} — ${esc(g.areas.join(', '))} <small>${t('warn.until', { when: tz(g.until) })}</small></span>`).join('');
+  el.hidden = false;
+}
+async function loadWarnings(token) {
+  try {
+    const r = await api('api/warnings.php');
+    if (token !== state.token) return;
+    state.warn = r.warnings || [];
+    renderWarnings();
+  } catch (e) { /* silent: no warning line */ }
+}
 // Ensemble probabilities arrive after the page is already usable; any failure leaves the consensus-only behaviour
 async function loadEnsemble(loc, token) {
   try {
