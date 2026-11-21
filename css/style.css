@@ -119,7 +119,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 
 /* The week: aligned columns with a header row */
 .sec-h h2 { font-size: 17px; margin: 0 0 8px; font-weight: 600; }
-.week { --wk: minmax(56px, 1fr) 30px auto auto auto; --wkgap: 10px; }
+.week { --wk: minmax(56px, 1fr) 34px 92px 54px 46px; --wkgap: 8px; }   /* fixed widths: every row is its own grid, so 'auto' columns would not line up between rows */
 .week .days { display: block; overflow: visible; padding: 0; }
 .week .wk-h, .week .d { display: grid; grid-template-columns: var(--wk); gap: var(--wkgap); align-items: center; }
 .week .wk-h { font-size: 12px; color: var(--muted); font-weight: 500; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
@@ -130,7 +130,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .week .d .lab { font-size: 15px; color: var(--muted); font-weight: 500; line-height: 1.2; }
 .week .d .lab small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
 .week .d.sel .lab { color: var(--accent); font-weight: 600; }
-.week .d .wi { width: 30px; height: 30px; }
+.week .d .wi { width: 30px; height: 30px; justify-self: center; }
 .week .d .hl { font-size: 16px; font-weight: 600; white-space: nowrap; }
 .week .d .hl span { color: var(--muted); font-weight: 400; }
 .week .d .pr { font-size: 13px; color: var(--muted); white-space: nowrap; line-height: 1.25; }
@@ -139,7 +139,7 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .week .d .pr small.storm svg { width: 11px; height: 11px; vertical-align: -1px; }
 .week .d .gu { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .week .note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
-@media (max-width: 360px) { .week { --wk: minmax(44px, 1fr) 24px auto auto auto; --wkgap: 6px; } .week .d .wi { width: 24px; height: 24px; } .week .d .lab { font-size: 13.5px; } .week .d .hl { font-size: 14px; } .week .d .pr, .week .d .gu { font-size: 12.5px; } }
+@media (max-width: 360px) { .week { --wk: minmax(44px, 1fr) 26px 74px 46px 38px; --wkgap: 4px; } .week .d .wi { width: 24px; height: 24px; } .week .d .lab { font-size: 13.5px; } .week .d .hl { font-size: 14px; } .week .d .pr, .week .d .gu { font-size: 12.5px; } }
 
 /* Colour legend for weather-category icons, above the table (Weather tab only) */
 .segkey { display: flex; flex-wrap: wrap; gap: 5px 16px; align-items: center; font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
