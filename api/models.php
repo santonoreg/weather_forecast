@@ -21,6 +21,9 @@
 return [
     'ecmwf_aifs025_single' => ['name' => 'ECMWF AIFS (AI)', 'res' => '0.25° (~25 km)', 'area' => 'global', 'region' => null, 'family' => 'ecmwf', 'fallback' => null, 'verify' => true, 'use' => ['trip']],
     'ecmwf_ifs025'         => ['name' => 'ECMWF IFS', 'res' => '0.25° (~25 km)', 'area' => 'global', 'region' => null, 'family' => 'ecmwf', 'fallback' => null, 'verify' => true, 'use' => ['astro', 'trip']],
+    // 9 km HRES (the 0.25° line above is the open-data version of the same model). Confirmed to return data for Athens and Thessaloniki;
+    // 'verify' stays false until the Historical Forecast / Previous Runs APIs have been confirmed to accept it (an unknown model name would fail the whole request).
+    'ecmwf_ifs'            => ['name' => 'ECMWF IFS HRES (9 km)', 'res' => '9 km', 'area' => 'global', 'region' => null, 'family' => 'ecmwf', 'fallback' => null, 'verify' => false, 'use' => []],
     'gfs_seamless'         => ['name' => 'NOAA GFS', 'res' => '0.11–0.25° (11–25 km)', 'area' => 'global (HRRR over the USA)', 'region' => null, 'family' => 'gfs', 'fallback' => null, 'verify' => true, 'use' => ['astro', 'trip']],
     'icon_seamless'        => ['name' => 'DWD ICON', 'res' => '2 / 7 / 11 km', 'area' => 'global (ICON-D2 over Germany, ICON-EU over Europe)', 'region' => null, 'family' => 'icon', 'fallback' => null, 'verify' => true, 'use' => ['astro', 'trip']],
     'gem_seamless'         => ['name' => 'Environment Canada GEM', 'res' => '2.5–15 km', 'area' => 'global (finer over North America)', 'region' => null, 'family' => 'gem', 'fallback' => null, 'verify' => true, 'use' => ['trip']],
