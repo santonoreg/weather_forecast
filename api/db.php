@@ -7,18 +7,45 @@ if (!function_exists('str_contains')) { function str_contains(string $h, string 
 if (!function_exists('str_starts_with')) { function str_starts_with(string $h, string $n): bool { return strncmp($h, $n, strlen($n)) === 0; } }
 ini_set('display_errors', '0');
 set_exception_handler(function (Throwable $e) {
+    app_log('error', 'Exception: ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')');
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, 'Server error: ' . $e->getMessage() . "\n"); exit(1); }
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['error' => 'Server error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 });
 register_shutdown_function(function () {
     $e = error_get_last();
-    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true) && !headers_sent()) {
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        app_log('error', 'PHP error: ' . $e['message'] . ' (' . basename($e['file']) . ':' . $e['line'] . ')');
+        if (headers_sent()) return;
         http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['error' => 'PHP error: ' . $e['message']], JSON_UNESCAPED_UNICODE);
     }
 });
+
+/* Activity log for the administrator (Account > Log): logins, failed logins, errors, background jobs.
+   kind: login | login_fail | logout | error | job.   Never throws, never blocks the request: if the log cannot be written, it is skipped.
+   Old rows are dropped (LOG_KEEP_DAYS, LOG_KEEP_ROWS). Passwords are never logged; a failed login records the user name that was tried. */
+const LOG_KEEP_DAYS = 90;
+const LOG_KEEP_ROWS = 20000;
+function app_log(string $kind, string $message, ?string $user = null): void
+{
+    static $busy = false;   // db() failing calls json_out(500), which logs: do not recurse
+    if ($busy) return;
+    $busy = true;
+    try {
+        $ip = PHP_SAPI === 'cli' ? 'cli' : substr(preg_replace('/[^0-9a-fA-F:.]/', '', (string)($_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '?')) ?: '?', 0, 45);
+        $pdo = db();
+        $pdo->prepare('INSERT INTO app_log (ts, kind, user, ip, message) VALUES (?, ?, ?, ?, ?)')
+            ->execute([time(), $kind, $user === null ? null : mb_substr($user, 0, 60), $ip, mb_substr($message, 0, 500)]);
+        if (random_int(1, 200) === 1) {
+            $pdo->prepare('DELETE FROM app_log WHERE ts < ?')->execute([time() - LOG_KEEP_DAYS * 86400]);
+            $pdo->prepare('DELETE FROM app_log WHERE id <= (SELECT MAX(id) FROM app_log) - ?')->execute([LOG_KEEP_ROWS]);
+        }
+    } catch (Throwable $e) { /* the log is best effort */ }
+    $busy = false;
+}
 
 /* Read one row / one value and CLOSE the statement. A SELECT whose cursor is left open keeps a read snapshot
    alive; with WAL, a later write on the same connection (e.g. the cache INSERT after a slow API call) then fails
@@ -113,6 +140,15 @@ function db(): PDO
         v TEXT NOT NULL,
         PRIMARY KEY (user_id, k)
     ) WITHOUT ROWID');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS app_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts INTEGER NOT NULL,
+        kind TEXT NOT NULL,
+        user TEXT,
+        ip TEXT,
+        message TEXT NOT NULL
+    )');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS app_log_ts ON app_log (ts)');
     if (!in_array('user_id', $cols, true)) $pdo->exec('ALTER TABLE locations ADD COLUMN user_id INTEGER');
     seed_admin($pdo);
     sync_cities($pdo);
@@ -205,6 +241,8 @@ function app_config(): array
 
 function json_out($data, int $code = 200): void
 {
+    if ($code >= 500) app_log('error', 'HTTP ' . $code . ': ' . (is_array($data) ? (string)($data['error'] ?? '') : '') . ' [' . basename((string)($_SERVER['SCRIPT_NAME'] ?? 'cli')) . ']');
+    if (PHP_SAPI === 'cli' && $code >= 400) { fwrite(STDERR, 'error ' . $code . ': ' . (is_array($data) ? (string)($data['error'] ?? '') : '') . "\n"); exit(1); }   // command-line jobs (cron) must fail with a non-zero exit code
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

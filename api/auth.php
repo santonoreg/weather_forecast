@@ -16,6 +16,7 @@ $action = (string)($in['action'] ?? '');
 $pdo = db();
 
 if ($action === 'logout') {
+    if ($me) app_log('logout', 'Logged out', $me['name']);
     auth_end_session();
     json_out(['user' => null, 'admin' => false]);
 }
@@ -39,6 +40,7 @@ if ($action !== 'login') json_out(['error' => 'Unknown action'], 400);
 if (!auth_configured()) json_out(['error' => 'Login is not configured on this server', 'code' => 'not_configured'], 503);
 
 if (auth_locked($pdo)) {
+    app_log('login_fail', 'Blocked: too many attempts', trim((string)($in['user'] ?? '')));
     header('Retry-After: ' . AUTH_FAIL_WINDOW);
     json_out(['error' => 'Too many attempts, try again later', 'code' => 'locked'], 429);
 }
@@ -53,6 +55,7 @@ $hash = $row ? (string)$row['pass_hash'] : '$2y$10$abcdefghijklmnopqrstuuMo1nJm7
 $ok = password_verify($pass, $hash) && $row;
 
 if (!$ok) {
+    app_log('login_fail', $row ? 'Wrong password' : 'Unknown user name', $name);
     auth_fail_bump($pdo, 'authfail:' . auth_ip());
     auth_fail_bump($pdo, 'authfail:*');
     usleep(400000);
@@ -61,4 +64,5 @@ if (!$ok) {
 
 $pdo->prepare('DELETE FROM cache WHERE k = ?')->execute(['authfail:' . auth_ip()]);
 auth_start_session((int)$row['id'], !empty($in['remember']));
+app_log('login', 'Logged in' . (!empty($in['remember']) ? ' (remember me)' : ''), (string)$row['username']);
 json_out(['user' => ['id' => (int)$row['id'], 'name' => $row['username'], 'role' => $row['role']], 'admin' => $row['role'] === 'admin']);

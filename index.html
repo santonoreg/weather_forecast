@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261200">
+<link rel="stylesheet" href="css/style.css?v=20261201">
 </head>
 <body>
 <header class="topbar">
@@ -208,6 +208,7 @@
       <button type="button" class="acc-tab" data-tab="places" data-i18n="nav.places">Locations &amp; Map</button>
       <button type="button" class="acc-tab" data-tab="cars" data-i18n="acc.cars.tab">Cars</button>
       <button type="button" class="acc-tab" data-tab="users" id="tabUsers" data-i18n="nav.users" hidden>Users</button>
+      <button type="button" class="acc-tab" data-tab="log" id="tabLog" data-i18n="nav.log" hidden>Log</button>
       <button type="button" class="acc-tab" data-tab="password" data-i18n="acc.pw.tab">Password</button>
     </div>
     <div class="acc-pane" id="pane-places">
@@ -265,6 +266,24 @@
         <button type="submit" class="btn primary" data-i18n="usr.create">Create user</button>
       </form>
       <p id="usersMsg" class="hint" role="status"></p>
+    </div>
+    </div>
+    <div class="acc-pane" id="pane-log" hidden>
+    <div class="panel users-panel">
+      <div class="log-bar">
+        <select id="logGroup" aria-label="Filter">
+          <option value="all" data-i18n="log.g.all">Everything</option>
+          <option value="login" data-i18n="log.g.login">Logins and logouts</option>
+          <option value="fail" data-i18n="log.g.fail">Failed logins</option>
+          <option value="error" data-i18n="log.g.error">Errors</option>
+          <option value="job" data-i18n="log.g.job">Background jobs</option>
+        </select>
+        <button type="button" class="btn ghost small" id="logRefresh" data-i18n="log.refresh">Refresh</button>
+        <span id="logCounts" class="hint"></span>
+      </div>
+      <div id="logList"></div>
+      <button type="button" class="btn ghost small" id="logMore" hidden data-i18n="log.more">Older entries</button>
+      <p class="hint" data-i18n="log.hint">Logins, failed logins and server errors are kept for 90 days. A failed login shows the user name that was tried, never the password.</p>
     </div>
     </div>
     <div class="acc-pane" id="pane-password" hidden>
@@ -326,12 +345,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261200"></script>
-<script src="js/icons.js?v=20261200"></script>
-<script src="js/app.js?v=20261200"></script>
-<script src="js/astro.js?v=20261200"></script>
-<script src="js/sunset.js?v=20261200"></script>
-<script src="js/dso.js?v=20261200"></script>
-<script src="js/trip.js?v=20261200"></script>
+<script src="js/i18n.js?v=20261201"></script>
+<script src="js/icons.js?v=20261201"></script>
+<script src="js/app.js?v=20261201"></script>
+<script src="js/astro.js?v=20261201"></script>
+<script src="js/sunset.js?v=20261201"></script>
+<script src="js/dso.js?v=20261201"></script>
+<script src="js/trip.js?v=20261201"></script>
 </body>
 </html>

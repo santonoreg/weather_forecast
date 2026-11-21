@@ -1344,6 +1344,7 @@ function updateAuthUI() {
   $('userBtn').textContent = state.user ? state.user.name : '';
   $('logoutBtn').hidden = !state.user;
   $('tabUsers').hidden = !state.admin;
+  $('tabLog').hidden = !state.admin;
 }
 function setUser(u) { state.user = u || null; state.admin = !!(u && u.role === 'admin'); updateAuthUI(); }
 async function loadAuth() {
@@ -1421,7 +1422,7 @@ const Account = {
   tab: 'places',
   show(tab) {
     this.tab = tab || this.tab || 'places';
-    if (this.tab === 'users' && !state.admin) this.tab = 'places';
+    if ((this.tab === 'users' || this.tab === 'log') && !state.admin) this.tab = 'places';
     $('accName').textContent = state.user.name;
     $('accInfo').textContent = t(state.admin ? 'usr.role.admin' : 'usr.role.user');
     document.querySelectorAll('.acc-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === this.tab));
@@ -1430,6 +1431,7 @@ const Account = {
     if (this.tab === 'places') { initMap(); setTimeout(() => map.invalidateSize(), 50); drawSavedMarkers(); }
     if (this.tab === 'cars') accCars.load();
     if (this.tab === 'users') Users.show();
+    if (this.tab === 'log') Logs.show();
     if (this.tab === 'password') { $('accOld').value = ''; $('accNew').value = ''; $('accMsg').textContent = ''; $('accMsg').classList.remove('err'); }
   },
 };
@@ -1476,6 +1478,31 @@ const Users = (() => {
     load();
   });
   return { show: load };
+})();
+/* Activity log (administrator): logins, failed logins, errors, background jobs (api/logs.php) */
+const Logs = (() => {
+  const KIND_CLS = { login: 'ok', logout: '', login_fail: 'warn', error: 'bad', job: '' };
+  let oldest = 0;
+  async function load(more) {
+    const box = $('logList');
+    let r;
+    try { r = await api('api/logs.php?group=' + encodeURIComponent($('logGroup').value) + (more && oldest ? '&before=' + oldest : '')); }
+    catch (e) { box.textContent = e.message; return; }
+    const fmt = (s) => new Date(s * 1000).toLocaleString(dateLocale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const rows = r.rows.map((x) => `<tr class="lg-${KIND_CLS[x.kind] || ''}"><td class="lg-t">${esc(fmt(x.ts))}</td><td><span class="lg-k">${esc(t('log.k.' + x.kind))}</span></td><td>${esc(x.user || '')}</td><td class="lg-ip">${esc(x.ip || '')}</td><td class="lg-m">${esc(x.message)}</td></tr>`).join('');
+    if (more) box.querySelector('tbody').insertAdjacentHTML('beforeend', rows);
+    else box.innerHTML = r.rows.length
+      ? `<div class="log-wrap"><table class="users-tbl log-tbl"><thead><tr><th>${esc(t('log.time'))}</th><th>${esc(t('log.kind'))}</th><th>${esc(t('auth.user'))}</th><th>IP</th><th>${esc(t('log.msg'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<p class="hint">${esc(t('log.empty'))}</p>`;
+    if (r.rows.length) oldest = r.rows[r.rows.length - 1].id;
+    $('logMore').hidden = !r.more;
+    const c = r.counts || {};
+    $('logCounts').textContent = t('log.counts', { l: c.login || 0, f: c.login_fail || 0, e: c.error || 0 });
+  }
+  $('logGroup').addEventListener('change', () => load(false));
+  $('logRefresh').addEventListener('click', () => load(false));
+  $('logMore').addEventListener('click', () => load(true));
+  return { show: () => load(false) };
 })();
 const haversineKm = (la1, lo1, la2, lo2) => {
   const r = 6371, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;

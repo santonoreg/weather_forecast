@@ -1260,3 +1260,10 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 /* Reliability window: transparency line and per-model sample counts */
 .relmeta { margin-top: 8px; } .relmeta .stale { color: var(--warn, #b45309); font-weight: 600; }
 .nsamp { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+/* Activity log (administrator) */
+.log-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+.log-tbl td { vertical-align: top; font-size: 13px; } .log-tbl .lg-t, .log-tbl .lg-ip { white-space: nowrap; color: var(--muted); } .log-tbl .lg-m { word-break: break-word; }
+.log-tbl .lg-k { font-weight: 600; } .log-tbl tr.lg-bad .lg-k { color: var(--bad); } .log-tbl tr.lg-warn .lg-k { color: var(--warn, #b45309); } .log-tbl tr.lg-ok .lg-k { color: var(--good); }
+#logMore { margin: 10px 0; }
+.log-wrap { overflow-x: auto; } .log-tbl .lg-m { min-width: 220px; } .log-tbl th, .log-tbl td { padding: 6px 8px; }

@@ -385,6 +385,8 @@ Then hard-refresh the browser (Ctrl+F5). The CSS/JS URLs carry a `?v=` version p
 
 ## Users and login
 
+**Activity log (administrator).** *My account → Log* lists logins and logouts, failed logins (with the user name that was tried and the IP; never the password), server errors and the nightly verification job, newest first, with a filter and a 24-hour summary. It is stored in the `app_log` table (kept 90 days / 20 000 rows) and served by `api/logs.php` (administrators only). `tools/verify-cron.php` exits with code 1 when it fails (and so does any command-line script that hits an HTTP-style error), so cron or a monitor can notice.
+
 Per-user settings (the models you switched off in the Reliability window, *Weight by reliability*, *Correct systematic error*, *One vote per model family*) are stored in the `user_prefs` table through `api/prefs.php`, so they follow you to another browser. The browser's localStorage stays the working copy: at login the server's values win; if the server has none yet, this browser's values are uploaded once.
 
 The whole app sits behind a login: until you are logged in you see only the login screen, and every API endpoint (except `api/auth.php`) answers `401`. There are two roles:
@@ -449,6 +451,7 @@ api/locations.php   GET cities (+ saved when logged in) / POST / DELETE saved lo
 api/cities.php      list of Greek cities shown to everyone
 api/auth.php        login / logout / status / change own password (api/auth_lib.php: users, sessions, throttle)
 api/users.php       user management (administrators)
+api/logs.php        activity log (administrators)
 api/cars.php        the logged-in user's own cars
 api/geocode.php     place search (Open-Meteo) and reverse geocoding (Nominatim)
 api/google_weather.php   optional Google WeatherNext 3 integration (used by forecast.php)
@@ -469,6 +472,7 @@ Database tables (created automatically): `locations(id, name, name_el, lat, lon,
 |---|---|
 | `GET api/locations.php` | `{cities, saved}`; `saved` = the logged-in user's own |
 | `GET/POST api/auth.php` | status; `{action:'login'\|'logout'\|'password', user, password, remember}` |
+| `GET api/logs.php?group=all\|login\|fail\|error\|job` | administrators only: activity log (logins, failed logins, errors, jobs) |
 | `GET/POST/DELETE api/users.php` | administrators only: list, `{action:'create'\|'password'\|'role'}`, delete |
 | `GET/POST api/prefs.php` | the user's own settings kept on the server: `{prefs: {"wefo.disabled", "wefo.weighted", "wefo.bias", "wefo.oneVote"}}` (which models are switched off, weighting, bias correction, one vote per family) |
 | `GET/POST/DELETE api/cars.php` | the user's own cars `{name, kind p\|d\|h\|e, cons}` |
