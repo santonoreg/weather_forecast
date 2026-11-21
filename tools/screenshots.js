@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Takes the README screenshots (forecast, hourly charts, reliability window, sky, admin log, themes) with a headless Edge/Chrome driven over the DevTools protocol.
+/* Takes the README screenshots (forecast, hourly charts, reliability window, sky, DSO, admin log, themes) with a headless Edge/Chrome driven over the DevTools protocol.
      node tools/screenshots.js [base-url] [admin-user] [admin-password]
    Needs a running copy of the app (default http://127.0.0.1:8901/) and, for the Locations / History shots, an admin login.
    Output: docs/screenshots/*.png */
@@ -14,7 +14,7 @@ const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
 const BROWSER = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find((p) => fs.existsSync(p));
 if (!BROWSER) { console.error('No Edge/Chrome found'); process.exit(1); }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const only = process.env.ONLY ? process.env.ONLY.split(',') : null;      // e.g. ONLY=forecast,astronomy re-takes just those groups
+const only = process.env.ONLY ? process.env.ONLY.split(',') : null;      // e.g. ONLY=dso,astronomy re-takes just those groups
 const want = (n) => !only || only.includes(n);
 
 (async () => {
@@ -90,6 +90,15 @@ const want = (n) => !only || only.includes(n);
   await waitFor("!document.getElementById('astroBody').hidden", 90000); await sleep(4000);
   await shot('astronomy', { from: '#view-astro .toolbar', to: '#view-astro .astro-tab', maxH: 2600 });
   await shot('astronomy-lightpollution', { from: '#view-astro .lpcard', to: '#view-astro .lpcard', maxH: 800 });
+
+  }
+  if (want('dso')) {
+  console.log('dso');
+  await click('[data-view=dso]');
+  await waitFor("document.querySelector('.dso-line')", 120000);
+    try { await waitFor("(() => { const i = document.querySelector('#dsoNight .ln-photo img'); return i && i.complete && i.naturalWidth > 0; })()", 40000); } catch (e) { console.log('  (photos did not load)'); }
+    await sleep(1500);
+  await shot('dso-tonight', { from: '#view-dso .toolbar', to: '#dsoNight .dso-line', maxH: 1700 });
 
   }
   if (USER && want('admin')) {

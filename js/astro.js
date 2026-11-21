@@ -456,7 +456,7 @@ const Astro = (() => {
     }
   }
 
-  /* ---- sky maths ---- */
+  /* ---- sky maths shared with the DSO Explorer tab ---- */
   const lstRad = (ms, lon) => sidereal(toDays(ms), RAD * -lon);                                    // local sidereal time, radians
   /* RA/Dec (radians) -> altitude and azimuth (degrees, azimuth clockwise from north) for an observer */
   function eq2hor(ra, de, ms, lat, lon) {
@@ -465,7 +465,7 @@ const Astro = (() => {
   }
   const moonEq = (ms) => { const m = moonCoords(toDays(ms)); return { ra: m.ra, dec: m.dec, dist: m.dist }; };
 
-  /* the Bortle class of a place (atlas included); with this place's Bortle class (atlas included) */
+  /* hourly model for the DSO Explorer: the same scores as the Astronomy table, with this place's Bortle class (atlas included) */
   async function bortleFor(loc) {
     const key = loc.lat + ',' + loc.lon;
     if (!S.atlas || S.atlas.key !== key) { try { const a = await atlasAt(loc.lat, loc.lon); if (a) S.atlas = { ...a, key }; } catch (e) { /* atlas unreachable: stored/seeded value */ } }

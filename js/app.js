@@ -1239,6 +1239,7 @@ function renderLocSelect() {
     + `<optgroup label="${esc(t('loc.cities'))}">${cities.map(opt).join('')}</optgroup>`;
   $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : '';
   $('astroLoc').innerHTML = $('locSelect').innerHTML; $('astroLoc').value = $('locSelect').value;
+  $('dsoLoc').innerHTML = $('locSelect').innerHTML; $('dsoLoc').value = $('locSelect').value;   // the Astronomy tab shares the location
 }
 
 function setCurrent(loc, go = false) {
@@ -1249,13 +1250,14 @@ function setCurrent(loc, go = false) {
     else { localStorage.setItem('wefo.loc', ADHOC); localStorage.setItem('wefo.adhoc', JSON.stringify({ name: loc.name, lat: loc.lat, lon: loc.lon })); }
   } catch (e) { /* ignore */ }
   renderLocSelect();
-  if (go && state.view !== 'astro') showView('forecast');
+  if (go && state.view !== 'astro' && state.view !== 'dso') showView('forecast');
   loadForecast();
   if (state.view === 'astro') Astro.load();
+  if (state.view === 'dso') Dso.refreshLocation();
 }
 $('locSelect').addEventListener('change', (e) => {
   const v = e.target.value;
-  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; $('astroLoc').value = $('locSelect').value; };
+  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; $('astroLoc').value = $('locSelect').value; $('dsoLoc').value = $('locSelect').value; };
   if (v === '__geo__') { back(); useMyLocation(); return; }
   if (v === '__map__') { back(); openMapPicker(); return; }
   if (v === ADHOC) return;
@@ -1651,6 +1653,7 @@ function showView(name) {
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   $('userBtn').classList.toggle('active', name === 'account');
   if (name === 'astro') Astro.load();
+  if (name === 'dso') Dso.show();
   if (name === 'trip') Trip.show();
   if (name === 'account') Account.show(tab);
 }
@@ -1813,6 +1816,7 @@ function onLangChange() {
   if (!histSec.hidden && histState && histState.data) renderHistory();
   if (state.data) renderAll();
   Astro.render();
+  Dso.render();
   Trip.render();
   Trip.renderModels();
 }
@@ -1864,7 +1868,7 @@ async function startApp() {
   await Prefs.sync();
   await loadLocations();
   const v = location.hash.slice(1);
-  if (v === 'astro' || v === 'trip' || v === 'account' || v === 'places' || v === 'cars' || v === 'password' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
+  if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'account' || v === 'places' || v === 'cars' || v === 'password' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
 }
 $('gateIcon').innerHTML = WI.svg(2, false);
 loadAuth().then(() => { if (state.user) return startApp(); showGate(); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
@@ -1872,5 +1876,5 @@ loadAuth().then(() => { if (state.user) return startApp(); showGate(); }).catch(
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(centerNow, 50));
 window.addEventListener('load', () => setTimeout(centerNow, 100));
 
-/* An earlier version registered a service worker (offline DSO files); remove it if this browser still has it */
-if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => { /* ignore */ });
+/* Offline: sw.js keeps the DSO catalogue files and every photo you have opened */
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { /* no service worker: everything still works online */ }));
