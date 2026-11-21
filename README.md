@@ -8,8 +8,8 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 - Frontend: plain **HTML / CSS / JavaScript** (no build step), [Leaflet](https://leafletjs.com/) for the map
 - UI languages: **English** (default) and **Greek** – switch with the `EN | ΕΛ` buttons in the header
 - **Light / dark theme** – follows your system setting; use the sun/moon button next to the language switch to override it
-- No API keys needed for the forecast, Sky Conditions or DSO Explorer (only the optional **Trip** route search needs a free OpenRouteService key). The whole app sits behind a [login](#users-and-login) with users and an administrator
-- Beyond the forecast: a [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution), a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook and a [DSO Explorer](#dso-explorer-open-to-everyone) with tonight's best deep-sky targets
+- No API keys needed for the forecast, or Sky Conditions (only the optional **Trip** route search needs a free OpenRouteService key). The whole app sits behind a [login](#users-and-login) with users and an administrator
+- Beyond the forecast: a [Sky Conditions](#sky-conditions-open-to-everyone) tab (Sun, Moon, seeing, transparency, light pollution) and a [Sunset & sunrise](#sunset--sunrise-colours-forecast-tab) outlook
 
 > The probabilities are a measure of model agreement. They are **not** an official forecast and must not be used for safety-critical decisions.
 
@@ -48,10 +48,6 @@ WeFO (*Weather · Forecast · Observer*) is a small self-hosted web app that put
 **Light pollution map** – David Lorenz's sky-brightness atlas laid over a dark map (with the NASA VIIRS night lights as a second overlay); click anywhere to look at that spot, the Bortle class is worked out from the atlas
 
 ![Light pollution map](docs/screenshots/astronomy-lightpollution.png)
-
-**DSO Explorer** – tonight's night summary and day phases, then the best deep-sky targets: photo, facts, Moon / cloud / deep-sky hour boxes and a 24 h altitude chart, one object per line
-
-![DSO Explorer](docs/screenshots/dso-tonight.png)
 
 **Locations & Map** – pick a point on the map, search, save locations (with an optional elevation)
 
@@ -165,16 +161,6 @@ The last icon of the *Hour by hour* switch (a half sun over the horizon) opens a
 ### Trip (Greece only, open to everyone, needs a free OpenRouteService key)
 
 A tab next to *Forecast*: pick a start and a destination (and "now" or a departure time within the next 6 days) and it shows up to three driving routes with distance, driving time, arrival, climb, the length on toll roads and the **toll cost**, a map coloured by how bad the weather is along the way, the "what to expect" warnings, a chart of temperature / rain / elevation and a stage-by-stage table. The weather is the **multi-model consensus**: `api/tripweather.php` reads ECMWF IFS and AIFS, GFS, ICON, Météo-France, UK Met Office and GEM at points about every 20 km, each at the time you will really be there (the route's own timetable), and shows the weather most models agree on with the share that agrees. **You choose the models**: a row of chips in the form (one, several or all; at least one stays on; the choice is remembered in the browser). Changing it re-analyses the forecast that is already loaded, so the map colours, the warnings, the weather along the route, the chart and the *Stage by stage* list all update at once, without a new request; a model that returned nothing for the route is struck through. "Slippery", fog and gust notes are estimates from the forecast, not road-authority reports. Routes come from OpenRouteService through `api/route.php` (cached for 6 hours; put a free key in `api/config.php` as `ors_api_key`, or in the `WEFO_ORS_API_KEY` environment variable). The search is limited to Greece. **Toll costs** come from our own table, `data/tolls_gr.json`: about 110 plazas of the Greek motorways (Egnatia, A1 / Aegean Motorway / Kentriki Odos, Olympia Odos, Ionia Odos, Moreas, E65 and the Rio–Antirrio bridge) with their OpenStreetMap positions and class-1 (car) prices; a route is charged for every plaza it passes within ~120 m. Attiki Odos is not in the table yet and the prices must be updated by hand when the operators change them (the file has an `asof` date). `php tools/test-route.php` checks the parsing and the toll matching offline. **Fuel / energy**: pick petrol, diesel, hybrid or electric, then a make and model from `assets/cars.json` (about 5,250 entries from the US EPA fuel-economy data, built by `python tools/build-cars.py`, combined cycle converted to L/100 km and kWh/100 km), or one of the "Typical cars", or type your own consumption and price — the numbers always stay editable. The EPA list has no European-only models; `assets/cars_eu.json` adds those, currently Škoda (80 versions) and the Hyundai i10 with the official WLTP combined figures (read from autotijd.be by `python tools/build-cars-eu.py skoda hyundai:i10`), and the Alfa Romeo 147 with the real-world consumption owners report on auto-abc.eu (`python tools/build-cars-abc.py "Alfa Romeo" 147`), and the typical cars and manual entry cover the rest.
-
-### DSO Explorer (open to everyone)
-
-A page for deep-sky observing, next to *Sky Conditions*. Everything is computed in the browser from three static files in `assets/` (the 2936-object catalogue, the 1627 stars to magnitude 5 and the constellation lines):
-
-- **Tonight** (the only list; the catalogue browser was dropped): sunset/sunrise, astronomical darkness (Sun below −18°, or sunset + 90 min … sunrise − 90 min where it never gets that dark), Moon rise/set and how much of the darkness the Moon is down, the cloud forecast for the dark hours (the same three-model mean as the Sky Conditions tab), and the best targets: catalogue objects with a magnitude that reach 30° and stay above it for an hour or more, ranked by effective magnitude, with a "Moon nearby" warning. The list can be re-sorted by altitude right now, peak altitude tonight, size or apparent magnitude (brightest first), with an arrow to reverse the order.
-- **Every target is one full-width line** with everything on it: a big DSS2 photo (click it for the zoomable photo and the offline finding chart, stereographic, north up), the facts (names, type, size, RA/Dec, peak altitude and time, hours above 30°, current altitude/azimuth, visibility class, catalogue flags), a 24 h altitude chart and the hourly Moon-light and cloud strips for the longest dark spell above 20°. There is no separate object page.
-- **Visibility class is an estimate:** surface brightness SB = mag + 2.5·log10(π/4·a·b·3600), effective magnitude = mag + 0.5·max(0, SB − 20.5); ≤ 8.5 binoculars (the brightest of these are visible to the naked eye too), ≤ 14 telescope, otherwise very difficult. It assumes a dark sky and no Moon.
-- **Offline:** `sw.js` (a small service worker) keeps the data files and every photo you have opened; the finding chart needs no network at all. Photos: Digitized Sky Survey (DSS2), STScI/NASA via CDS.
-- `node tools/test-dso.js` checks the maths: transit altitude/azimuth of M31, M42 and M45, the visibility classes of the reference objects, the night figures and the Moon-strip values.
 
 ### Choosing the models
 
@@ -365,7 +351,7 @@ Every probability shown is a number between 0 and 100 % built from the active mo
 
 Up to three routes come from OpenRouteService. Along each, a point is placed about **every 22 km** (3 … 26 points), and the multi-model forecast is read at that point **for the hour you will really be there**, from the route's own timetable (linear between the two forecast hours). Per point, per chosen model: weather type, rain, gusts, temperature. A model repeating another one's numbers is counted once. The weather shown is the type most of the *chosen* models show, with the share that agrees; changing the chosen models re-runs exactly this step on the data already downloaded. A point gets a severity from 0 (fine) to 3 (dangerous): drizzle 1; rain 1–3 by hourly amount (≥ 1.5 mm/h → 2, ≥ 4 → 3); snow 2–3; thunder 3; fog 2; gusts ≥ 40 / 55 / 80 km/h → 1 / 2 / 3; and 2 for **ice risk** (≤ 1.5 °C with rain, or humidity ≥ 92 %). A route is ranked by the mean severity plus half of the worst one. These are estimates from the forecast, not road-authority data. Tolls are matched to your route with our own table of plazas (within 120 m); fuel is `km · consumption / 100` plus 0.15 L (or 0.1 kWh) per 100 m of climb.
 
-### 8. Sky, Moon and deep-sky objects
+### 8. Sky and Moon
 
 Everything astronomical is computed **in the browser**. Positions of the Sun and Moon use the low-precision series of SunCalc (accurate to a fraction of a degree, plenty for twilight and moonrise), with parallax for the Moon; the phase comes from the Sun–Moon elongation; the sky coordinates of an object come from the local sidereal time. Astronomical darkness is the Sun below −18°; where it never gets that low, the window is sunset + 90 min … sunrise − 90 min.
 
@@ -375,15 +361,13 @@ Everything astronomical is computed **in the browser**. Positions of the Sun and
 
 **Light pollution** is read from David Lorenz's sky-brightness atlas (VIIRS 2025): the colour of the tile pixel under the place is matched to the nearest of 15 brightness zones (zenith sky brightness in mag/arcsec²) and then to a Bortle class. You can override it per place.
 
-**Deep-sky objects.** The 2 936-object catalogue gives magnitude, size and position. Surface brightness is `SB = mag + 2.5 · log₁₀(π/4 · a · b · 3600)` (a, b in arcminutes); the *effective magnitude* is `mag + 0.5 · max(0, SB − 20.5)`, so a faint, large, diffuse object counts as fainter than its magnitude says. It is a **binoculars** target up to 8.5, a **telescope** target up to 14 and otherwise very difficult. That is an estimate for a dark sky without the Moon. Tonight's list takes objects that reach **30°** and stay above it for at least an hour inside the dark window (sampled every 20 minutes), ranked by effective magnitude with a small bonus for altitude; "Moon nearby" means the Moon is up, more than 20 % lit and within 40° of the object at its best hour. `node tools/test-dso.js` checks the maths against independent values (transit altitude 90° − |φ − δ|, the night figures of a known date, the Moon strip at new and full Moon).
-
 ### 9. What the numbers do not tell you
 
 * The consensus is only as good as the models: if all of them miss the same thunderstorm, WeFO misses it too. Agreement is not accuracy.
 * A score is a statement about the **last 28 days** at the Greek airports. Weights follow the season; a model that was best in a dry month may not be in a wet one. Rain weights are only used when the window holds enough rain events.
 * Airports are points, usually flat and near the coast. Mountain valleys and islands are represented by the local tilt only as far as a station is near.
 * Probabilities from the ensemble describe the atmosphere's uncertainty as the ensembles see it; they are not calibrated against observations in WeFO (a Brier-score check against METAR is possible and not built).
-* Seeing, transparency, the visibility class of an object and the "slippery road" notes are heuristics.
+* Seeing, transparency and the "slippery road" notes are heuristics.
 
 ---
 
@@ -521,16 +505,13 @@ Most settings are constants in the PHP files below. One optional file, `api/conf
 ## Project structure
 
 ```
-index.html          single-page UI (Forecast, Sky Conditions, DSO Explorer, Locations views)
+index.html          single-page UI (Forecast, Trip, Sky Conditions, account views)
 css/style.css       styles (light/dark, responsive)
 js/i18n.js          translations (en, el) and language switching
 js/icons.js         3D-style SVG weather icons, WMO code → category mapping
 js/app.js           UI logic: tables, consensus, weighting, map, preferences, login and users
 js/sunset.js        Sunset & sunrise quality view (Forecast tab)
 js/astro.js         Sky Conditions tab: Sun/Moon maths, seeing/transparency estimates, scores, light-pollution map
-js/dso.js           DSO Explorer: tonight's targets, hour boxes, altitude charts, photo viewer, finding chart
-sw.js               service worker: offline catalogue files and opened photos
-assets/             dso.json, sky_stars.json, sky_constellations.json (static catalogue data)
 api/db.php          SQLite connection (WAL), JSON helpers, HTTP client, error handling
 api/forecast.php    multi-model forecast aggregation + 30 min cache
 api/verify.php      model verification endpoint: serves the cache (stale-while-revalidate)
@@ -554,7 +535,6 @@ api/config.example.php   template for api/config.php (your own API keys — copy
 api/config.php      your own local config (git-ignored; absent = optional features stay off)
 tools/hash-password.php  CLI helper that creates a password hash (for the optional admin account in config.php)
 tools/add-user.php      CLI: create a user / administrator or reset a password
-tools/test-dso.js        checks of the astronomy maths (node tools/test-dso.js)
 tools/screenshots.js     retakes the README screenshots with a headless browser
 data/               SQLite database (created automatically, git-ignored)
 ```
@@ -595,7 +575,7 @@ Errors are returned as `{"error": "message"}` with an HTTP 4xx/5xx status.
 - **Server side:** saved locations, cached API responses and the downloaded weather history in `data/wefo.sqlite`. No personal data or cookies.
 - **Browser side (`localStorage`):** `wefo.lang` (language), `wefo.theme` (light/dark), `wefo.loc` (last selected location) stay in the browser. `wefo.disabled` (disabled models), `wefo.weighted`, `wefo.bias`, `wefo.oneVote` are also stored on the server per user (`user_prefs`) so they follow the user to another browser.
 - **Requests made by the server:** coordinates of the selected locations go to Open-Meteo, MET Norway, aviationweather.gov (to find the nearest METAR station), MeteoAlarm (feeds.meteoalarm.org: warnings, no coordinates sent), (reverse geocoding) Nominatim, and — only if you configured a key — Google (`weather.googleapis.com`).
-- **Requests made by the browser:** map tiles (OpenStreetMap; DSS2 photos from alasky.cds.unistra.fr in the DSO Explorer; in the Sky Conditions tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
+- **Requests made by the browser:** map tiles (OpenStreetMap; in the Sky Conditions tab also the light-pollution atlas from djlorenz.github.io and NASA GIBS night lights), Leaflet (unpkg CDN) and the Inter font (Google Fonts).
 - **Terms:** Open-Meteo's free API is for **non-commercial** use with fair-use limits; Nominatim, MET Norway and aviationweather.gov (NOAA) have their own usage policies. Caching in this app keeps usage low, but check the terms before any commercial or high-traffic deployment. The optional Google Weather API is **not free beyond its monthly quota** and is entirely opt-in — see [above](#optional-google-weathernext-3-and-the-wefo-vs-ai-comparison).
 
 ## Limitations

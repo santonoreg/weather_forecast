@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261203">
+<link rel="stylesheet" href="css/style.css?v=20261204">
 </head>
 <body>
 <header class="topbar">
@@ -19,7 +19,6 @@
       <button class="nav-btn active" data-view="forecast" data-i18n="nav.forecast">Forecast</button>
       <button class="nav-btn" data-view="trip" data-i18n="nav.trip">Trip</button>
       <button class="nav-btn" data-view="astro" data-i18n="nav.astro">Sky Conditions</button>
-      <button class="nav-btn" data-view="dso" data-i18n="nav.dso">DSO Explorer</button>
     </nav>
     <button id="userBtn" class="auth-btn userbtn" type="button" data-i18n-title="acc.title" title="My account" hidden></button>
     <button id="logoutBtn" class="auth-btn" type="button" data-i18n="auth.logout" hidden>Log out</button>
@@ -185,23 +184,6 @@
     <div id="tripOut"></div>
   </section>
 
-  <!-- ============ DSO EXPLORER ============ -->
-  <section id="view-dso" class="view">
-    <div class="toolbar">
-      <label><span data-i18n="tb.location">Location</span>
-        <select id="dsoLoc"></select>
-      </label>
-      <span id="dsoMeta" class="meta"></span>
-    </div>
-    <div id="dsoEmpty" class="notice" data-i18n="as.empty" hidden></div>
-    <div id="dsoLoadErr" class="notice error" hidden></div>
-    <div id="dsoBody">
-      <div id="dsoMain">
-        <div id="dsoNight"></div>
-      </div>
-    </div>
-  </section>
-
   <!-- ============ MY ACCOUNT: locations, cars, users (administrator), password ============ -->
   <section id="view-account" class="view">
     <div class="acc-head"><h2 id="accName"></h2><span id="accInfo" class="acc-info"></span></div>
@@ -333,25 +315,14 @@
   </div>
 </div>
 
-<!-- DSO photo / finding chart -->
-<div id="dsoModal" class="modal" hidden>
-  <div class="modal-card wide">
-    <button type="button" class="modal-x" data-close data-i18n-title="h.close" title="Close">✕</button>
-    <h2 id="dsoModalTitle"></h2>
-    <div class="seg2" id="dsoPM"><button type="button" class="on" data-pm="photo" data-i18n="dso.photo">Photo</button><button type="button" data-pm="map" data-i18n="dso.map">Finder chart</button></div>
-    <div id="dsoPMBox"></div>
-  </div>
-</div>
-
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261203"></script>
-<script src="js/icons.js?v=20261203"></script>
-<script src="js/app.js?v=20261203"></script>
-<script src="js/astro.js?v=20261203"></script>
-<script src="js/sunset.js?v=20261203"></script>
-<script src="js/dso.js?v=20261203"></script>
-<script src="js/trip.js?v=20261203"></script>
+<script src="js/i18n.js?v=20261204"></script>
+<script src="js/icons.js?v=20261204"></script>
+<script src="js/app.js?v=20261204"></script>
+<script src="js/astro.js?v=20261204"></script>
+<script src="js/sunset.js?v=20261204"></script>
+<script src="js/trip.js?v=20261204"></script>
 </body>
 </html>
