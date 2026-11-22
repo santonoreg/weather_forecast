@@ -171,9 +171,10 @@ function agg(p, param, a, b) {
   const sl = (arr, key) => nn(keep.map((i) => (key ? fixValue(p, key, i, arr[i]) : arr[i])));
   switch (param) {
     case 'precip': {
-      // Yr only gives a 6 h total for later hours, spread evenly over them: fine for blocks of >= 6 h, not as an hourly value
-      const sm = h.precip_6h_block;
-      const v = sm && b - a < 6 ? nn(keep.filter((i) => !sm[i]).map((i) => h.precipitation[i])) : sl(h.precipitation);
+      // Yr only gives a 6 h total for later hours, POSEIDON a 3 h total, each spread evenly over its hours: fine for blocks as long as the total, not as an hourly value
+      const sm6 = h.precip_6h_block, sm3 = h.precip_3h_block;
+      const smeared = (sm6 && b - a < 6 ? (i) => sm6[i] : null) || (sm3 && b - a < 3 ? (i) => sm3[i] : null);
+      const v = smeared ? nn(keep.filter((i) => !smeared(i)).map((i) => h.precipitation[i])) : sl(h.precipitation);
       return v.length ? v.reduce((s, x) => s + x, 0) : null;
     }
     case 'gust': { const v = sl(h.wind_gusts_10m, 'wind_gusts_10m'); return v.length ? Math.max(...v) : null; }

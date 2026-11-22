@@ -232,7 +232,7 @@ function app_config(): array
     $f = __DIR__ . '/config.php';
     $file = is_file($f) ? (require $f) : [];
     $cfg = is_array($file) ? $file : [];
-    foreach (['google_weather_api_key' => 'WEFO_GOOGLE_WEATHER_API_KEY', 'ssl_verify' => 'WEFO_SSL_VERIFY', 'admin_user' => 'WEFO_ADMIN_USER', 'admin_password_hash' => 'WEFO_ADMIN_PASSWORD_HASH', 'ors_api_key' => 'WEFO_ORS_API_KEY'] as $key => $env) {
+    foreach (['google_weather_api_key' => 'WEFO_GOOGLE_WEATHER_API_KEY', 'ssl_verify' => 'WEFO_SSL_VERIFY', 'poseidon_enabled' => 'WEFO_POSEIDON_ENABLED', 'admin_user' => 'WEFO_ADMIN_USER', 'admin_password_hash' => 'WEFO_ADMIN_PASSWORD_HASH', 'ors_api_key' => 'WEFO_ORS_API_KEY'] as $key => $env) {
         $v = getenv($env);
         if ($v !== false && $v !== '') $cfg[$key] = $v;
     }

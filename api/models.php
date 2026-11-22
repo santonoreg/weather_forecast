@@ -15,6 +15,7 @@
 //            'ecmwf' = IFS, AIFS and everything that is ECMWF output underneath
 //   fallback the family a regional "seamless" model turns into outside its domain (null = none)
 //   verify   scored by api/verify.php (needs the model in the Open-Meteo Historical Forecast API)
+//   source   where the data comes from when it is NOT the Open-Meteo forecast API (api/forecast.php fetches those itself; 'poseidon' = api/poseidon.php)
 //   use      small subsets: astro (api/astro.php, api/skypoints.php), trip (api/tripweather.php)
 //
 // Adding a model: confirm first with a real Open-Meteo call that it returns data for Greece.
@@ -32,6 +33,9 @@ return [
     'jma_seamless'         => ['name' => 'JMA (Japan)', 'res' => '5–55 km', 'area' => 'global (finer over Japan)', 'region' => null, 'family' => 'jma', 'fallback' => null, 'verify' => true, 'use' => []],
     'cma_grapes_global'    => ['name' => 'CMA GRAPES (China)', 'res' => '0.15° (~15 km)', 'area' => 'global', 'region' => null, 'family' => 'cma', 'fallback' => null, 'verify' => true, 'use' => []],
     'bom_access_global'    => ['name' => 'BOM ACCESS (Australia)', 'res' => '0.15° (~15 km)', 'area' => 'global', 'region' => null, 'family' => 'bom', 'fallback' => null, 'verify' => true, 'use' => []],
+    // HCMR's POSEIDON weather system (SKIRON/Eta, 5 km, own assimilation; GFS boundaries). Not in Open-Meteo: api/poseidon.php reads the point endpoint of the website's map
+    // (see the notes there: undocumented, personal-use terms). It is not scored by the verification (no archive of its forecasts), so it counts with weight 1.
+    'poseidon_meteo'       => ['name' => 'POSEIDON (HCMR)', 'res' => '~5 km (1/20°), 3-hourly', 'area' => 'Mediterranean, Europe, N. Africa (HCMR SKIRON/Eta)', 'region' => [28.0, 48.0, -12.0, 42.0], 'family' => 'skiron', 'fallback' => null, 'verify' => false, 'use' => [], 'source' => 'poseidon'],
     'knmi_seamless'        => ['name' => 'KNMI (Netherlands)', 'res' => '2 km (Harmonie), then ECMWF', 'area' => 'NW Europe', 'region' => [46.0, 58.0, -6.0, 12.0], 'family' => 'knmi', 'fallback' => 'ecmwf', 'verify' => true, 'use' => []],
     'dmi_seamless'         => ['name' => 'DMI (Denmark)', 'res' => '2 km (Harmonie), then ECMWF', 'area' => 'Northern Europe', 'region' => [49.0, 66.0, -12.0, 25.0], 'family' => 'dmi', 'fallback' => 'ecmwf', 'verify' => true, 'use' => []],
     'metno_seamless'       => ['name' => 'MET Norway (Nordic)', 'res' => '1 km, then ECMWF', 'area' => 'Nordic countries', 'region' => [54.0, 72.0, 0.0, 35.0], 'family' => 'metno', 'fallback' => 'ecmwf', 'verify' => true, 'use' => []],

@@ -48,6 +48,11 @@ return [
     //   Env var: WEFO_SSL_VERIFY (0 / false disables)
     'ssl_verify' => true,
 
+    // POSEIDON (HCMR, Hellenic Centre for Marine Research): a separate regional weather model (SKIRON/Eta, ~5 km) added to the comparison. WeFO reads
+    // the point endpoint that poseidon.hcmr.gr's own map uses (undocumented; the documented API is for observations only). The site's terms allow
+    // personal use and ask for permission for any other use (poseidon@hcmr.gr). Set false (or env WEFO_POSEIDON_ENABLED=0) to leave it out.
+    'poseidon_enabled' => true,
+
     'admin_user' => '',
     'admin_password_hash' => '',
 

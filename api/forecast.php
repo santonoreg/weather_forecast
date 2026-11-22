@@ -3,11 +3,15 @@
 declare(strict_types=1);
 require __DIR__ . '/db.php';
 require __DIR__ . '/google_weather.php';
+require __DIR__ . '/poseidon.php';
 
 const CACHE_TTL = 1800; // 30 λεπτά
 
 $CATALOG = require __DIR__ . '/models.php';   // id => name, resolution, area, family … (single source of truth)
-$MODELS = array_map(fn($m) => $m['name'], $CATALOG);
+$POSEIDON_ON = poseidon_enabled();
+if (!$POSEIDON_ON) unset($CATALOG['poseidon_meteo']);
+$MODELS = array_map(fn($m) => $m['name'], $CATALOG);                                          // every model WeFO knows
+$OM_MODELS = array_filter($MODELS, fn($id) => empty($CATALOG[$id]['source']), ARRAY_FILTER_USE_KEY);   // the ones Open-Meteo serves
 $VARS = ['temperature_2m', 'apparent_temperature', 'precipitation', 'wind_speed_10m', 'wind_gusts_10m',
          'wind_direction_10m', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl', 'weather_code', 'cape', 'lifted_index', 'convective_inhibition', 'is_day'];
 // lifted_index: GFS and CMA only; convective_inhibition: GFS, ICON, UKMO, CMA, KNMI, DMI, MET Nordic (checked for Greece); lightning_potential: no model returns it there
@@ -38,7 +42,7 @@ if (empty($_GET['refresh'])) {
 $url = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
     'latitude' => $lat, 'longitude' => $lon,
     'hourly' => implode(',', $VARS),
-    'models' => implode(',', array_keys($MODELS)),
+    'models' => implode(',', array_keys($OM_MODELS)),
     'timezone' => 'auto', 'forecast_days' => 7,
 ] + ($elev !== null ? ['elevation' => $elev] : []));
 $body = http_get($url);
@@ -49,7 +53,7 @@ $time = $om['hourly']['time'];
 $offset = (int)($om['utc_offset_seconds'] ?? 0);
 $providers = [];
 
-foreach ($MODELS as $id => $name) {
+foreach ($OM_MODELS as $id => $name) {
     $h = [];
     $has = false;
     foreach ($VARS as $v) {
@@ -122,6 +126,15 @@ if ($yr && !empty($yr['properties']['timeseries'])) {
         $h['precip_6h_block'][] = $prec !== null ? $smeared : 0;
     }
     $providers[] = ['id' => 'yr', 'name' => 'MET Norway / Yr', 'res' => '~1–9 km (ECMWF-based outside the Nordics)', 'area' => 'global', 'family' => 'ecmwf', 'derives_from' => 'ecmwf_ifs025', 'hourly' => $h];   // Yr is ECMWF-based outside the Nordics
+}
+
+// POSEIDON (HCMR): a separate regional model for the Mediterranean (see api/poseidon.php for what it is and the terms of use). Optional: any failure = no such provider.
+if ($POSEIDON_ON) {
+    $ps = fetch_poseidon($lat, $lon, $time, $offset, $VARS);
+    if ($ps) {
+        $c = $CATALOG['poseidon_meteo'];
+        $providers[] = ['id' => 'poseidon_meteo', 'name' => $c['name'], 'res' => $c['res'], 'area' => $c['area'], 'family' => $c['family'], 'hourly' => $ps['hourly']];
+    }
 }
 
 // Optional: Google WeatherNext 3 via the Google Maps Platform Weather API — only if a key is
