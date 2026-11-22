@@ -1164,7 +1164,11 @@ function renderWarnings() {
   const tz = (iso) => { const d = new Date(new Date(iso).getTime() + state.data.utc_offset_seconds * 1000); return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')} ${d.toISOString().slice(11, 16)}`; };
   const groups = new Map();   // one chip per kind and level, listing its regions
   w.forEach((x) => { const k = `${x.type}|${x.level}`; if (!groups.has(k)) groups.set(k, { ...x, areas: [], until: x.expires }); const g = groups.get(k); const a = LANG === 'el' && x.area_el ? x.area_el : x.area; if (!g.areas.includes(a)) g.areas.push(a); if (x.expires > g.until) g.until = x.expires; });
-  el.innerHTML = `<span class="wlab" title="${esc(t('warn.tip'))}">⚠ ${t('warn.title')}</span>` + [...groups.values()].map((g) => `<span class="wchip ${WARN_LEVEL[g.level] || 'yellow'}">${esc(t('warn.type.' + g.type))} — ${esc(g.areas.join(', '))} <small>${t('warn.until', { when: tz(g.until) })}</small></span>`).join('');
+  const rows = [...groups.values()].sort((x, y) => y.level - x.level);
+  const top = WARN_LEVEL[rows[0].level] || 'yellow';   // the box takes the colour of the most severe warning
+  el.className = `warnline ${top}`;
+  el.innerHTML = `<div class="wlab" title="${esc(t('warn.tip'))}">⚠ ${t('warn.title')}</div><ul>`
+    + rows.map((g) => `<li class="${WARN_LEVEL[g.level] || 'yellow'}"><i></i><span><b>${esc(t('warn.type.' + g.type))}</b> — ${esc(g.areas.join(', '))} <small>${t('warn.until', { when: tz(g.until) })}</small></span></li>`).join('') + '</ul>';
   el.hidden = false;
 }
 async function loadWarnings(token) {
