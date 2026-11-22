@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=greek">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261207">
+<link rel="stylesheet" href="css/style.css?v=20261208">
 </head>
 <body>
 <header class="topbar">
@@ -17,6 +17,7 @@
   <div class="topright">
     <nav>
       <button class="nav-btn active" data-view="forecast" data-i18n="nav.forecast">Forecast</button>
+      <button class="nav-btn" data-view="history" data-i18n="nav.history">History</button>
       <button class="nav-btn" data-view="trip" data-i18n="nav.trip">Trip</button>
       <button class="nav-btn" data-view="astro" data-i18n="nav.astro">Sky Conditions</button>
       <button class="nav-btn" data-view="dso" data-i18n="nav.dso">DSO Explorer</button>
@@ -83,12 +84,6 @@
             <div id="heroRadar" class="rainline" hidden></div>
             <div id="heroRain" class="rainline" hidden></div>
             <div id="heroWarn" class="warnline" hidden></div>
-            <div class="hero-foot">
-              <button id="heroHist" type="button" class="hist">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 5-7 4 4"/><path d="M3 21h18"/></svg>
-                <span data-i18n="hero.history">View full history</span>
-              </button>
-            </div>
           </section>
           <section class="week card">
             <div class="sec-h"><h2 data-i18n="wk.title">Days ahead</h2></div>
@@ -164,6 +159,16 @@
         <div class="legend" id="astroNote"></div>
       </section>
     </div>
+  </section>
+
+  <!-- ============ HISTORY: the long-term climate of the chosen location (the section itself, #histSec, is at the end of <main>) ============ -->
+  <section id="view-history" class="view">
+    <div class="toolbar">
+      <label><span data-i18n="tb.location">Location</span>
+        <select id="histLoc"></select>
+      </label>
+    </div>
+    <div id="histNote" class="notice" data-i18n="hist.need" hidden>The climate history needs a saved place or one of the Greek cities. Choose one in the Location list.</div>
   </section>
 
   <!-- ============ TRIP ============ -->
@@ -303,7 +308,7 @@
   </section>
 
   <!-- Climate history of the chosen location: lives outside the views so it opens under whichever one
-       is showing (the forecast's "View full history" link, or a saved location's History button) -->
+       is showing (the History tab, or a saved location's History button) -->
   <section id="histSec" class="histsec" hidden>
     <button id="histClose" class="h-close" type="button" data-i18n-title="h.close" title="Close">✕</button>
     <div id="histBody"></div>
@@ -362,12 +367,12 @@
 <footer data-i18n-html="footer.html"></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/i18n.js?v=20261207"></script>
-<script src="js/icons.js?v=20261207"></script>
-<script src="js/app.js?v=20261207"></script>
-<script src="js/astro.js?v=20261207"></script>
-<script src="js/sunset.js?v=20261207"></script>
-<script src="js/dso.js?v=20261207"></script>
-<script src="js/trip.js?v=20261207"></script>
+<script src="js/i18n.js?v=20261208"></script>
+<script src="js/icons.js?v=20261208"></script>
+<script src="js/app.js?v=20261208"></script>
+<script src="js/astro.js?v=20261208"></script>
+<script src="js/sunset.js?v=20261208"></script>
+<script src="js/dso.js?v=20261208"></script>
+<script src="js/trip.js?v=20261208"></script>
 </body>
 </html>

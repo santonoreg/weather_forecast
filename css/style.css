@@ -112,10 +112,6 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .hero .rainline { display: flex; align-items: center; gap: 8px; margin: 15px 0 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--outlook) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--outlook) 25%, var(--line)); font-size: 13.5px; color: var(--text); }
 .hero .rainline .rdot path { fill: var(--outlook); }
 .hero .rainline .rdot { width: 14px; height: 14px; flex: none; }
-.hero .hero-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
-.hero .hist { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 14px; padding: 4px 0; cursor: pointer; font-family: inherit; }
-.hero .hist svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.hero .hist:hover { text-decoration: underline; }
 
 /* The week: aligned columns with a header row */
 .sec-h h2 { font-size: 17px; margin: 0 0 8px; font-weight: 600; }
@@ -1290,3 +1286,6 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .tr-models .mdl.nodata span { opacity: .5; text-decoration: line-through; }
 .tr-models .mdl-def { margin: 6px 8px 2px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; text-align: left; }
 .tr-models .mdl-def:hover { text-decoration: underline; } .tr-models .mdl-def[disabled] { opacity: .4; cursor: default; text-decoration: none; }
+
+/* EMY warnings: the title takes its own line, the warnings follow underneath */
+.warnline .wlab { flex: 0 0 100%; }

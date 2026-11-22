@@ -638,7 +638,6 @@ const RAIN_DOT = '<svg class="rdot" viewBox="0 0 24 24" aria-hidden="true"><path
 
 function renderHero() {
   if (!state.data || !state.current) return;
-  $('heroHist').closest('.hero-foot').hidden = state.current.id == null;   // climate history needs a stored location
   const c = nowColumn();
   const shares = weatherShares(c);
   const temp = wmean(wpairs('temperature_2m', (p) => agg(p, 'temperature_2m', c.a, c.b)));
@@ -691,7 +690,6 @@ function renderHero() {
   if (outlook) $('heroRain').innerHTML = `${RAIN_DOT}<span>${outlook}</span>`;
   renderWarnings();
 }
-$('heroHist').addEventListener('click', () => { if (state.current && state.current.id != null) openHistory(state.current); });
 
 /* Colour legend for the weather-category icons, shown above the table only on the Weather tab */
 function renderSegKey() {
@@ -1240,6 +1238,7 @@ function renderLocSelect() {
   $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : '';
   $('astroLoc').innerHTML = $('locSelect').innerHTML; $('astroLoc').value = $('locSelect').value;
   $('dsoLoc').innerHTML = $('locSelect').innerHTML; $('dsoLoc').value = $('locSelect').value;   // the Astronomy tab shares the location
+  $('histLoc').innerHTML = $('locSelect').innerHTML; $('histLoc').value = $('locSelect').value;   // and so does the History tab
 }
 
 function setCurrent(loc, go = false) {
@@ -1250,15 +1249,16 @@ function setCurrent(loc, go = false) {
     else { localStorage.setItem('wefo.loc', ADHOC); localStorage.setItem('wefo.adhoc', JSON.stringify({ name: loc.name, lat: loc.lat, lon: loc.lon })); }
   } catch (e) { /* ignore */ }
   renderLocSelect();
-  if (go && state.view !== 'astro' && state.view !== 'dso') showView('forecast');
+  if (go && state.view !== 'astro' && state.view !== 'dso' && state.view !== 'history') showView('forecast');
   loadForecast();
   if (state.view === 'astro') Astro.load();
   if (typeof LpMap !== 'undefined' && LpMap.isOpen) LpMap.sync();
   if (state.view === 'dso') Dso.refreshLocation();
+  if (state.view === 'history') showHistoryView();
 }
 $('locSelect').addEventListener('change', (e) => {
   const v = e.target.value;
-  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; $('astroLoc').value = $('locSelect').value; $('dsoLoc').value = $('locSelect').value; };
+  const back = () => { $('locSelect').value = state.current ? (state.current.id == null ? ADHOC : String(state.current.id)) : ''; $('astroLoc').value = $('locSelect').value; $('dsoLoc').value = $('locSelect').value; $('histLoc').value = $('locSelect').value; };
   if (v === '__geo__') { back(); useMyLocation(); return; }
   if (v === '__map__') { back(); openMapPicker(); return; }
   if (v === ADHOC) return;
@@ -1655,6 +1655,8 @@ function showView(name) {
   $('userBtn').classList.toggle('active', name === 'account');
   if (name === 'astro') Astro.load();
   if (name === 'dso') Dso.show();
+  if (name === 'history') showHistoryView();
+  else if (histFromView) { closeHistory(); histFromView = false; }   // the climate history opened by the History tab goes away with it
   if (name === 'trip') Trip.show();
   if (name === 'account') Account.show(tab);
 }
@@ -1808,7 +1810,17 @@ async function openHistory(loc, refresh = false) {
   }
 }
 function closeHistory() { histSec.hidden = true; histState = null; $('histBody').innerHTML = ''; }
-$('histClose').addEventListener('click', closeHistory);
+$('histClose').addEventListener('click', () => { closeHistory(); if (state.view === 'history') $('histNote').hidden = false; });
+/* The History tab: the climate history of the chosen location (it needs a stored one: a saved place or a Greek city) */
+let histFromView = false;
+function showHistoryView() {
+  const loc = state.current;
+  if (!loc || loc.id == null) { closeHistory(); $('histNote').hidden = false; return; }
+  $('histNote').hidden = true;
+  histFromView = true;
+  openHistory(loc);
+}
+$('histLoc').addEventListener('change', () => { $('locSelect').value = $('histLoc').value; $('locSelect').dispatchEvent(new Event('change')); $('histLoc').value = $('locSelect').value; });
 
 /* ================= Language ================= */
 function onLangChange() {
@@ -1871,7 +1883,7 @@ async function startApp() {
   await Prefs.sync();
   await loadLocations();
   const v = location.hash.slice(1);
-  if (v === 'astro' || v === 'dso' || v === 'trip' || v === 'account' || v === 'places' || v === 'cars' || v === 'password' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
+  if (v === 'astro' || v === 'dso' || v === 'history' || v === 'trip' || v === 'account' || v === 'places' || v === 'cars' || v === 'password' || (v === 'users' && state.admin)) showView(v); else showView('forecast');
 }
 $('gateIcon').innerHTML = WI.svg(2, false);
 loadAuth().then(() => { if (state.user) return startApp(); showGate(); }).catch((err) => { $('error').textContent = err.message; $('error').hidden = false; });
