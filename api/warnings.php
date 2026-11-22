@@ -12,9 +12,12 @@ const WARN_TTL = 1800;
 const WARN_URL = 'https://feeds.meteoalarm.org/api/v1/warnings/feeds-greece';
 const WARN_HORIZON = 48 * 3600;   // warnings that start within this many seconds are shown too
 
-/* The Greek texts of this feed arrive as UTF-8 that has been read as Windows-1252 once too often ("Ήπειρος" -> "Î‰Ï€..."); undo it when that is what it is */
+/* The Greek texts of this feed used to arrive as UTF-8 that had been read as Windows-1252 once too often ("Ήπειρος" -> "Î‰Ï€..."); today they are
+   correct. Keep text that already contains Greek letters as it is, undo the double encoding when that is what it is, and give up (null: the
+   English name is shown) otherwise. */
 function unmangle(string $s): ?string
 {
+    if (preg_match('/\p{Greek}/u', $s)) return $s;
     $b = @mb_convert_encoding($s, 'Windows-1252', 'UTF-8');
     return ($b !== false && $b !== '' && mb_check_encoding($b, 'UTF-8') && preg_match('/\p{Greek}/u', $b)) ? $b : null;
 }
