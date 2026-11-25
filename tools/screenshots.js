@@ -51,7 +51,7 @@ const want = (n) => !only || only.includes(n);
   await viewport(1400, 1000);
   await go();
   // a clean state: light theme, English, Athens, time across, models hidden
-  await prefs({ 'wefo.theme': 'light', 'wefo.lang': 'en', 'wefo.orient': 'h', 'wefo.modelsOpen': '0', 'wefo.weighted': '1', 'wefo.disabled': null, 'wefo.loc': null, 'wefo.adhoc': null });
+  await prefs({ 'wefo.theme': 'light', 'wefo.lang': 'en', 'wefo.orient': 'h', 'wefo.weighted': '1', 'wefo.disabled': null, 'wefo.loc': null, 'wefo.adhoc': null });
   if (USER) { await js(`fetch('api/auth.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', user: ${JSON.stringify(USER)}, password: ${JSON.stringify(PASS)} }) }).then((r) => r.json())`); }
   await go('?shots=1');
   await loaded();
@@ -71,12 +71,12 @@ const want = (n) => !only || only.includes(n);
   await click('#chartsToggle'); await sleep(1800);                                       // the hourly charts under the table (temperature, rain, wind, cloud, with the model range and the ensemble band)
   await shot('forecast-charts', { from: '#view-forecast .hours', to: '#hcharts', maxH: 2200 });
   await click('#chartsToggle'); await sleep(600);
-  await click('#modelsToggle'); await sleep(800);                                      // rain and wind show the individual models
-  await click('.tab[data-param=precip]'); await sleep(1000);
+  await click('#grid tr.lane[data-lane=rain] .lane-x'); await sleep(1000);               // the + of a row opens the individual models for it
   await shot('forecast-rain', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1100 });
-  await click('.tab[data-param=wind]'); await sleep(1000);
+  await click('#grid tr.lane[data-lane=rain] .lane-x'); await sleep(600);
+  await click('#grid tr.lane[data-lane=wind] .lane-x'); await sleep(1000);
   await shot('forecast-wind', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1200 });
-  await click('.tab[data-param=weather]'); await sleep(600);
+  await click('#grid tr.lane[data-lane=wind] .lane-x'); await sleep(600);
   if (await js("!!(state.verify && state.verify.weights_by_lead)")) {          // the Reliability window: scores by forecast day, how fresh the numbers are
     await click('#relBtn'); await sleep(1200);
     await shot('reliability-window', { top: 0, to: '#relModal .modal-card', pad: 20, maxH: 1500 });

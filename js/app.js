@@ -26,11 +26,6 @@ try { state.bias = localStorage.getItem('wefo.bias') !== '0'; } catch (e) { /* i
 state.oneVote = false;   // "one vote per model family" (off by default)
 try { state.oneVote = localStorage.getItem('wefo.oneVote') === '1'; } catch (e) { /* ignore */ }
 try { const so = localStorage.getItem('wefo.orient'); state.orient = (so === 'v' || so === 's') ? so : 'h'; } catch (e) { /* ignore */ }
-// Models shown or hidden is remembered per layout: hidden by default across, shown by default in the time-down view (where only "hide" is wanted)
-let modelsAcross = false;
-try { modelsAcross = localStorage.getItem('wefo.modelsOpen') === '1'; } catch (e) { /* ignore */ }
-// time-down shows the weighted summary only (never the individual models, no toggle there); the show/hide choice belongs to the time-across layout
-Object.defineProperty(state, 'modelsOpen', { get: () => state.orient !== 'v' && modelsAcross, set: (x) => { if (state.orient !== 'v') modelsAcross = !!x; } });
 // Προτιμήσεις ανά χρήστη/browser (localStorage): μοντέλα που έχουν απενεργοποιηθεί
 state.disabled = new Set();
 try { state.disabled = new Set(JSON.parse(localStorage.getItem('wefo.disabled') || '[]')); } catch (e) { /* ignore */ }
@@ -743,6 +738,10 @@ const tempWindRainCell = (c) => {
    weighted summary but lists the individual models for that one parameter only. */
 const ALL_SECTIONS = ['weather', 'temperature_2m', 'precip', 'wind', 'cloud_cover', 'relative_humidity_2m', 'pressure_msl'];
 const LANE_OF = { temperature_2m: 'temp', precip: 'rain', wind: 'wind', cloud_cover: 'cloud', relative_humidity_2m: 'hum', pressure_msl: 'press' };
+/* Time across: the + next to a lane opens the comparison of the individual models for that parameter, right under it
+   (the Weather lane opens the weather and the thunderstorm rows). All closed when the page opens. */
+const LANE_SECTIONS = { wx: ['weather', 'storm'], temp: ['temperature_2m'], rain: ['precip'], wind: ['wind'], cloud: ['cloud_cover'], hum: ['relative_humidity_2m'], press: ['pressure_msl'] };
+const openLanes = new Set();
 /* "Time down": the weighted answer as one column per parameter (most likely weather, then temperature,
    wind, rain, cloud, humidity, pressure). With the models shown, every model gets one sub-column per
    parameter on the Weather tab, or a single column for the chosen parameter on the other tabs. */
@@ -752,7 +751,7 @@ function renderGridVertical(cols, builts) {
   const lanes = buildWeatherLanes(cols).slice(2);   // temp, rain, wind, cloud, hum, press (weather + agreement come from weatherAgreeCell)
   const order = ['temp', 'wind', 'rain', 'cloud', 'hum', 'press'];
   const sumCols = order.map((k) => lanes.find((l) => l.cls === k));
-  const models = state.modelsOpen ? [...(extraRows || []).map((r) => ({ ...r, cls: 'ai' })), ...rows.map((r) => ({ ...r, cls: 'model' }))] : [];
+  const models = [];   // the weighted columns only: the model comparison is in the Time across layout
   const subs = builts.map(({ key }) => ({ key, label: key === 'weather' ? t('lane.weather') : t('lane.' + LANE_OF[key]) }));
   const multi = builts.length > 1 && models.length;
   const rowOf = (b, id) => [...(b.extraRows || []), ...b.rows].find((r) => r.id === id);
@@ -922,14 +921,11 @@ function buildWeatherLanes(cols) {
 
 function renderGrid() {
   const { param } = state;
-  // the parameter tabs only choose which model values are listed, so they do nothing while the models are hidden
-  const tabsOff = !state.modelsOpen && state.orient !== 's';
-  document.querySelectorAll('#tabs .tab').forEach((b) => { b.disabled = tabsOff; });
   renderSegKey();
   // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
   const sun = state.orient === 's';
-  document.querySelector('.hours .tabsrow').hidden = sun; $('legend').hidden = sun; $('sunsetBox').hidden = !sun;
-  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
+  $('legend').hidden = sun; $('sunsetBox').hidden = !sun;
+  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsCount').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
 
   const cols = state.orient === 'v' ? verticalColumns(state.vHours) : columns();
   // Weather = overview: the models are listed for every parameter; any other tab lists them for that one only
@@ -940,8 +936,7 @@ function renderGrid() {
     $('grid').classList.remove('lanes');
     $('grid').hidden = false; $('hcharts').hidden = true; $('chartsToggle').hidden = true;
     renderGridVertical(cols, builts);
-    $('modelsToggle').hidden = true;   // the models are always listed in this layout
-    setModelsToggle(rows.length + (extraRows || []).length);
+    setModelsCount();
   } else {
     $('grid').classList.remove('vert');
     $('grid').classList.add('lanes');
@@ -954,44 +949,53 @@ function renderGrid() {
     // flagship AI models, then the collapsed "Show all N models" individual provider rows last.
     // the full weighted summary on every tab; the tab's own parameter is highlighted
     buildWeatherLanes(cols).forEach((l) => {
-      html += `<tr class="lane ${l.cls}${LANE_OF[param] === l.cls ? ' sel' : ''}"><th class="rowh"${state.ens && (l.cls === 'rain' || l.cls === 'wind') ? ` title="${esc(t('ens.tip'))}"` : ''}>${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
-    });
-    // the individual models (AI ones first), one block per parameter: shown only with "Show all N models"
-    if (state.modelsOpen) {
-      builts.forEach(({ key, built: b }) => {
-        const list = [...(b.extraRows || []).map((r) => [r, 'ai']), ...b.rows.map((r) => [r, ''])];
+      const secs = LANE_SECTIONS[l.cls], open = !!secs && openLanes.has(l.cls);
+      const tip = secs ? t(open ? 'm.lane.hide' : 'm.lane.show', { p: l.name }) : '';
+      const tog = secs ? `<button type="button" class="lane-x" aria-expanded="${open}" aria-label="${esc(tip)}">${open ? '−' : '+'}</button>` : '';
+      const thTitle = secs ? tip : (state.ens && (l.cls === 'rain' || l.cls === 'wind') ? t('ens.tip') : '');
+      html += `<tr class="lane ${l.cls}${open ? ' open' : ''}"${secs ? ` data-lane="${l.cls}"` : ''}><th class="rowh${secs ? ' tog' : ''}"${thTitle ? ` title="${esc(thTitle)}"` : ''}>${tog}${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
+      if (!open) return;
+      // the individual models for this parameter (the AI ones first)
+      secs.forEach((key) => {
+        const b = buildRows(key, cols), list = [...(b.extraRows || []).map((r) => [r, 'ai']), ...b.rows.map((r) => [r, ''])];
         if (!list.length) return;
-        html += `<tr class="sect"><th colspan="${cols.length + 1}"><span>${t('p.' + key)}</span></th></tr>`;
-        list.forEach(([r, c]) => { html += rowHtml(r, c); });
+        if (secs.length > 1) html += `<tr class="sect"><th colspan="${cols.length + 1}"><span>${t('p.' + key)}</span></th></tr>`;
+        list.forEach(([r, c]) => { html += rowHtml(r, `${c} mrow`); });
       });
-    }
+    });
     html += '</tbody>';
     $('grid').innerHTML = html;
     centerNow();
     requestAnimationFrame(() => requestAnimationFrame(centerNow));
-    $('modelsToggle').hidden = false; $('chartsToggle').hidden = false;
+    $('chartsToggle').hidden = false;
     $('chartsToggle').classList.toggle('active', state.chartsOpen);
     $('hcharts').hidden = !state.chartsOpen;
     if (state.chartsOpen) $('hcharts').innerHTML = meteoHtml();
-    setModelsToggle(rows.length + (extraRows || []).length);
+    setModelsCount();
   }
-  const compareNote = state.modelsOpen && extraRows && extraRows.length ? t('lg.compare') : '';
-  $('legend').textContent = t('lg.' + param, { thr: param === 'precip' ? rainThr(state.step) : WIND_THR }) + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote + (state.ens ? t('lg.ens', { b: Math.round(ENS_BETA * 100), n: state.ens.systems.reduce((a, x) => a + x.members, 0), k: state.ens.systems.length }) : '');
+  // the legend explains the summary, and every parameter whose models are open
+  const openKeys = state.orient === 'v' ? [] : [...openLanes].flatMap((k) => LANE_SECTIONS[k]).filter((k) => k !== 'weather');
+  const compareNote = openLanes.size && state.orient !== 'v' && extraRows && extraRows.length ? t('lg.compare') : '';
+  $('legend').textContent = ['weather', ...openKeys].map((k) => t('lg.' + k, { thr: k === 'precip' ? rainThr(state.step) : WIND_THR })).join(' ') + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote + (state.ens ? t('lg.ens', { b: Math.round(ENS_BETA * 100), n: state.ens.systems.reduce((a, x) => a + x.members, 0), k: state.ens.systems.length }) : '');
 }
-// icon-only button inside the view switch: the tooltip carries the text, "active" = all models shown
-function setModelsToggle(n) {
-  const b = $('modelsToggle'), txt = state.modelsOpen ? t('m.hideall') : t('m.showall', { n });
-  b.title = txt; b.setAttribute('aria-label', txt); b.querySelector('span').textContent = txt; b.classList.toggle('active', !!state.modelsOpen);
+// how many models are switched on, above the table; it opens the Reliability window (where they are switched on and off)
+function setModelsCount() {
+  const uniq = uniqueProviders(), on = uniq.filter((p) => !state.disabled.has(p.id)).length;
+  const b = $('modelsCount');
+  b.hidden = false; b.querySelector('span').textContent = t('m.count', { a: on, n: uniq.length });
 }
+$('modelsCount').addEventListener('click', () => $('relBtn').click());
 state.chartsOpen = (() => { try { return localStorage.getItem('wefo.chartsOpen') === '1'; } catch (e) { return false; } })();
 $('chartsToggle').addEventListener('click', () => {
   state.chartsOpen = !state.chartsOpen;
   try { localStorage.setItem('wefo.chartsOpen', state.chartsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
   renderGrid();
 });
-$('modelsToggle').addEventListener('click', () => {
-  state.modelsOpen = !state.modelsOpen;
-  try { localStorage.setItem('wefo.modelsOpen', state.modelsOpen ? '1' : '0'); } catch (e) { /* ignore */ }
+// + / − on a lane (or a click on its name): open or close the model comparison for that parameter
+$('grid').addEventListener('click', (e) => {
+  const th = e.target.closest('tr.lane[data-lane] > th.rowh'); if (!th) return;
+  const k = th.parentElement.dataset.lane;
+  if (openLanes.has(k)) openLanes.delete(k); else openLanes.add(k);
   renderGrid();
 });
 document.querySelectorAll('#orientSeg [data-orient]').forEach((b) => {
@@ -1043,9 +1047,6 @@ function renderDays() {
   }).join('');
 }
 
-function renderTabs() {
-  $('tabs').innerHTML = Object.entries(PARAMS).map(([k, v]) => `<button class="tab ${k === state.param ? 'active' : ''}" data-param="${k}">${t('p.' + k)}</button>`).join('');
-}
 
 const allModelIds = () => Object.keys(state.data.models_known || {});   // used to list models without coverage for a location
 // Optional, key-gated models (e.g. need a Google Cloud API key in api/config.php): most deployments
@@ -1084,7 +1085,7 @@ $('relSave').addEventListener('click', () => {
 
 function renderAll() {
   famCount = null;
-  renderModels(); renderDays(); renderHero(); renderTabs(); renderGrid();
+  renderModels(); renderDays(); renderHero(); renderGrid();
   const d = state.data, loc = state.current;
   $('meta').textContent = t('meta', { name: locName(loc), lat: d.lat.toFixed(3), lon: d.lon.toFixed(3), el: Math.round(d.elevation ?? 0), a: activeProviders().length, n: uniqueProviders().length, time: new Date(d.generated).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) });
 }
@@ -1092,10 +1093,6 @@ function renderAll() {
 $('days').addEventListener('click', (e) => {
   const b = e.target.closest('[data-day]'); if (!b) return;
   state.day = +b.dataset.day; state.vHours = 24; vAutoCenter = true; renderDays(); renderGrid();
-});
-$('tabs').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-param]'); if (!b) return;
-  state.param = b.dataset.param; renderTabs(); renderGrid();
 });
 state.step = +$('stepSelect').value || 1;
 $('stepSelect').addEventListener('change', (e) => { state.step = +e.target.value; if (state.data) renderGrid(); });
