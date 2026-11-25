@@ -228,7 +228,7 @@ const I18N = {
 
     'm.active': '{a}/{n} active', 'm.dup': 'Same data as {n} (outside its coverage) – not counted twice',
     'r.save': 'Exit and save', 'r.btn.title': 'Model reliability, and switching models on and off', 'r.pick.hint': 'Tick or untick the models to switch them on or off in every table and in the averages, then press “Exit and save”.',
-    'm.duphour': 'Same data as {n} from {when} — not counted twice in the averages', 'm.count': '{a}/{n} models active', 'm.lane.show': 'Compare the models: {p}', 'm.lane.hide': 'Hide the models: {p}',
+    'm.duphour': 'Same data as {n} from {when} — not counted twice in the averages', 'm.lane.show': 'Compare the models: {p}', 'm.lane.hide': 'Hide the models: {p}',
     'm.missing': 'No coverage for this location', 'm.all': 'Enable all',
     'mn.jma_seamless': 'JMA (Japan)', 'mn.cma_grapes_global': 'CMA GRAPES (China)', 'mn.bom_access_global': 'BOM ACCESS (Australia)',
     'mn.knmi_seamless': 'KNMI (Netherlands)', 'mn.dmi_seamless': 'DMI (Denmark)', 'mn.metno_seamless': 'MET Norway (Nordic)',
@@ -494,7 +494,7 @@ const I18N = {
 
     'm.active': '{a}/{n} ενεργά', 'm.dup': 'Ίδια δεδομένα με {n} (εκτός περιοχής κάλυψης) – δεν μετράει διπλά',
     'r.save': 'Έξοδος και αποθήκευση', 'r.btn.title': 'Αξιοπιστία μοντέλων και ενεργοποίηση/απενεργοποίηση', 'r.pick.hint': 'Τσεκάρισε ή ξετσεκάρισε ένα μοντέλο για να το ενεργοποιήσεις ή να το απενεργοποιήσεις σε όλους τους πίνακες και στους μέσους όρους. Μετά πάτα «Έξοδος και αποθήκευση».',
-    'm.duphour': 'Ίδια δεδομένα με {n} από {when} — δεν μετράει διπλά στους μέσους όρους', 'm.count': '{a}/{n} μοντέλα ενεργά', 'm.lane.show': 'Σύγκριση μοντέλων: {p}', 'm.lane.hide': 'Απόκρυψη μοντέλων: {p}',
+    'm.duphour': 'Ίδια δεδομένα με {n} από {when} — δεν μετράει διπλά στους μέσους όρους', 'm.lane.show': 'Σύγκριση μοντέλων: {p}', 'm.lane.hide': 'Απόκρυψη μοντέλων: {p}',
     'm.missing': 'Χωρίς κάλυψη για αυτή την τοποθεσία', 'm.all': 'Ενεργοποίηση όλων',
     'mn.jma_seamless': 'JMA (Ιαπωνία)', 'mn.cma_grapes_global': 'CMA GRAPES (Κίνα)', 'mn.bom_access_global': 'BOM ACCESS (Αυστραλία)',
     'mn.knmi_seamless': 'KNMI (Ολλανδία)', 'mn.dmi_seamless': 'DMI (Δανία)', 'mn.metno_seamless': 'MET Norway (Nordic)',
