@@ -45,7 +45,7 @@ if (empty($_GET['refresh']) && ($row = fetch_one($st)) && time() - (int)$row['fe
 
 function ors_directions(string $key, array $body): array
 {
-    $ch = curl_init('https://api.openrouteservice.org/v2/directions/driving-car/geojson');
+    $ch = curl_init('https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson');   // api.openrouteservice.org was retired (HTTP 410) in Nov 2026
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 40, CURLOPT_POST => true, CURLOPT_ENCODING => '',
         CURLOPT_POSTFIELDS => json_encode($body),

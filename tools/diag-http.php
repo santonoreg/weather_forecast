@@ -29,7 +29,7 @@ diag('open-meteo trip', 'https://api.open-meteo.com/v1/forecast?' . http_build_q
     'models' => implode(',', $models), 'timezone' => 'GMT', 'forecast_days' => 2]));
 $key = (string)(app_config()['ors_api_key'] ?? '');
 echo 'ors key: ', $key === '' ? 'MISSING' : 'set (' . strlen($key) . ' chars)', "\n";
-if ($key !== '') diag('openrouteservice', 'https://api.openrouteservice.org/v2/directions/driving-car/geojson', [
+if ($key !== '') diag('openrouteservice', 'https://api.heigit.org/openrouteservice/v2/directions/driving-car/geojson', [
     CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode(['coordinates' => [[21.03, 39.17], [21.7346, 38.2466]], 'radiuses' => [3000, 3000]]),
     CURLOPT_HTTPHEADER => ['Authorization: ' . $key, 'Content-Type: application/json; charset=utf-8', 'Accept: application/geo+json'],
 ]);
