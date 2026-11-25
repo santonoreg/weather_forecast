@@ -1292,3 +1292,11 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .warnline li { display: flex; align-items: baseline; gap: 8px; line-height: 1.35; }
 .warnline li i { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #d4a400; transform: translateY(1px); } .warnline li.orange i { background: #ea7a14; } .warnline li.red i { background: #dc2626; }
 .warnline small { opacity: .8; white-space: nowrap; }
+
+/* DSO observing-conditions boxes: smaller, so the dark hours fit on one line; a faint edge so a light box still shows on a white card */
+.dl-cells { grid-template-columns: repeat(auto-fill, 30px); gap: 4px; }
+.dl-cells .cell { width: 30px; height: 30px; font-size: 11.5px; font-weight: 700; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .12); }
+.dl-cells.hrs span { width: 30px; font-size: 11px; }
+/* the Bortle pill: darker text on the light theme, where the gold text was hard to read */
+:root[data-theme="light"] .pill.bort { color: #7a5a00; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .pill.bort { color: #7a5a00; } }

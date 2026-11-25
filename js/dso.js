@@ -418,7 +418,9 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
     }
     return stops[stops.length - 1][1];
   };
-  const CLOUD_RAMP = [[0, [0, 0, 0]], [100, [255, 255, 255]]];                    // 0% cloud = black, 100% = white
+  const CLOUD_RAMP = [[0, [0, 0, 0]], [100, [255, 255, 255]]];                    // 0% cloud = black, 100% = white (dark theme)
+  const CLOUD_RAMP_LIGHT = [[0, [30, 38, 62]], [100, [184, 192, 208]]];           // light theme: the same direction, but overcast ends in a grey that shows on a white card
+  const lightUI = () => (typeof effectiveTheme === 'function' ? effectiveTheme() : 'dark') === 'light';
   const DEEP_RAMP = [[0, [190, 38, 52]], [6, [224, 90, 56]], [11, [246, 196, 69]], [16, [238, 228, 176]], [24, [160, 208, 150]], [40, [56, 168, 96]], [100, [26, 120, 72]]];
   const MOON_RAMP = [[0, [40, 48, 74]], [1, [245, 231, 176]]];
   const cell = (rgb, txt) => `<i class="cell" style="background:rgb(${rgb});color:${0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] > 150 ? '#1b2333' : '#fff'}">${txt}</i>`;
@@ -445,7 +447,7 @@ ${phasesHtml(loc, N.off)}<p class="dso-note" data-note="night" hidden>${t('dso.n
     const litMid = Math.round(Astro.sky((best.a + best.b) / 2, loc.lat, loc.lon).lit * 100);
     const row = (arr) => `<div class="dl-cells" style="--n:${chunks.length}">${arr.join('')}</div>`;
     const moonCells = mv.map((x) => cell(ramp(clamp(x.v / 0.8, 0, 1), MOON_RAMP), Math.round(x.v * 100)));
-    const cloudCells = chunks.map((c) => { const cc = cloudAt(c.h); return cc == null ? cell([60, 66, 90], '–') : cell(ramp(cc, CLOUD_RAMP), Math.round(cc)); });
+    const cloudCells = chunks.map((c) => { const cc = cloudAt(c.h); return cc == null ? cell([60, 66, 90], '–') : cell(ramp(cc, lightUI() ? CLOUD_RAMP_LIGHT : CLOUD_RAMP), Math.round(cc)); });
     const deepCells = chunks.map((c) => { const d = S.night.deep.get(c.h); return d == null ? cell([60, 66, 90], '–') : cell(ramp(d, DEEP_RAMP), Math.round(d)); });
     const go = (view, label) => `<a class="dl-go" href="#${view}" data-goto="${view}">${esc(label)} <i>›</i></a>`;
     return `<section class="dl-wx">

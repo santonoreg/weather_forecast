@@ -1852,8 +1852,9 @@ $('themeBtn').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme', next);
   try { localStorage.setItem('wefo.theme', next); } catch (e) { /* ignore */ }
   syncThemeBtn();
+  if (state.view === 'dso') Dso.render();   // the DSO hour boxes colour cloud differently in the two themes
 });
-if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', syncThemeBtn);
+if (sysDark && sysDark.addEventListener) sysDark.addEventListener('change', () => { syncThemeBtn(); if (state.view === 'dso') Dso.render(); });
 syncThemeBtn();
 
 $('brandIcon').innerHTML = WI.svg(2, false);
