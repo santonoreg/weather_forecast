@@ -1226,7 +1226,6 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .tbl-tools .btn.active { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); color: var(--accent); border-color: var(--accent); }
 .hcharts { margin-top: 12px; }
 .tbl-tools .btn { display: inline-flex; align-items: center; gap: 7px; } .tbl-tools svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-#relBtn small { color: var(--muted); font-size: 12px; margin-left: 4px; }
 #relModal .modal-card { max-width: 1060px; }
 #relModal .table-wrap { max-height: 62vh; overflow: auto; }
 #relTable .rowh { min-width: 190px; } #relTable tr.off { opacity: .6; } #relTable .mdl { padding: 2px 0; } #relTable .mdl:hover { background: none; }

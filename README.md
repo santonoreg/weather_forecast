@@ -139,11 +139,11 @@ Choose a saved location and you get a two-column layout: a **hero card** and the
    | **Thunderstorm** | CAPE (J/kg) and a bolt when the model forecasts a thunderstorm | average CAPE | chance of thunderstorm |
    | **Cloud cover / Humidity / Pressure** | value, colour-coded | average, min–max | agreement % |
 
-   The **Reliability** button above the table opens the [Reliability window](#model-verification-reliability-window) (scores, per-day scores, and the switches for individual models).
+   The **N/M models active** button above the table opens the [Reliability window](#model-verification-reliability-window) (scores, per-day scores, and the switches for individual models).
 
 4. **Step**: 1, 3, 6 or 12 hours. Values are aggregated per step (rain = sum, gust/CAPE = max, weather code = most severe, wind direction = speed-weighted circular mean, others = mean).
 5. The **current time interval is highlighted** (whole column) and, when the table needs horizontal scrolling, it is **automatically centred**. Past intervals are slightly dimmed.
-6. **Reliability** button: the model scores, and the switches that turn individual models on and off (see below).
+6. **N/M models active** button (above the hourly table): opens the Reliability window — the model scores, and the switches that turn individual models on and off (see below).
 7. Three checkboxes: **Weight by reliability** (on/off), **Correct systematic error** and **One vote per model family** – see [Methodology](#methodology). Your choices are kept in the browser and, once you are logged in, on the server (`user_prefs`) so they follow you to another device.
 8. **Refresh** forces a fresh download (otherwise data is cached for 30 minutes).
 

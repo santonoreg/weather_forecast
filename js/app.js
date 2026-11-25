@@ -984,7 +984,6 @@ function setModelsCount() {
   const b = $('modelsCount');
   b.hidden = false; b.querySelector('span').textContent = t('m.count', { a: on, n: uniq.length });
 }
-$('modelsCount').addEventListener('click', () => $('relBtn').click());
 state.chartsOpen = (() => { try { return localStorage.getItem('wefo.chartsOpen') === '1'; } catch (e) { return false; } })();
 $('chartsToggle').addEventListener('click', () => {
   state.chartsOpen = !state.chartsOpen;
@@ -1058,7 +1057,6 @@ const OPTIONAL_MODEL_IDS = ['google_weathernext'];
 const HEADLINE_MODEL_IDS = ['google_weathernext', 'ecmwf_aifs025_single'];
 
 function renderModels() {
-  $('relBtn').textContent = t('p.reliability');   // how many are active is shown above the forecast table
   renderRelModal();
 }
 function saveDisabled() {
@@ -1073,7 +1071,7 @@ $('relTable').addEventListener('change', (e) => {
   renderRelModal();
 });
 $('relAll').addEventListener('click', () => { relDraft.clear(); renderRelModal(); });
-$('relBtn').addEventListener('click', () => { relDraft = new Set(state.disabled); $('relModal').hidden = false; renderRelModal(); });
+$('modelsCount').addEventListener('click', () => { relDraft = new Set(state.disabled); $('relModal').hidden = false; renderRelModal(); });
 // Exit and save: apply the choices and refresh the tables only if some model was switched on or off
 $('relSave').addEventListener('click', () => {
   const changed = relDraft.size !== state.disabled.size || [...relDraft].some((id) => !state.disabled.has(id));

@@ -78,7 +78,7 @@ const want = (n) => !only || only.includes(n);
   await shot('forecast-wind', { from: '#view-forecast .hours', to: '#view-forecast .hours', maxH: 1200 });
   await click('#grid tr.lane[data-lane=wind] .lane-x'); await sleep(600);
   if (await js("!!(state.verify && state.verify.weights_by_lead)")) {          // the Reliability window: scores by forecast day, how fresh the numbers are
-    await click('#relBtn'); await sleep(1200);
+    await click('#modelsCount'); await sleep(1200);
     await shot('reliability-window', { top: 0, to: '#relModal .modal-card', pad: 20, maxH: 1500 });
     await js("document.getElementById('relModal').hidden = true");
   } else console.log('  (no lead-time verification data: reliability-window skipped)');
