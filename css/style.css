@@ -476,7 +476,12 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
   border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--muted); font: 700 13px/1 inherit; vertical-align: -3px; cursor: pointer; }
 .grid tr.lane.open .lane-x, .grid .lane-x:hover { color: var(--accent); border-color: var(--accent); }
 .grid tr.lane.open > th.rowh { color: var(--accent); font-weight: 700; }
-.grid:not(.vert) tr.mrow:last-child td, .grid:not(.vert) tr.mrow:last-child .rowh { border-bottom: 2px solid var(--line); }
+/* the opened block (lane + its models): an accent frame around it, a left accent bar on the names, a faint tint on the model names */
+.grid.lanes tr.lane.open > td, .grid.lanes tr.lane.open > th { border-top: 2px solid var(--accent); }
+.grid.lanes tr.lane.open > th.rowh, .grid.lanes tr.mrow > th.rowh, .grid.lanes tr.mrow.sect > th { box-shadow: inset 3px 0 0 var(--accent); }
+.grid.lanes tr.lane.open > td:last-child, .grid.lanes tr.mrow > td:last-child { box-shadow: inset -2px 0 0 var(--accent); }
+.grid.lanes tr.mrow > th.rowh { background-color: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
+.grid.lanes tr.mrow.mlast > td, .grid.lanes tr.mrow.mlast > th { border-bottom: 2px solid var(--accent); }
 
 /* ================= Astronomy tab ================= */
 .nights { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-bottom: 14px; }

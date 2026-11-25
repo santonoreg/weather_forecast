@@ -956,12 +956,15 @@ function renderGrid() {
       html += `<tr class="lane ${l.cls}${open ? ' open' : ''}"${secs ? ` data-lane="${l.cls}"` : ''}><th class="rowh${secs ? ' tog' : ''}"${thTitle ? ` title="${esc(thTitle)}"` : ''}>${tog}${l.name}</th>${l.cells.map((c, i) => `<td class="${cls(cols[i])}" style="background:${c.bg || ''}">${c.html}</td>`).join('')}</tr>`;
       if (!open) return;
       // the individual models for this parameter (the AI ones first)
+      // the opened block (the lane and its models) is framed in the accent colour, so it reads as one group
+      const grp = [];
       secs.forEach((key) => {
         const b = buildRows(key, cols), list = [...(b.extraRows || []).map((r) => [r, 'ai']), ...b.rows.map((r) => [r, ''])];
         if (!list.length) return;
-        if (secs.length > 1) html += `<tr class="sect"><th colspan="${cols.length + 1}"><span>${t('p.' + key)}</span></th></tr>`;
-        list.forEach(([r, c]) => { html += rowHtml(r, `${c} mrow`); });
+        if (secs.length > 1) grp.push((last) => `<tr class="sect mrow${last ? ' mlast' : ''}"><th colspan="${cols.length + 1}"><span>${t('p.' + key)}</span></th></tr>`);
+        list.forEach(([r, c]) => grp.push((last) => rowHtml(r, `${c} mrow${last ? ' mlast' : ''}`)));
       });
+      html += grp.map((f, i) => f(i === grp.length - 1)).join('');
     });
     html += '</tbody>';
     $('grid').innerHTML = html;
