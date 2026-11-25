@@ -1222,7 +1222,8 @@ body.locked main, body.locked nav, body.locked #histSec { display: none !importa
 .grid.vert th.sub.first, .grid.vert td.first { border-left: 1px solid var(--line); }
 .grid.vert td.model, .grid.vert td.ai { width: auto; min-width: 46px; text-align: center; padding-left: 3px; padding-right: 3px; }
 /* reliability pop-up, and the models toggle above the table */
-.tbl-tools { display: flex; justify-content: flex-end; gap: 8px; margin: 6px 0; } .tbl-tools:has(#modelsCount[hidden]):not(:has(#chartsToggle:not([hidden]))) { display: none; }
+.tbl-tools { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 6px 0; } .tbl-tools:has(#modelsCount[hidden]) { display: none; }   /* hidden only in the Sunset view */
+.tbl-tools .chk { padding-bottom: 0; font-size: 13px; }
 .tbl-tools .btn.active { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); color: var(--accent); border-color: var(--accent); }
 .hcharts { margin-top: 12px; }
 .tbl-tools .btn { display: inline-flex; align-items: center; gap: 7px; } .tbl-tools svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
