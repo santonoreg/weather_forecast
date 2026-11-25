@@ -925,7 +925,7 @@ function renderGrid() {
   // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
   const sun = state.orient === 's';
   $('legend').hidden = sun; $('sunsetBox').hidden = !sun;
-  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
+  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsCount').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
 
   const cols = state.orient === 'v' ? verticalColumns(state.vHours) : columns();
   // Weather = overview: the models are listed for every parameter; any other tab lists them for that one only
@@ -936,6 +936,7 @@ function renderGrid() {
     $('grid').classList.remove('lanes');
     $('grid').hidden = false; $('hcharts').hidden = true; $('chartsToggle').hidden = true;
     renderGridVertical(cols, builts);
+    setModelsCount();
   } else {
     $('grid').classList.remove('vert');
     $('grid').classList.add('lanes');
@@ -970,12 +971,20 @@ function renderGrid() {
     $('chartsToggle').classList.toggle('active', state.chartsOpen);
     $('hcharts').hidden = !state.chartsOpen;
     if (state.chartsOpen) $('hcharts').innerHTML = meteoHtml();
+    setModelsCount();
   }
   // the legend explains the summary, and every parameter whose models are open
   const openKeys = state.orient === 'v' ? [] : [...openLanes].flatMap((k) => LANE_SECTIONS[k]).filter((k) => k !== 'weather');
   const compareNote = openLanes.size && state.orient !== 'v' && extraRows && extraRows.length ? t('lg.compare') : '';
   $('legend').textContent = ['weather', ...openKeys].map((k) => t('lg.' + k, { thr: k === 'precip' ? rainThr(state.step) : WIND_THR })).join(' ') + t('lg.providers', { n: rows.length }) + (weightsOn() ? t('lg.weighted') : '') + compareNote + (state.ens ? t('lg.ens', { b: Math.round(ENS_BETA * 100), n: state.ens.systems.reduce((a, x) => a + x.members, 0), k: state.ens.systems.length }) : '');
 }
+// how many models are switched on, above the table; it opens the Reliability window (where they are switched on and off)
+function setModelsCount() {
+  const uniq = uniqueProviders(), on = uniq.filter((p) => !state.disabled.has(p.id)).length;
+  const b = $('modelsCount');
+  b.hidden = false; b.querySelector('span').textContent = t('m.count', { a: on, n: uniq.length });
+}
+$('modelsCount').addEventListener('click', () => $('relBtn').click());
 state.chartsOpen = (() => { try { return localStorage.getItem('wefo.chartsOpen') === '1'; } catch (e) { return false; } })();
 $('chartsToggle').addEventListener('click', () => {
   state.chartsOpen = !state.chartsOpen;
