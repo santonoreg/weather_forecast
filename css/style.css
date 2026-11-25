@@ -478,7 +478,9 @@ select, input[type=text], input[type=number], input[type=search] { font: inherit
 .grid tr.lane.open > th.rowh { color: var(--accent); font-weight: 700; }
 /* the opened block (lane + its models): a soft accent frame (a little stronger than the ordinary lines), a left bar on the names;
    the model rows are compact and their names indented, so they read as sub-rows of the parameter */
-.grid.lanes { --grp: color-mix(in srgb, var(--accent) 38%, var(--line)); }
+.grid.lanes { --grp: color-mix(in srgb, var(--accent) 20%, var(--line)); }
+.grid.lanes tr.mrow > td.corrc { box-shadow: none; }   /* no blue underline on bias-corrected values here (the tooltip still says it) */
+.grid.lanes tr.mrow > td.corrc:last-child { box-shadow: inset -2px 0 0 var(--grp); }
 .grid.lanes tr.lane.open > td, .grid.lanes tr.lane.open > th { border-top: 2px solid var(--grp); }
 .grid.lanes tr.lane.open > th.rowh, .grid.lanes tr.mrow > th.rowh, .grid.lanes tr.mrow.sect > th { box-shadow: inset 3px 0 0 var(--grp); }
 .grid.lanes tr.lane.open > td:last-child, .grid.lanes tr.mrow > td:last-child { box-shadow: inset -2px 0 0 var(--grp); }

@@ -925,7 +925,7 @@ function renderGrid() {
   // "Sunset & sunrise" view: its own panel, no parameter tabs / legend / model list
   const sun = state.orient === 's';
   $('legend').hidden = sun; $('sunsetBox').hidden = !sun;
-  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsCount').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
+  if (sun) { $('segKey').hidden = true; $('grid').classList.remove('vert', 'lanes'); $('grid').hidden = true; $('hcharts').hidden = true; $('chartsToggle').hidden = true; $('modelsCount').hidden = true; $('lanesClose').hidden = true; $('vFooter').hidden = true; Sunset.render(); return; }
 
   const cols = state.orient === 'v' ? verticalColumns(state.vHours) : columns();
   // Weather = overview: the models are listed for every parameter; any other tab lists them for that one only
@@ -936,6 +936,7 @@ function renderGrid() {
     $('grid').classList.remove('lanes');
     $('grid').hidden = false; $('hcharts').hidden = true; $('chartsToggle').hidden = true;
     renderGridVertical(cols, builts);
+    $('lanesClose').hidden = true;
     setModelsCount();
   } else {
     $('grid').classList.remove('vert');
@@ -971,6 +972,7 @@ function renderGrid() {
     centerNow();
     requestAnimationFrame(() => requestAnimationFrame(centerNow));
     $('chartsToggle').hidden = false;
+    $('lanesClose').hidden = !openLanes.size;   // "Close all": only while some parameter is open
     $('chartsToggle').classList.toggle('active', state.chartsOpen);
     $('hcharts').hidden = !state.chartsOpen;
     if (state.chartsOpen) $('hcharts').innerHTML = meteoHtml();
@@ -994,6 +996,7 @@ $('chartsToggle').addEventListener('click', () => {
   renderGrid();
 });
 // + / − on a lane (or a click on its name): open or close the model comparison for that parameter
+$('lanesClose').addEventListener('click', () => { openLanes.clear(); renderGrid(); });
 $('grid').addEventListener('click', (e) => {
   const th = e.target.closest('tr.lane[data-lane] > th.rowh'); if (!th) return;
   const k = th.parentElement.dataset.lane;
