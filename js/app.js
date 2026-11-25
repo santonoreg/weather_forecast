@@ -1058,8 +1058,7 @@ const OPTIONAL_MODEL_IDS = ['google_weathernext'];
 const HEADLINE_MODEL_IDS = ['google_weathernext', 'ecmwf_aifs025_single'];
 
 function renderModels() {
-  const uniq = uniqueProviders(), off = uniq.filter((p) => state.disabled.has(p.id)).length;
-  $('relBtn').innerHTML = `${t('p.reliability')} <small>${t('m.active', { a: uniq.length - off, n: uniq.length })}</small>`;
+  $('relBtn').textContent = t('p.reliability');   // how many are active is shown above the forecast table
   renderRelModal();
 }
 function saveDisabled() {
